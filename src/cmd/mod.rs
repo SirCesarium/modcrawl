@@ -14,9 +14,9 @@ pub struct Cli {
 #[derive(clap::Subcommand)]
 pub enum Commands {
     /// Analyze & crawl `Minecraft` mod dependencies.
-    /// 
+    ///
     /// Finds hidden dependencies in mod metadata.
-    /// 
+    ///
     /// By default, ignores Jar-In-Jar dependencies, use `-j` to include them.
     #[command(aliases = &["d", "deps", "dependencies"])]
     Dep(dep::Args),
