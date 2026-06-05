@@ -15,6 +15,12 @@ pub struct Args {
     pub include_jar_in_jar: bool,
 }
 
+/// Run the `dep` command.
+///
+/// # Errors
+///
+/// Returns an error if the archive cannot be read.
+#[allow(clippy::unnecessary_wraps)]
 pub fn run(args: &Args) -> Result<()> {
     println!(
         "dep command: file={}, include-jar-in-jar={}",

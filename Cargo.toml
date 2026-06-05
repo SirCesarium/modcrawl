@@ -19,3 +19,10 @@ path = "src/main.rs"
 name = "modcrawl"
 path = "src/lib.rs"
 crate-type = ["lib", "cdylib", "staticlib"]
+
+[lints.clippy]
+all = "deny"
+pedantic = "deny"
+unwrap_used = "deny"
+expect_used = "deny"
+absolute_paths = "deny"
