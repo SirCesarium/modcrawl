@@ -51,9 +51,9 @@ impl fmt::Display for PluginType {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModType {
     Fabric,
-    Forge { forge_format: ForgeModFormat },
+    Forge(ForgeModFormat),
     NeoForge,
-    Plugin { plugin_type: PluginType },
+    Plugin(PluginType),
     Unknown,
 }
 
@@ -63,71 +63,77 @@ impl fmt::Display for ModType {
             Self::Fabric => write!(f, "Fabric"),
             Self::NeoForge => write!(f, "NeoForge"),
             Self::Unknown => write!(f, "Unknown"),
-            Self::Forge { forge_format } => write!(f, "Forge ({forge_format})"),
-            Self::Plugin { plugin_type } => write!(f, "Plugin ({plugin_type})"),
+            Self::Forge(fmt) => write!(f, "Forge ({fmt})"),
+            Self::Plugin(ty) => write!(f, "Plugin ({ty})"),
         }
     }
 }
 
+/// A detection rule: if a ZIP entry with this file path exists, the mod type is determined.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct DetectionRule {
+    pub file: &'static str,
+    pub mod_type: ModType,
+}
+
+/// Single source of truth for detection and metadata file paths.
+///
+/// Order matters: the first matching rule wins (Paper > Bukkit, NeoForge > Forge).
+const DETECTION_ORDER: &[DetectionRule] = &[
+    // Paper MUST be before Bukkit.
+    DetectionRule {
+        file: "paper-plugin.yml",
+        mod_type: ModType::Plugin(PluginType::Paper),
+    },
+    DetectionRule {
+        file: "plugin.yml",
+        mod_type: ModType::Plugin(PluginType::Bukkit),
+    },
+    DetectionRule {
+        file: "velocity-plugin.json",
+        mod_type: ModType::Plugin(PluginType::Velocity),
+    },
+    DetectionRule {
+        file: "bungee.yml",
+        mod_type: ModType::Plugin(PluginType::Bungee),
+    },
+    // NeoForge MUST be before Forge.
+    DetectionRule {
+        file: "META-INF/neoforge.mods.toml",
+        mod_type: ModType::NeoForge,
+    },
+    DetectionRule {
+        file: "META-INF/mods.toml",
+        mod_type: ModType::Forge(ForgeModFormat::ModsToml),
+    },
+    DetectionRule {
+        file: "mcmod.info",
+        mod_type: ModType::Forge(ForgeModFormat::McmodInfo),
+    },
+    DetectionRule {
+        file: "fabric.mod.json",
+        mod_type: ModType::Fabric,
+    },
+];
+
+/// Detect the mod type from a list of ZIP entries.
 #[must_use]
 pub fn detect_mod_type(entries: &[ZipEntry]) -> ModType {
-    let has_file = |name: &str| entries.iter().any(|e| e.name.as_str() == name);
-
-    /*
-     PLUGINS
-
-     ---
-
-     PAPER MUST BE BEFORE BUKKIT.
-    */
-    if has_file("paper-plugin.yml") {
-        return ModType::Plugin {
-            plugin_type: PluginType::Paper,
-        };
+    for rule in DETECTION_ORDER {
+        if entries.iter().any(|e| e.name.as_str() == rule.file) {
+            return rule.mod_type.clone();
+        }
     }
-    if has_file("plugin.yml") {
-        return ModType::Plugin {
-            plugin_type: PluginType::Bukkit,
-        };
-    }
-
-    /*
-    PROXIES
-    */
-    if has_file("velocity-plugin.json") {
-        return ModType::Plugin {
-            plugin_type: PluginType::Velocity,
-        };
-    }
-    if has_file("bungee.yml") {
-        return ModType::Plugin {
-            plugin_type: PluginType::Bungee,
-        };
-    }
-
-    /*
-     MODS
-
-     ---
-
-     NeoForge MUST be before Forge.
-    */
-    if has_file("META-INF/neoforge.mods.toml") {
-        return ModType::NeoForge;
-    }
-    if has_file("META-INF/mods.toml") {
-        return ModType::Forge {
-            forge_format: ForgeModFormat::ModsToml,
-        };
-    }
-    if has_file("mcmod.info") {
-        return ModType::Forge {
-            forge_format: ForgeModFormat::McmodInfo,
-        };
-    }
-    if has_file("fabric.mod.json") {
-        return ModType::Fabric;
-    }
-
     ModType::Unknown
+}
+
+/// Returns the metadata file path inside the JAR for this mod type.
+#[must_use]
+pub fn metadata_file_path(mod_type: &ModType) -> Option<&'static str> {
+    for rule in DETECTION_ORDER {
+        if &rule.mod_type == mod_type {
+            return Some(rule.file);
+        }
+    }
+    None
 }
