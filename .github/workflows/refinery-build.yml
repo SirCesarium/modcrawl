@@ -1,0 +1,681 @@
+name: Refinery Build
+"on":
+  push:
+    tags:
+      - v*
+  release:
+    types:
+      - created
+jobs:
+  build:
+    name: ${{ matrix.artifact }} (${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.abi || 'default' }})
+    runs-on: ${{ matrix.runs_on }}
+    permissions:
+      contents: read
+    env: {}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - artifact: modcrawl
+            artifact_type: bin
+            os: linux
+            arch: x86_64
+            runs_on: ubuntu-24.04
+            output_name: modcrawl-linux-x86_64-gnu
+            artifact_bin: modcrawl
+            target_triple: x86_64-unknown-linux-gnu
+            packages:
+              - bin
+              - tar.gz
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages: []
+            bin_ext: ""
+            headers: false
+            linker_env: []
+            features: []
+            features_str: ""
+            default_features: true
+            abi: gnu
+          - artifact: modcrawl
+            artifact_type: bin
+            os: linux
+            arch: arm64
+            runs_on: ubuntu-24.04-arm
+            output_name: modcrawl-linux-arm64-gnu
+            artifact_bin: modcrawl
+            target_triple: aarch64-unknown-linux-gnu
+            packages:
+              - bin
+              - tar.gz
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages:
+              - gcc-aarch64-linux-gnu
+            bin_ext: ""
+            headers: false
+            linker: aarch64-linux-gnu-gcc
+            linker_env:
+              - CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+            features: []
+            features_str: ""
+            default_features: true
+            abi: gnu
+          - artifact: modcrawl
+            artifact_type: bin
+            os: linux
+            arch: x86_64
+            runs_on: ubuntu-24.04
+            output_name: modcrawl-linux-x86_64-musl
+            artifact_bin: modcrawl
+            target_triple: x86_64-unknown-linux-musl
+            packages:
+              - bin
+              - tar.gz
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages:
+              - musl-tools
+            bin_ext: ""
+            headers: false
+            linker_env:
+              - CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc
+            features: []
+            features_str: ""
+            default_features: false
+            abi: musl
+          - artifact: modcrawl
+            artifact_type: bin
+            os: linux
+            arch: arm64
+            runs_on: ubuntu-24.04-arm
+            output_name: modcrawl-linux-arm64-musl
+            artifact_bin: modcrawl
+            target_triple: aarch64-unknown-linux-musl
+            packages:
+              - bin
+              - tar.gz
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages:
+              - gcc-aarch64-linux-gnu
+              - musl-tools
+            bin_ext: ""
+            headers: false
+            linker: aarch64-linux-gnu-gcc
+            linker_env:
+              - CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc
+            features: []
+            features_str: ""
+            default_features: false
+            abi: musl
+          - artifact: modcrawl
+            artifact_type: bin
+            os: windows
+            arch: x86_64
+            runs_on: windows-2025
+            output_name: modcrawl-windows-x86_64-msvc
+            artifact_bin: modcrawl
+            target_triple: x86_64-pc-windows-msvc
+            packages:
+              - bin
+              - zip
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages: []
+            bin_ext: .exe
+            headers: false
+            linker_env: []
+            features: []
+            features_str: ""
+            default_features: true
+            abi: msvc
+          - artifact: modcrawl
+            artifact_type: bin
+            os: windows
+            arch: arm64
+            runs_on: windows-11-arm
+            output_name: modcrawl-windows-arm64-msvc
+            artifact_bin: modcrawl
+            target_triple: aarch64-pc-windows-msvc
+            packages:
+              - bin
+              - zip
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages: []
+            bin_ext: .exe
+            headers: false
+            linker_env: []
+            features: []
+            features_str: ""
+            default_features: true
+            abi: msvc
+          - artifact: modcrawl
+            artifact_type: bin
+            os: macos
+            arch: x86_64
+            runs_on: macos-26
+            output_name: modcrawl-macos-x86_64
+            artifact_bin: modcrawl
+            target_triple: x86_64-apple-darwin
+            packages:
+              - bin
+              - tar.gz
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages: []
+            bin_ext: ""
+            headers: false
+            linker_env: []
+            features: []
+            features_str: ""
+            default_features: true
+          - artifact: modcrawl
+            artifact_type: bin
+            os: macos
+            arch: arm64
+            runs_on: macos-26
+            output_name: modcrawl-macos-arm64
+            artifact_bin: modcrawl
+            target_triple: aarch64-apple-darwin
+            packages:
+              - bin
+              - tar.gz
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages: []
+            bin_ext: ""
+            headers: false
+            linker_env: []
+            features: []
+            features_str: ""
+            default_features: true
+          - artifact: modcrawl
+            artifact_type: lib
+            os: linux
+            arch: x86_64
+            runs_on: ubuntu-24.04
+            output_name: modcrawl-linux-x86_64-gnu
+            artifact_bin: modcrawl
+            target_triple: x86_64-unknown-linux-gnu
+            packages:
+              - bin
+              - tar.gz
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages: []
+            bin_ext: ""
+            headers: true
+            linker_env: []
+            features: []
+            features_str: ""
+            default_features: true
+            abi: gnu
+          - artifact: modcrawl
+            artifact_type: lib
+            os: linux
+            arch: arm64
+            runs_on: ubuntu-24.04-arm
+            output_name: modcrawl-linux-arm64-gnu
+            artifact_bin: modcrawl
+            target_triple: aarch64-unknown-linux-gnu
+            packages:
+              - bin
+              - tar.gz
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages:
+              - gcc-aarch64-linux-gnu
+            bin_ext: ""
+            headers: true
+            linker: aarch64-linux-gnu-gcc
+            linker_env:
+              - CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+            features: []
+            features_str: ""
+            default_features: true
+            abi: gnu
+          - artifact: modcrawl
+            artifact_type: lib
+            os: linux
+            arch: x86_64
+            runs_on: ubuntu-24.04
+            output_name: modcrawl-linux-x86_64-musl
+            artifact_bin: modcrawl
+            target_triple: x86_64-unknown-linux-musl
+            packages:
+              - bin
+              - tar.gz
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages:
+              - musl-tools
+            bin_ext: ""
+            headers: true
+            linker_env:
+              - CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc
+            features: []
+            features_str: ""
+            default_features: false
+            abi: musl
+          - artifact: modcrawl
+            artifact_type: lib
+            os: linux
+            arch: arm64
+            runs_on: ubuntu-24.04-arm
+            output_name: modcrawl-linux-arm64-musl
+            artifact_bin: modcrawl
+            target_triple: aarch64-unknown-linux-musl
+            packages:
+              - bin
+              - tar.gz
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages:
+              - gcc-aarch64-linux-gnu
+              - musl-tools
+            bin_ext: ""
+            headers: true
+            linker: aarch64-linux-gnu-gcc
+            linker_env:
+              - CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc
+            features: []
+            features_str: ""
+            default_features: false
+            abi: musl
+          - artifact: modcrawl
+            artifact_type: lib
+            os: windows
+            arch: x86_64
+            runs_on: windows-2025
+            output_name: modcrawl-windows-x86_64-msvc
+            artifact_bin: modcrawl
+            target_triple: x86_64-pc-windows-msvc
+            packages:
+              - bin
+              - zip
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages: []
+            bin_ext: .exe
+            headers: true
+            linker_env: []
+            features: []
+            features_str: ""
+            default_features: true
+            abi: msvc
+          - artifact: modcrawl
+            artifact_type: lib
+            os: windows
+            arch: arm64
+            runs_on: windows-11-arm
+            output_name: modcrawl-windows-arm64-msvc
+            artifact_bin: modcrawl
+            target_triple: aarch64-pc-windows-msvc
+            packages:
+              - bin
+              - zip
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages: []
+            bin_ext: .exe
+            headers: true
+            linker_env: []
+            features: []
+            features_str: ""
+            default_features: true
+            abi: msvc
+          - artifact: modcrawl
+            artifact_type: lib
+            os: macos
+            arch: x86_64
+            runs_on: macos-26
+            output_name: modcrawl-macos-x86_64
+            artifact_bin: modcrawl
+            target_triple: x86_64-apple-darwin
+            packages:
+              - bin
+              - tar.gz
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages: []
+            bin_ext: ""
+            headers: true
+            linker_env: []
+            features: []
+            features_str: ""
+            default_features: true
+          - artifact: modcrawl
+            artifact_type: lib
+            os: macos
+            arch: arm64
+            runs_on: macos-26
+            output_name: modcrawl-macos-arm64
+            artifact_bin: modcrawl
+            target_triple: aarch64-apple-darwin
+            packages:
+              - bin
+              - tar.gz
+            has_deb: false
+            has_rpm: false
+            has_msi: false
+            has_archive: true
+            has_bin: true
+            include_files: []
+            apt_packages: []
+            bin_ext: ""
+            headers: true
+            linker_env: []
+            features: []
+            features_str: ""
+            default_features: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Setup Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.target_triple }}
+          cache: true
+          toolchain: stable
+      - name: Install cbindgen
+        uses: taiki-e/install-action@v2
+        if: matrix.headers == true
+        with:
+          tool: cbindgen
+      - name: Configure Linker and System Dependencies
+        if: join(matrix.apt_packages, '') != '' || join(matrix.linker_env, '') != ''
+        run: |-
+          PKGS="${{ join(matrix.apt_packages, ' ') }}"
+          if [ -n "$PKGS" ] && [ "${{ runner.os }}" = "Linux" ]; then
+            sudo apt-get update && sudo apt-get install --no-install-recommends -y $PKGS
+          fi
+
+          for env_var in "${{ join(matrix.linker_env, '" "') }}"; do
+            if [ -n "$env_var" ]; then
+              echo "$env_var" >> "$GITHUB_ENV"
+            fi
+          done
+        shell: bash
+      - name: Install System Dependencies (Windows) [WiX]
+        if: runner.os == 'Windows' && matrix.has_msi
+        run: >-
+          choco install wixtoolset -y
+
+          $wixDir = Get-ChildItem "${env:ProgramFiles}\WiX*", "C:\Program Files (x86)\WiX*" -Directory -ErrorAction
+          SilentlyContinue | Sort-Object Name -Descending | Select-Object -First 1
+
+          if ($wixDir -and (Test-Path "$($wixDir.FullName)\bin\candle.exe")) {
+            Add-Content $env:GITHUB_PATH "$($wixDir.FullName)\bin"
+          }
+        shell: powershell
+      - name: Set up MinGW (x86_64)
+        if: runner.os == 'Windows' && matrix.abi == 'gnu' && matrix.arch == 'x86_64'
+        uses: egor-tensin/setup-mingw@v3
+        with:
+          platform: x64
+      - name: Set up MinGW (i686)
+        if: runner.os == 'Windows' && matrix.abi == 'gnu' && matrix.arch == 'x86'
+        uses: egor-tensin/setup-mingw@v3
+        with:
+          platform: x86
+      - name: Build
+        run: |-
+          CMD="cargo build --release"
+          CMD="$CMD --target ${{ matrix.target_triple }}"
+          FEATURES="${{ matrix.features_str }}"
+          if [ -n "$FEATURES" ]; then
+            CMD="$CMD --features \"$FEATURES\""
+          fi
+          NO_DEFAULT="${{ matrix.default_features }}"
+          if [ "$NO_DEFAULT" = "false" ]; then
+            CMD="$CMD --no-default-features"
+          fi
+          eval "$CMD"
+        shell: bash
+      - name: Prepare Binary
+        run: |-
+          SRC="target/${{ matrix.target_triple }}/release/${{ matrix.artifact_bin }}${{ matrix.bin_ext }}"
+          DST_ORIG="target/release/${{ matrix.artifact_bin }}${{ matrix.bin_ext }}"
+          DST_RENAMED="target/release/${{ matrix.output_name }}${{ matrix.bin_ext }}"
+
+          mkdir -p target/release
+          cp "$SRC" "$DST_ORIG"
+          cp "$SRC" "$DST_RENAMED"
+        shell: bash
+        if: matrix.artifact_type == 'bin'
+      - name: Prepare Library
+        run: |-
+          SRCDIR="target/${{ matrix.target_triple }}/release"
+          DSTDIR="target/release"
+          mkdir -p "$DSTDIR"
+
+          copy_lib() {
+            local src_file="$1"
+            local dst_orig_file="$2"
+            local dst_renamed_file="$3"
+            if [ -f "$src_file" ]; then
+              cp "$src_file" "$DSTDIR/$dst_orig_file"
+              cp "$src_file" "$DSTDIR/$dst_renamed_file"
+            fi
+          }
+
+          NAME="${{ matrix.artifact_bin }}"
+          OUT="${{ matrix.output_name }}"
+
+          copy_lib "$SRCDIR/lib${NAME}.so" "lib${NAME}.so" "${OUT}.so"
+          copy_lib "$SRCDIR/lib${NAME}.dylib" "lib${NAME}.dylib" "${OUT}.dylib"
+          copy_lib "$SRCDIR/lib${NAME}.a" "lib${NAME}.a" "${OUT}.a"
+          copy_lib "$SRCDIR/${NAME}.dll" "${NAME}.dll" "${OUT}.dll"
+          copy_lib "$SRCDIR/${NAME}.lib" "${NAME}.lib" "${OUT}.lib"
+          copy_lib "$SRCDIR/lib${NAME}.dll.a" "lib${NAME}.dll.a" "${OUT}.dll.a"
+          copy_lib "$SRCDIR/${NAME}.wasm" "${NAME}.wasm" "${OUT}.wasm"
+
+          if [ "${{ matrix.headers }}" = "true" ]; then
+            if [ -f "cbindgen.toml" ]; then
+              cbindgen --config cbindgen.toml --crate "${NAME}" --output "$DSTDIR/${OUT}.h"
+            else
+              cbindgen --crate "${NAME}" --output "$DSTDIR/${OUT}.h"
+            fi
+          fi
+        shell: bash
+        if: matrix.artifact_type == 'lib'
+      - name: Copy Extra Files
+        run: |-
+          for f in ${{ join(matrix.include_files, ' ') }}; do
+            if [ -f "$f" ]; then
+              cp "$f" "target/release/"
+            fi
+          done
+        shell: bash
+      - name: Export Binary
+        run: |-
+          mkdir -p _packages
+          cp "target/release/${{ matrix.output_name }}${{ matrix.bin_ext }}" "_packages/"
+        shell: bash
+        if: matrix.artifact_type == 'bin'
+      - name: Export Library
+        run: |-
+          mkdir -p _packages
+          cp target/release/${{ matrix.output_name }}.* _packages/ 2>/dev/null || true
+        shell: bash
+        if: matrix.artifact_type == 'lib' && (matrix.has_bin || !matrix.has_archive)
+      - name: Package Binary
+        run: |-
+          ARCHIVE_DIR="${PWD}/_packages"
+          mkdir -p "$ARCHIVE_DIR"
+          STAGING_DIR="target/archive_staging/${{ matrix.output_name }}"
+          mkdir -p "$STAGING_DIR"
+          cp "target/release/${{ matrix.output_name }}${{ matrix.bin_ext }}" "$STAGING_DIR/"
+          for f in ${{ join(matrix.include_files, ' ') }}; do
+            if [ -f "$f" ]; then
+              cp "$f" "$STAGING_DIR/"
+            fi
+          done
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            (cd "$STAGING_DIR" && 7z a -tzip "$ARCHIVE_DIR/${{ matrix.output_name }}.zip" .) > /dev/null
+          else
+            tar -czf "$ARCHIVE_DIR/${{ matrix.output_name }}.tar.gz" -C "$STAGING_DIR" .
+          fi
+        shell: bash
+        if: matrix.artifact_type == 'bin' && matrix.has_archive
+      - name: Package Library
+        run: |-
+          ARCHIVE_DIR="${PWD}/_packages"
+          mkdir -p "$ARCHIVE_DIR"
+          STAGING_DIR="target/archive_staging/${{ matrix.output_name }}"
+          mkdir -p "$STAGING_DIR"
+          cp target/release/lib${{ matrix.artifact_bin }}.* "$STAGING_DIR/" 2>/dev/null || true
+          cp target/release/${{ matrix.artifact_bin }}.* "$STAGING_DIR/" 2>/dev/null || true
+          cp target/release/${{ matrix.output_name }}.* "$STAGING_DIR/" 2>/dev/null || true
+          for f in ${{ join(matrix.include_files, ' ') }}; do
+            if [ -f "$f" ]; then
+              cp "$f" "$STAGING_DIR/"
+            fi
+          done
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            (cd "$STAGING_DIR" && 7z a -tzip "$ARCHIVE_DIR/${{ matrix.output_name }}.zip" .) > /dev/null
+          else
+            tar -czf "$ARCHIVE_DIR/${{ matrix.output_name }}.tar.gz" -C "$STAGING_DIR" .
+          fi
+        shell: bash
+        if: matrix.artifact_type == 'lib' && matrix.has_archive
+      - name: Install cargo-deb
+        uses: taiki-e/install-action@v2
+        if: ${{ matrix.has_deb }}
+        with:
+          tool: cargo-deb
+      - name: Build .deb package
+        run: |-
+          mkdir -p _packages
+          cargo deb --target ${{ matrix.target_triple }} --no-build -o _packages/
+          for f in _packages/*.deb; do
+            [ -f "$f" ] && mv "$f" "_packages/${{ matrix.output_name }}.deb"
+          done
+        shell: bash
+        if: ${{ matrix.has_deb }}
+      - name: Install cargo-generate-rpm
+        uses: taiki-e/install-action@v2
+        if: ${{ matrix.has_rpm }}
+        with:
+          tool: cargo-generate-rpm
+      - name: Build .rpm package
+        run: |-
+          mkdir -p _packages
+          cargo generate-rpm -o _packages/
+          for f in _packages/*.rpm; do
+            [ -f "$f" ] && mv "$f" "_packages/${{ matrix.output_name }}.rpm"
+          done
+        shell: bash
+        if: ${{ matrix.has_rpm }}
+      - name: Install cargo-wix
+        uses: taiki-e/install-action@v2
+        if: ${{ matrix.has_msi }}
+        with:
+          tool: cargo-wix
+      - name: Build .msi package
+        run: |-
+          if (!(Test-Path _packages)) { New-Item -ItemType Directory -Path _packages }
+          cargo wix --target ${{ matrix.target_triple }} -o _packages/
+          $msi = Get-ChildItem "_packages\*.msi" | Select-Object -First 1
+          if ($msi) { Rename-Item -Path $msi.FullName -NewName "${{ matrix.output_name }}.msi" }
+        shell: pwsh
+        if: ${{ matrix.has_msi }}
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.output_name }}
+          path: _packages/
+  release:
+    name: Release Artifacts
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Publish to crates.io
+        uses: ./.github/actions/cargo-publish
+        env:
+          CRATES_TOKEN: ${{ secrets.CRATES_TOKEN }}
+      - name: Download Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          merge-multiple: true
+          path: ./artifacts
+      - name: Display structure
+        run: find ./artifacts -type f | sort
+        shell: bash
+      - name: Publish Release
+        uses: softprops/action-gh-release@v3
+        with:
+          fail_on_unmatched_files: true
+          files: ./artifacts/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

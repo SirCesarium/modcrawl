@@ -1,0 +1,67 @@
+version = 1
+platform = "github"
+lang = "rust"
+
+[[artifacts]]
+type = "bin"
+name = "modcrawl"
+outputName = "{name}-{os}-{arch}-{abi}"
+
+[[artifacts]]
+type = "lib"
+name = "modcrawl"
+outputName = "{name}-{os}-{arch}-{abi}"
+headers = true
+
+# --- LINUX ---
+[[targets]]
+id = "linux-gnu"
+for = "modcrawl"
+os = "linux"
+arch = ["x86_64", "arm64"]
+abi = "gnu"
+packages = ["bin", "tar.gz"]
+
+[[targets]]
+id = "linux-musl"
+for = "modcrawl"
+os = "linux"
+arch = ["x86_64", "arm64"]
+abi = "musl"
+defaultFeatures = false
+packages = ["bin", "tar.gz"]
+
+# --- WINDOWS ---
+[[targets]]
+id = "windows-msvc"
+for = "modcrawl"
+os = "windows"
+arch = ["x86_64", "arm64"]
+abi = "msvc"
+packages = ["bin", "zip"]
+
+# --- MACOS ---
+[[targets]]
+id = "macos"
+for = "modcrawl"
+os = "macos"
+arch = ["x86_64", "arm64"]
+packages = ["bin", "tar.gz"]
+
+# --- PUBLISH ---
+[[publish]]
+type = "builtin"
+builtin = "download_artifact"
+targets = "all"
+
+[[publish]]
+type = "builtin"
+builtin = "github_release"
+targets = "all"
+
+[[publish]]
+type = "composite"
+name = "Publish to crates.io"
+action = "cargo-publish"
+secrets = ["CRATES_TOKEN"]
+targets = "once"

@@ -1,0 +1,16 @@
+name: Publish to Crates.io
+description: Publish the crate to crates.io
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Publish
+      run: cargo publish --token ${{ env.CRATES_TOKEN }}
+      shell: bash
+      continue-on-error: true
