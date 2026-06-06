@@ -1970,9 +1970,9 @@ dependencies = [
 
 [[package]]
 name = "zipcrawl"
-version = "2.2.0"
+version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b365ea0b93a294cb9b868d1b74bef781c65d090194ec58bc0323cccac03d491"
+checksum = "0f464844180d49da52d8c90664a24cb10b6f761b1f223c6653d887794bafa749"
 dependencies = [
  "colored",
  "glob",
