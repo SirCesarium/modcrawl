@@ -4,7 +4,7 @@ use std::path::Path;
 use zipcrawl::ZipManager;
 
 use crate::{
-    core::detect_mod_type::{ModType, detect_mod_type},
+    core::detect_mod_type::{detect_mod_type, ModType},
     error::Result,
 };
 
