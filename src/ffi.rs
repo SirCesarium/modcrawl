@@ -5,16 +5,24 @@ use std::path::Path;
 use std::ptr;
 use std::slice;
 
+use crate::core::dep;
 use crate::core::identify::{identify, identify_reader};
+use crate::core::metadata;
 use crate::error::Result;
 
 fn to_c_string(result: Result<String>) -> *mut c_char {
     match result {
         Ok(s) => match CString::new(s) {
             Ok(cs) => cs.into_raw(),
-            Err(_) => ptr::null_mut(),
+            Err(e) => {
+                eprintln!("modcrawl: CString error: {e}");
+                ptr::null_mut()
+            }
         },
-        Err(_) => ptr::null_mut(),
+        Err(e) => {
+            eprintln!("modcrawl: {e:?}");
+            ptr::null_mut()
+        }
     }
 }
 
@@ -53,6 +61,182 @@ pub unsafe extern "C" fn modcrawl_identify_bytes(data: *const u8, len: usize) ->
     let slice = unsafe { slice::from_raw_parts(data, len) };
     let mut cursor = Cursor::new(slice);
     to_c_string(identify_reader(&mut cursor).map(|m| m.to_string()))
+}
+
+/// Read and parse metadata from a JAR file path.
+///
+/// Returns a human-readable C string that must be freed with `modcrawl_free_string`.
+/// Returns NULL on error.
+///
+/// # Safety
+///
+/// `path` must be a valid null-terminated C string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn modcrawl_metadata(path: *const c_char) -> *mut c_char {
+    if path.is_null() {
+        return ptr::null_mut();
+    }
+    let Ok(path_str) = unsafe { CStr::from_ptr(path) }.to_str() else {
+        return ptr::null_mut();
+    };
+    to_c_string(metadata::read_metadata(Path::new(path_str)).map(|m| m.to_string()))
+}
+
+/// Read and parse metadata from a JAR file path, returning JSON.
+///
+/// Returns a JSON C string that must be freed with `modcrawl_free_string`.
+/// Returns NULL on error.
+///
+/// # Safety
+///
+/// `path` must be a valid null-terminated C string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn modcrawl_metadata_json(path: *const c_char) -> *mut c_char {
+    if path.is_null() {
+        return ptr::null_mut();
+    }
+    let Ok(path_str) = unsafe { CStr::from_ptr(path) }.to_str() else {
+        return ptr::null_mut();
+    };
+    to_c_string(
+        metadata::read_metadata(Path::new(path_str))
+            .and_then(|m| serde_json::to_string(&m).map_err(Into::into)),
+    )
+}
+
+/// Read and parse metadata from a ZIP/JAR byte buffer.
+///
+/// Returns a human-readable C string that must be freed with `modcrawl_free_string`.
+/// Returns NULL on error.
+///
+/// # Safety
+///
+/// `data` must be valid for reads of `len` bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn modcrawl_metadata_bytes(data: *const u8, len: usize) -> *mut c_char {
+    if data.is_null() || len == 0 {
+        return ptr::null_mut();
+    }
+    let slice = unsafe { slice::from_raw_parts(data, len) };
+    let mut cursor = Cursor::new(slice);
+    to_c_string(metadata::read_metadata_reader(&mut cursor).map(|m| m.to_string()))
+}
+
+/// Read and parse metadata from a ZIP/JAR byte buffer, returning JSON.
+///
+/// Returns a JSON C string that must be freed with `modcrawl_free_string`.
+/// Returns NULL on error.
+///
+/// # Safety
+///
+/// `data` must be valid for reads of `len` bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn modcrawl_metadata_json_bytes(data: *const u8, len: usize) -> *mut c_char {
+    if data.is_null() || len == 0 {
+        return ptr::null_mut();
+    }
+    let slice = unsafe { slice::from_raw_parts(data, len) };
+    let mut cursor = Cursor::new(slice);
+    to_c_string(
+        metadata::read_metadata_reader(&mut cursor)
+            .and_then(|m| serde_json::to_string(&m).map_err(Into::into)),
+    )
+}
+
+/// Analyze dependencies from a JAR file path.
+///
+/// `include_jij` controls whether embedded JAR-in-JAR entries appear in the output.
+///
+/// Returns a human-readable C string that must be freed with `modcrawl_free_string`.
+/// Returns NULL on error.
+///
+/// # Safety
+///
+/// `path` must be a valid null-terminated C string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn modcrawl_deps(path: *const c_char, include_jij: bool) -> *mut c_char {
+    if path.is_null() {
+        return ptr::null_mut();
+    }
+    let Ok(path_str) = unsafe { CStr::from_ptr(path) }.to_str() else {
+        return ptr::null_mut();
+    };
+    to_c_string(dep::analyze(Path::new(path_str), include_jij).map(|r| r.to_string()))
+}
+
+/// Analyze dependencies from a JAR file path, returning JSON.
+///
+/// `include_jij` controls whether embedded JAR-in-JAR entries appear in the output.
+///
+/// Returns a JSON C string that must be freed with `modcrawl_free_string`.
+/// Returns NULL on error.
+///
+/// # Safety
+///
+/// `path` must be a valid null-terminated C string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn modcrawl_deps_json(path: *const c_char, include_jij: bool) -> *mut c_char {
+    if path.is_null() {
+        return ptr::null_mut();
+    }
+    let Ok(path_str) = unsafe { CStr::from_ptr(path) }.to_str() else {
+        return ptr::null_mut();
+    };
+    to_c_string(
+        dep::analyze(Path::new(path_str), include_jij)
+            .and_then(|r| serde_json::to_string(&r).map_err(Into::into)),
+    )
+}
+
+/// Analyze dependencies from a ZIP/JAR byte buffer.
+///
+/// `include_jij` controls whether embedded JAR-in-JAR entries appear in the output.
+///
+/// Returns a human-readable C string that must be freed with `modcrawl_free_string`.
+/// Returns NULL on error.
+///
+/// # Safety
+///
+/// `data` must be valid for reads of `len` bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn modcrawl_deps_bytes(
+    data: *const u8,
+    len: usize,
+    include_jij: bool,
+) -> *mut c_char {
+    if data.is_null() || len == 0 {
+        return ptr::null_mut();
+    }
+    let slice = unsafe { slice::from_raw_parts(data, len) };
+    let mut cursor = Cursor::new(slice);
+    to_c_string(dep::analyze_reader(&mut cursor, include_jij).map(|r| r.to_string()))
+}
+
+/// Analyze dependencies from a ZIP/JAR byte buffer, returning JSON.
+///
+/// `include_jij` controls whether embedded JAR-in-JAR entries appear in the output.
+///
+/// Returns a JSON C string that must be freed with `modcrawl_free_string`.
+/// Returns NULL on error.
+///
+/// # Safety
+///
+/// `data` must be valid for reads of `len` bytes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn modcrawl_deps_json_bytes(
+    data: *const u8,
+    len: usize,
+    include_jij: bool,
+) -> *mut c_char {
+    if data.is_null() || len == 0 {
+        return ptr::null_mut();
+    }
+    let slice = unsafe { slice::from_raw_parts(data, len) };
+    let mut cursor = Cursor::new(slice);
+    to_c_string(
+        dep::analyze_reader(&mut cursor, include_jij)
+            .and_then(|r| serde_json::to_string(&r).map_err(Into::into)),
+    )
 }
 
 /// Free a string returned by any `modcrawl_*` function.
