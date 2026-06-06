@@ -42,3 +42,81 @@ pub fn extract(mng: &mut ZipManager) -> Result<Vec<DepEntry>> {
 
     Ok(deps)
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Cursor, Write};
+    use zip::ZipWriter;
+
+    use super::*;
+    use crate::core::dep::types::DepKind;
+
+    fn make_zip_bytes(contents: &[(&str, &str)]) -> Vec<u8> {
+        let mut buf = Cursor::new(Vec::new());
+        let mut zip = ZipWriter::new(&mut buf);
+        for (name, content) in contents {
+            zip.start_file::<&str, ()>(name, Default::default())
+                .unwrap();
+            zip.write_all(content.as_bytes()).unwrap();
+        }
+        zip.finish().unwrap();
+        buf.into_inner()
+    }
+
+    #[test]
+    fn extract_depends() {
+        let json = r#"{
+            "schemaVersion": 1,
+            "id": "testmod",
+            "version": "1.0.0",
+            "depends": {
+                "fabric-api": ">=0.50.0",
+                "minecraft": "~1.20.1"
+            }
+        }"#;
+        let bytes = make_zip_bytes(&[("fabric.mod.json", json)]);
+        let mut mng = ZipManager::from_reader(&mut Cursor::new(bytes)).unwrap();
+        let deps = extract(&mut mng).unwrap();
+        assert_eq!(deps.len(), 2);
+        assert!(deps
+            .iter()
+            .any(|d| d.name == "fabric-api" && d.kind == DepKind::Required));
+        assert!(deps
+            .iter()
+            .any(|d| d.name == "minecraft" && d.kind == DepKind::Required));
+    }
+
+    #[test]
+    fn extract_recommends_and_suggests() {
+        let json = r#"{
+            "schemaVersion": 1,
+            "id": "testmod",
+            "version": "1.0.0",
+            "recommends": {
+                "sodium": "*"
+            },
+            "suggests": {
+                "iris": "*"
+            }
+        }"#;
+        let bytes = make_zip_bytes(&[("fabric.mod.json", json)]);
+        let mut mng = ZipManager::from_reader(&mut Cursor::new(bytes)).unwrap();
+        let deps = extract(&mut mng).unwrap();
+        assert_eq!(deps.len(), 2);
+        assert!(deps
+            .iter()
+            .any(|d| d.name == "sodium" && d.kind == DepKind::Recommended));
+        assert!(deps
+            .iter()
+            .any(|d| d.name == "iris" && d.kind == DepKind::Suggested));
+    }
+
+    #[test]
+    fn extract_empty_when_no_deps() {
+        let json = r#"{"schemaVersion": 1, "id": "testmod", "version": "1.0.0"}"#;
+        let bytes = make_zip_bytes(&[("fabric.mod.json", json)]);
+        let mut mng = ZipManager::from_reader(&mut Cursor::new(bytes)).unwrap();
+        let deps = extract(&mut mng).unwrap();
+        assert!(deps.is_empty());
+    }
+}

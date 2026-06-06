@@ -34,3 +34,41 @@ pub enum Error {
     #[diagnostic(code(modcrawl::unsupported_metadata))]
     UnsupportedMetadata(String),
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_display_io() {
+        let e = Error::Io(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "file not found",
+        ));
+        assert!(e.to_string().contains("file not found"));
+        assert!(e.to_string().contains("I/O error"));
+    }
+
+    #[test]
+    fn error_display_unsupported_metadata() {
+        let e = Error::UnsupportedMetadata("Foo.jar".to_owned());
+        assert_eq!(e.to_string(), "Unsupported metadata format for Foo.jar");
+    }
+
+    #[test]
+    fn error_from_io() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied");
+        let e: Error = io_err.into();
+        assert!(matches!(e, Error::Io(_)));
+    }
+
+    #[test]
+    fn error_unsupported_metadata_code() {
+        use miette::Diagnostic;
+        let e = Error::UnsupportedMetadata("test".to_owned());
+        assert_eq!(
+            e.code().unwrap().to_string(),
+            "modcrawl::unsupported_metadata"
+        );
+    }
+}

@@ -108,3 +108,52 @@ impl fmt::Display for FabricModMetadata {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn minimal() {
+        let json = r#"{"schemaVersion": 1, "id": "testmod", "version": "1.0.0"}"#;
+        let meta = parse(json).unwrap();
+        assert_eq!(meta.id, "testmod");
+        assert_eq!(meta.version, "1.0.0");
+        assert_eq!(meta.schema_version, 1);
+    }
+
+    #[test]
+    fn full() {
+        let json = r#"{
+            "schemaVersion": 1,
+            "id": "testmod",
+            "version": "1.0.0",
+            "name": "Test Mod",
+            "description": "A test mod",
+            "authors": ["Alice", "Bob"],
+            "license": "MIT",
+            "depends": {
+                "fabric-api": ">=0.50.0"
+            },
+            "recommends": {
+                "sodium": "*"
+            }
+        }"#;
+        let meta = parse(json).unwrap();
+        assert_eq!(meta.name.as_deref(), Some("Test Mod"));
+        assert_eq!(meta.description.as_deref(), Some("A test mod"));
+        assert_eq!(meta.license.as_deref(), Some("MIT"));
+        assert!(meta.depends.contains_key("fabric-api"));
+        assert!(meta.recommends.contains_key("sodium"));
+    }
+
+    #[test]
+    fn display_output() {
+        let json = r#"{"schemaVersion": 1, "id": "testmod", "version": "1.0.0", "name": "Test"}"#;
+        let meta = parse(json).unwrap();
+        let out = meta.to_string();
+        assert!(out.contains("ID:       testmod"));
+        assert!(out.contains("Name:     Test"));
+        assert!(out.contains("Version:  1.0.0"));
+    }
+}

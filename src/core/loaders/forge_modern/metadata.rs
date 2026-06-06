@@ -134,3 +134,64 @@ impl fmt::Display for ModsTomlMetadata {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn minimal() {
+        let toml = r#"
+[[mods]]
+modId = "testmod"
+version = "1.0.0"
+"#;
+        let meta = parse(toml).unwrap();
+        assert_eq!(meta.mods.len(), 1);
+        assert_eq!(meta.mods[0].mod_id, "testmod");
+    }
+
+    #[test]
+    fn full() {
+        let toml = r#"
+modLoader = "javafml"
+loaderVersion = "[60,)"
+issueTrackerURL = "https://example.com/issues"
+license = "MIT"
+
+[[mods]]
+modId = "testmod"
+version = "1.0.0"
+displayName = "Test Mod"
+description = "A test mod"
+authors = "Alice"
+
+[[dependencies.testmod]]
+modId = "minecraft"
+type = "required"
+versionRange = ">=1.20"
+mandatory = true
+"#;
+        let meta = parse(toml).unwrap();
+        assert_eq!(meta.mod_loader.as_deref(), Some("javafml"));
+        assert_eq!(meta.loader_version.as_deref(), Some("[60,)"));
+        assert_eq!(meta.license.as_deref(), Some("MIT"));
+        assert_eq!(meta.mods.len(), 1);
+        assert_eq!(meta.mods[0].display_name.as_deref(), Some("Test Mod"));
+    }
+
+    #[test]
+    fn display_output() {
+        let toml = r#"
+[[mods]]
+modId = "testmod"
+version = "1.0.0"
+displayName = "Test Mod"
+"#;
+        let meta = parse(toml).unwrap();
+        let out = meta.to_string();
+        assert!(out.contains("Mod ID:   testmod"));
+        assert!(out.contains("Name:     Test Mod"));
+        assert!(out.contains("Version:  1.0.0"));
+    }
+}

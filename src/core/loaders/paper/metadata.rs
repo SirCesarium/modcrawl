@@ -40,3 +40,57 @@ impl fmt::Display for PaperPluginMetadata {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn minimal() {
+        let yaml = r#"
+name: TestPlugin
+version: "1.0.0"
+main: com.example.TestPlugin
+"#;
+        let meta = parse(yaml).unwrap();
+        assert_eq!(meta.name, "TestPlugin");
+        assert_eq!(meta.version, "1.0.0");
+        assert_eq!(meta.main, "com.example.TestPlugin");
+    }
+
+    #[test]
+    fn full() {
+        let yaml = r#"
+name: TestPlugin
+version: "1.0.0"
+main: com.example.TestPlugin
+description: A test plugin
+author: Alice
+authors: [Alice, Bob]
+website: https://example.com
+api-version: "1.20"
+folia-supported: true
+load: STARTUP
+bootstrapper: com.example.Bootstrap
+loader: com.example.Loader
+"#;
+        let meta = parse(yaml).unwrap();
+        assert_eq!(meta.description.as_deref(), Some("A test plugin"));
+        assert_eq!(meta.authors, vec!["Alice".to_string(), "Bob".to_string()]);
+        assert_eq!(meta.bootstrapper.as_deref(), Some("com.example.Bootstrap"));
+        assert_eq!(meta.loader.as_deref(), Some("com.example.Loader"));
+    }
+
+    #[test]
+    fn display_output() {
+        let yaml = r#"
+name: TestPlugin
+version: "1.0.0"
+main: com.example.TestPlugin
+"#;
+        let meta = parse(yaml).unwrap();
+        let out = meta.to_string();
+        assert!(out.contains("Name:     TestPlugin"));
+        assert!(out.contains("Version:  1.0.0"));
+    }
+}

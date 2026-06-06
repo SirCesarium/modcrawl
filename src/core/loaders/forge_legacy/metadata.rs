@@ -74,3 +74,49 @@ impl fmt::Display for ForgeLegacyDisplay<'_> {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn single_entry() {
+        let json = r#"[{
+            "modid": "testmod",
+            "name": "Test Mod",
+            "version": "1.0.0",
+            "mcversion": "1.20.1",
+            "description": "A test mod"
+        }]"#;
+        let meta = parse(json).unwrap();
+        assert_eq!(meta.len(), 1);
+        assert_eq!(meta[0].modid, "testmod");
+        assert_eq!(meta[0].name.as_deref(), Some("Test Mod"));
+        assert_eq!(meta[0].version.as_deref(), Some("1.0.0"));
+    }
+
+    #[test]
+    fn multiple_entries() {
+        let json = r#"[
+            {"modid": "mod_a", "version": "1.0"},
+            {"modid": "mod_b", "version": "2.0", "dependencies": ["mod_a"]}
+        ]"#;
+        let meta = parse(json).unwrap();
+        assert_eq!(meta.len(), 2);
+        assert_eq!(meta[1].dependencies, vec!["mod_a"]);
+    }
+
+    #[test]
+    fn display_output() {
+        let json = r#"[{
+            "modid": "testmod",
+            "name": "Test Mod",
+            "version": "1.0.0"
+        }]"#;
+        let meta = parse(json).unwrap();
+        let out = ForgeLegacyDisplay(&meta).to_string();
+        assert!(out.contains("Mod ID:   testmod"));
+        assert!(out.contains("Name:     Test Mod"));
+        assert!(out.contains("Version:  1.0.0"));
+    }
+}

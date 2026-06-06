@@ -99,6 +99,18 @@ impl VersionRange {
     fn parse_simple(s: &str, raw: Option<String>) -> Self {
         let trimmed = s.trim();
 
+        // Single < must be checked before split_once('<') so `<2.0`
+        // doesn't get caught by the `>=a<b` branch as `("", "2.0")`.
+        if let Some(max) = trimmed.strip_prefix('<') {
+            return Self {
+                min: None,
+                max: Some(max.to_owned()),
+                min_inclusive: true,
+                max_inclusive: false,
+                raw,
+            };
+        }
+
         if let Some((ge, lt)) = trimmed.split_once('<') {
             return Self {
                 min: Some(ge.trim().strip_prefix(">=").unwrap_or(ge.trim()).to_owned()),
@@ -113,16 +125,6 @@ impl VersionRange {
             return Self {
                 min: Some(min.to_owned()),
                 max: None,
-                min_inclusive: true,
-                max_inclusive: false,
-                raw,
-            };
-        }
-
-        if let Some(max) = trimmed.strip_prefix('<') {
-            return Self {
-                min: None,
-                max: Some(max.to_owned()),
                 min_inclusive: true,
                 max_inclusive: false,
                 raw,
@@ -247,5 +249,295 @@ impl fmt::Display for DepReport {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dep_kind_priority() {
+        assert_eq!(DepKind::Required.priority(), 5);
+        assert_eq!(DepKind::LoadBefore.priority(), 4);
+        assert_eq!(DepKind::Optional.priority(), 3);
+        assert_eq!(DepKind::Recommended.priority(), 2);
+        assert_eq!(DepKind::Suggested.priority(), 1);
+        assert_eq!(DepKind::Incompatible.priority(), 0);
+        assert_eq!(DepKind::Discouraged.priority(), 0);
+    }
+
+    #[test]
+    fn dep_kind_is_excluded() {
+        assert!(!DepKind::Required.is_excluded());
+        assert!(!DepKind::LoadBefore.is_excluded());
+        assert!(!DepKind::Optional.is_excluded());
+        assert!(!DepKind::Recommended.is_excluded());
+        assert!(!DepKind::Suggested.is_excluded());
+        assert!(DepKind::Incompatible.is_excluded());
+        assert!(DepKind::Discouraged.is_excluded());
+    }
+
+    #[test]
+    fn dep_kind_marker() {
+        assert_eq!(DepKind::Required.marker(), "*");
+        assert_eq!(DepKind::Optional.marker(), "-");
+        assert_eq!(DepKind::Recommended.marker(), "-");
+        assert_eq!(DepKind::Suggested.marker(), "-");
+        assert_eq!(DepKind::LoadBefore.marker(), "<");
+        assert_eq!(DepKind::Incompatible.marker(), "!");
+        assert_eq!(DepKind::Discouraged.marker(), "!");
+    }
+
+    #[test]
+    fn version_range_none() {
+        let v = VersionRange::parse(None);
+        assert_eq!(v.min, None);
+        assert_eq!(v.max, None);
+        assert!(v.min_inclusive);
+        assert!(!v.max_inclusive);
+        assert_eq!(v.raw, None);
+    }
+
+    #[test]
+    fn version_range_wildcard() {
+        let v = VersionRange::parse(Some("*".to_owned()));
+        assert_eq!(v.min, None);
+        assert_eq!(v.max, None);
+        assert_eq!(v.raw, Some("*".to_owned()));
+    }
+
+    #[test]
+    fn version_range_empty() {
+        let v = VersionRange::parse(Some(String::new()));
+        assert_eq!(v.min, None);
+        assert_eq!(v.max, None);
+    }
+
+    #[test]
+    fn version_range_maven_inclusive() {
+        let v = VersionRange::parse(Some("[1.0,2.0]".to_owned()));
+        assert_eq!(v.min, Some("1.0".to_owned()));
+        assert_eq!(v.max, Some("2.0".to_owned()));
+        assert!(v.min_inclusive);
+        assert!(v.max_inclusive);
+    }
+
+    #[test]
+    fn version_range_maven_exclusive_min() {
+        let v = VersionRange::parse(Some("(1.0,2.0]".to_owned()));
+        assert_eq!(v.min, Some("1.0".to_owned()));
+        assert_eq!(v.max, Some("2.0".to_owned()));
+        assert!(!v.min_inclusive);
+        assert!(v.max_inclusive);
+    }
+
+    #[test]
+    fn version_range_maven_unbounded_max() {
+        let v = VersionRange::parse(Some("[1.0,)".to_owned()));
+        assert_eq!(v.min, Some("1.0".to_owned()));
+        assert_eq!(v.max, None);
+        assert!(v.min_inclusive);
+        assert!(!v.max_inclusive);
+    }
+
+    #[test]
+    fn version_range_maven_unbounded_min() {
+        let v = VersionRange::parse(Some("(,2.0]".to_owned()));
+        assert_eq!(v.min, None);
+        assert_eq!(v.max, Some("2.0".to_owned()));
+        assert!(!v.min_inclusive);
+        assert!(v.max_inclusive);
+    }
+
+    #[test]
+    fn version_range_maven_exact() {
+        let v = VersionRange::parse(Some("[1.0]".to_owned()));
+        assert_eq!(v.min, Some("1.0".to_owned()));
+        assert_eq!(v.max, Some("1.0".to_owned()));
+        assert!(v.min_inclusive);
+        assert!(v.max_inclusive);
+    }
+
+    #[test]
+    fn version_range_simple_combined() {
+        let v = VersionRange::parse(Some(">=1.0<2.0".to_owned()));
+        assert_eq!(v.min, Some("1.0".to_owned()));
+        assert_eq!(v.max, Some("2.0".to_owned()));
+        assert!(v.min_inclusive);
+        assert!(!v.max_inclusive);
+    }
+
+    #[test]
+    fn version_range_simple_min_only() {
+        let v = VersionRange::parse(Some(">=1.0".to_owned()));
+        assert_eq!(v.min, Some("1.0".to_owned()));
+        assert_eq!(v.max, None);
+        assert!(v.min_inclusive);
+        assert!(!v.max_inclusive);
+    }
+
+    #[test]
+    fn version_range_simple_max_only() {
+        let v = VersionRange::parse(Some("<2.0".to_owned()));
+        assert_eq!(v.min, None);
+        assert_eq!(v.max, Some("2.0".to_owned()));
+        assert!(v.min_inclusive);
+        assert!(!v.max_inclusive);
+    }
+
+    #[test]
+    fn version_range_simple_exact() {
+        let v = VersionRange::parse(Some("1.0".to_owned()));
+        assert_eq!(v.min, Some("1.0".to_owned()));
+        assert_eq!(v.max, Some("1.0".to_owned()));
+        assert!(v.min_inclusive);
+        assert!(v.max_inclusive);
+    }
+
+    #[test]
+    fn version_range_display_falls_back_to_raw() {
+        let v = VersionRange::parse(Some("[1.0,2.0]".to_owned()));
+        assert_eq!(v.to_string(), "[1.0,2.0]");
+    }
+
+    #[test]
+    fn version_range_display_wildcard_when_no_raw() {
+        let v = VersionRange {
+            min: Some("1.0".to_owned()),
+            max: Some("2.0".to_owned()),
+            min_inclusive: true,
+            max_inclusive: true,
+            raw: None,
+        };
+        assert_eq!(v.to_string(), "*");
+    }
+
+    #[test]
+    fn dep_entry_new() {
+        let vr = VersionRange::parse(Some(">=1.0".to_owned()));
+        let e = DepEntry::new("test-mod", DepKind::Required, vr);
+        assert_eq!(e.name, "test-mod");
+        assert_eq!(e.kind, DepKind::Required);
+        assert_eq!(e.version_range.min, Some("1.0".to_owned()));
+    }
+
+    #[test]
+    fn dep_entry_display_with_version() {
+        let e = DepEntry::new(
+            "foo",
+            DepKind::Required,
+            VersionRange::parse(Some("1.0".to_owned())),
+        );
+        let s = e.to_string();
+        assert!(s.contains('*'));
+        assert!(s.contains("foo"));
+        assert!(s.contains("1.0"));
+    }
+
+    #[test]
+    fn dep_entry_display_without_version() {
+        let e = DepEntry::new("bar", DepKind::Optional, VersionRange::parse(None));
+        let s = e.to_string();
+        assert!(s.contains('-'));
+        assert!(s.contains("bar"));
+        assert!(!s.contains('('));
+    }
+
+    #[test]
+    fn jar_in_jar_display() {
+        let j = JarInJar {
+            path: "libs/foo.jar".to_owned(),
+        };
+        assert_eq!(j.to_string(), "  / libs/foo.jar");
+    }
+
+    #[test]
+    fn dep_report_empty() {
+        let r = DepReport {
+            dependencies: vec![],
+            jar_in_jar: vec![],
+        };
+        assert_eq!(r.to_string(), "");
+    }
+
+    #[test]
+    fn dep_report_only_required() {
+        let r = DepReport {
+            dependencies: vec![DepEntry::new(
+                "a",
+                DepKind::Required,
+                VersionRange::parse(None),
+            )],
+            jar_in_jar: vec![],
+        };
+        let s = r.to_string();
+        assert!(s.contains("* required"));
+        assert!(!s.contains("optional"));
+        assert!(!s.contains("load before"));
+        assert!(!s.contains("jar-in-jar"));
+        assert!(s.contains("Dependencies:"));
+    }
+
+    #[test]
+    fn dep_report_with_optional() {
+        let r = DepReport {
+            dependencies: vec![
+                DepEntry::new("a", DepKind::Required, VersionRange::parse(None)),
+                DepEntry::new("b", DepKind::Optional, VersionRange::parse(None)),
+            ],
+            jar_in_jar: vec![],
+        };
+        let s = r.to_string();
+        assert!(s.contains("* required"));
+        assert!(s.contains("- optional/recommended/suggested"));
+        assert!(!s.contains("load before"));
+    }
+
+    #[test]
+    fn dep_report_with_loadbefore() {
+        let r = DepReport {
+            dependencies: vec![
+                DepEntry::new("a", DepKind::Required, VersionRange::parse(None)),
+                DepEntry::new("b", DepKind::LoadBefore, VersionRange::parse(None)),
+            ],
+            jar_in_jar: vec![],
+        };
+        let s = r.to_string();
+        assert!(s.contains("< load before"));
+    }
+
+    #[test]
+    fn dep_report_with_jar_in_jar() {
+        let r = DepReport {
+            dependencies: vec![DepEntry::new(
+                "a",
+                DepKind::Required,
+                VersionRange::parse(None),
+            )],
+            jar_in_jar: vec![JarInJar {
+                path: "libs/foo.jar".to_owned(),
+            }],
+        };
+        let s = r.to_string();
+        assert!(s.contains("/ jar-in-jar"));
+        assert!(s.contains("Jar-in-jar:"));
+    }
+
+    #[test]
+    fn dep_report_legend_only_required() {
+        let r = DepReport {
+            dependencies: vec![DepEntry::new(
+                "x",
+                DepKind::Required,
+                VersionRange::parse(None),
+            )],
+            jar_in_jar: vec![],
+        };
+        let s = r.to_string();
+        assert!(!s.contains("- optional"));
+        assert!(!s.contains("< load"));
+        assert!(!s.contains("/ jar-in-jar"));
     }
 }

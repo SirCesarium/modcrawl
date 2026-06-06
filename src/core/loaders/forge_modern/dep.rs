@@ -25,6 +25,87 @@ pub fn extract(mng: &mut ZipManager) -> Result<Vec<DepEntry>> {
     Ok(deps)
 }
 
+#[cfg(test)]
+mod tests {
+    use std::io::{Cursor, Write};
+    use zip::ZipWriter;
+
+    use super::*;
+    use crate::core::dep::types::DepKind;
+
+    fn make_zip_bytes(contents: &[(&str, &str)]) -> Vec<u8> {
+        let mut buf = Cursor::new(Vec::new());
+        let mut zip = ZipWriter::new(&mut buf);
+        for (name, content) in contents {
+            zip.start_file::<&str, ()>(name, Default::default())
+                .unwrap();
+            zip.write_all(content.as_bytes()).unwrap();
+        }
+        zip.finish().unwrap();
+        buf.into_inner()
+    }
+
+    #[test]
+    fn extract_required_and_optional() {
+        let toml = r#"
+[[mods]]
+modId = "testmod"
+version = "1.0.0"
+
+[[dependencies.testmod]]
+modId = "minecraft"
+type = "required"
+versionRange = ">=1.20"
+mandatory = true
+
+[[dependencies.testmod]]
+modId = "optional-lib"
+type = "optional"
+versionRange = ">=2.0"
+"#;
+        let bytes = make_zip_bytes(&[("META-INF/mods.toml", toml)]);
+        let mut mng = ZipManager::from_reader(&mut Cursor::new(bytes)).unwrap();
+        let deps = extract(&mut mng).unwrap();
+        assert_eq!(deps.len(), 2);
+        assert!(deps
+            .iter()
+            .any(|d| d.name == "minecraft" && d.kind == DepKind::Required));
+        assert!(deps
+            .iter()
+            .any(|d| d.name == "optional-lib" && d.kind == DepKind::Optional));
+    }
+
+    #[test]
+    fn extract_skips_incompatible() {
+        let toml = r#"
+[[mods]]
+modId = "testmod"
+version = "1.0.0"
+
+[[dependencies.testmod]]
+modId = "bad-mod"
+type = "incompatible"
+"#;
+        let bytes = make_zip_bytes(&[("META-INF/mods.toml", toml)]);
+        let mut mng = ZipManager::from_reader(&mut Cursor::new(bytes)).unwrap();
+        let deps = extract(&mut mng).unwrap();
+        assert!(deps.is_empty());
+    }
+
+    #[test]
+    fn extract_empty_when_no_deps() {
+        let toml = r#"
+[[mods]]
+modId = "testmod"
+version = "1.0.0"
+"#;
+        let bytes = make_zip_bytes(&[("META-INF/mods.toml", toml)]);
+        let mut mng = ZipManager::from_reader(&mut Cursor::new(bytes)).unwrap();
+        let deps = extract(&mut mng).unwrap();
+        assert!(deps.is_empty());
+    }
+}
+
 fn forge_dep_kind(dep_type: Option<&str>) -> DepKind {
     match dep_type {
         Some("optional") => DepKind::Optional,
