@@ -21,7 +21,7 @@ type = "bin"
 os = "linux"
 arch = ["x86_64", "arm64"]
 abi = "gnu"
-packages = ["bin", "tar.gz"]
+packages = ["bin"]
 
 [[targets]]
 id = "linux-musl-bin"
@@ -31,7 +31,7 @@ os = "linux"
 arch = ["x86_64", "arm64"]
 abi = "musl"
 defaultFeatures = false
-packages = ["bin", "tar.gz"]
+packages = ["bin"]
 
 # --- LINUX LIB ---
 [[targets]]
@@ -41,7 +41,6 @@ type = "lib"
 os = "linux"
 arch = ["x86_64", "arm64"]
 abi = "gnu"
-headers = true
 packages = ["tar.gz"]
 
 [[targets]]
@@ -51,7 +50,6 @@ type = "lib"
 os = "linux"
 arch = ["x86_64", "arm64"]
 abi = "musl"
-headers = true
 defaultFeatures = false
 packages = ["tar.gz"]
 
@@ -63,7 +61,7 @@ type = "bin"
 os = "windows"
 arch = ["x86_64", "arm64"]
 abi = "msvc"
-packages = ["bin", "zip"]
+packages = ["bin"]
 
 # --- WINDOWS LIB ---
 [[targets]]
@@ -82,7 +80,7 @@ for = "modcrawl"
 type = "bin"
 os = "macos"
 arch = ["x86_64", "arm64"]
-packages = ["bin", "tar.gz"]
+packages = ["bin"]
 
 # --- MACOS LIB ---
 [[targets]]

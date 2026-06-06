@@ -27,11 +27,10 @@ jobs:
             target_triple: x86_64-unknown-linux-gnu
             packages:
               - bin
-              - tar.gz
             has_deb: false
             has_rpm: false
             has_msi: false
-            has_archive: true
+            has_archive: false
             has_bin: true
             include_files: []
             apt_packages: []
@@ -52,11 +51,10 @@ jobs:
             target_triple: aarch64-unknown-linux-gnu
             packages:
               - bin
-              - tar.gz
             has_deb: false
             has_rpm: false
             has_msi: false
-            has_archive: true
+            has_archive: false
             has_bin: true
             include_files: []
             apt_packages:
@@ -80,11 +78,10 @@ jobs:
             target_triple: x86_64-unknown-linux-musl
             packages:
               - bin
-              - tar.gz
             has_deb: false
             has_rpm: false
             has_msi: false
-            has_archive: true
+            has_archive: false
             has_bin: true
             include_files: []
             apt_packages:
@@ -107,117 +104,11 @@ jobs:
             target_triple: aarch64-unknown-linux-musl
             packages:
               - bin
-              - tar.gz
             has_deb: false
             has_rpm: false
             has_msi: false
-            has_archive: true
+            has_archive: false
             has_bin: true
-            include_files: []
-            apt_packages:
-              - gcc-aarch64-linux-gnu
-              - musl-tools
-            bin_ext: ""
-            headers: false
-            linker: aarch64-linux-gnu-gcc
-            linker_env:
-              - CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc
-            features: []
-            features_str: ""
-            default_features: false
-            abi: musl
-          - artifact: modcrawl
-            artifact_type: bin
-            os: linux
-            arch: x86_64
-            runs_on: ubuntu-24.04
-            output_name: modcrawl-linux-x86_64-gnu
-            artifact_bin: modcrawl
-            target_triple: x86_64-unknown-linux-gnu
-            packages:
-              - tar.gz
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: false
-            include_files: []
-            apt_packages: []
-            bin_ext: ""
-            headers: false
-            linker_env: []
-            features: []
-            features_str: ""
-            default_features: true
-            abi: gnu
-          - artifact: modcrawl
-            artifact_type: bin
-            os: linux
-            arch: arm64
-            runs_on: ubuntu-24.04-arm
-            output_name: modcrawl-linux-arm64-gnu
-            artifact_bin: modcrawl
-            target_triple: aarch64-unknown-linux-gnu
-            packages:
-              - tar.gz
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: false
-            include_files: []
-            apt_packages:
-              - gcc-aarch64-linux-gnu
-            bin_ext: ""
-            headers: false
-            linker: aarch64-linux-gnu-gcc
-            linker_env:
-              - CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-            features: []
-            features_str: ""
-            default_features: true
-            abi: gnu
-          - artifact: modcrawl
-            artifact_type: bin
-            os: linux
-            arch: x86_64
-            runs_on: ubuntu-24.04
-            output_name: modcrawl-linux-x86_64-musl
-            artifact_bin: modcrawl
-            target_triple: x86_64-unknown-linux-musl
-            packages:
-              - tar.gz
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: false
-            include_files: []
-            apt_packages:
-              - musl-tools
-            bin_ext: ""
-            headers: false
-            linker_env:
-              - CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc
-            features: []
-            features_str: ""
-            default_features: false
-            abi: musl
-          - artifact: modcrawl
-            artifact_type: bin
-            os: linux
-            arch: arm64
-            runs_on: ubuntu-24.04-arm
-            output_name: modcrawl-linux-arm64-musl
-            artifact_bin: modcrawl
-            target_triple: aarch64-unknown-linux-musl
-            packages:
-              - tar.gz
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: false
             include_files: []
             apt_packages:
               - gcc-aarch64-linux-gnu
@@ -241,11 +132,10 @@ jobs:
             target_triple: x86_64-pc-windows-msvc
             packages:
               - bin
-              - zip
             has_deb: false
             has_rpm: false
             has_msi: false
-            has_archive: true
+            has_archive: false
             has_bin: true
             include_files: []
             apt_packages: []
@@ -266,60 +156,11 @@ jobs:
             target_triple: aarch64-pc-windows-msvc
             packages:
               - bin
-              - zip
             has_deb: false
             has_rpm: false
             has_msi: false
-            has_archive: true
+            has_archive: false
             has_bin: true
-            include_files: []
-            apt_packages: []
-            bin_ext: .exe
-            headers: false
-            linker_env: []
-            features: []
-            features_str: ""
-            default_features: true
-            abi: msvc
-          - artifact: modcrawl
-            artifact_type: bin
-            os: windows
-            arch: x86_64
-            runs_on: windows-2025
-            output_name: modcrawl-windows-x86_64-msvc
-            artifact_bin: modcrawl
-            target_triple: x86_64-pc-windows-msvc
-            packages:
-              - zip
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: false
-            include_files: []
-            apt_packages: []
-            bin_ext: .exe
-            headers: false
-            linker_env: []
-            features: []
-            features_str: ""
-            default_features: true
-            abi: msvc
-          - artifact: modcrawl
-            artifact_type: bin
-            os: windows
-            arch: arm64
-            runs_on: windows-11-arm
-            output_name: modcrawl-windows-arm64-msvc
-            artifact_bin: modcrawl
-            target_triple: aarch64-pc-windows-msvc
-            packages:
-              - zip
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: false
             include_files: []
             apt_packages: []
             bin_ext: .exe
@@ -339,11 +180,10 @@ jobs:
             target_triple: x86_64-apple-darwin
             packages:
               - bin
-              - tar.gz
             has_deb: false
             has_rpm: false
             has_msi: false
-            has_archive: true
+            has_archive: false
             has_bin: true
             include_files: []
             apt_packages: []
@@ -363,11 +203,10 @@ jobs:
             target_triple: aarch64-apple-darwin
             packages:
               - bin
-              - tar.gz
             has_deb: false
             has_rpm: false
             has_msi: false
-            has_archive: true
+            has_archive: false
             has_bin: true
             include_files: []
             apt_packages: []
@@ -377,161 +216,6 @@ jobs:
             features: []
             features_str: ""
             default_features: true
-          - artifact: modcrawl
-            artifact_type: bin
-            os: macos
-            arch: x86_64
-            runs_on: macos-26
-            output_name: modcrawl-macos-x86_64
-            artifact_bin: modcrawl
-            target_triple: x86_64-apple-darwin
-            packages:
-              - tar.gz
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: false
-            include_files: []
-            apt_packages: []
-            bin_ext: ""
-            headers: false
-            linker_env: []
-            features: []
-            features_str: ""
-            default_features: true
-          - artifact: modcrawl
-            artifact_type: bin
-            os: macos
-            arch: arm64
-            runs_on: macos-26
-            output_name: modcrawl-macos-arm64
-            artifact_bin: modcrawl
-            target_triple: aarch64-apple-darwin
-            packages:
-              - tar.gz
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: false
-            include_files: []
-            apt_packages: []
-            bin_ext: ""
-            headers: false
-            linker_env: []
-            features: []
-            features_str: ""
-            default_features: true
-          - artifact: modcrawl
-            artifact_type: lib
-            os: linux
-            arch: x86_64
-            runs_on: ubuntu-24.04
-            output_name: libmodcrawl-linux-x86_64-gnu
-            artifact_bin: modcrawl
-            target_triple: x86_64-unknown-linux-gnu
-            packages:
-              - bin
-              - tar.gz
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: true
-            include_files: []
-            apt_packages: []
-            bin_ext: ""
-            headers: true
-            linker_env: []
-            features: []
-            features_str: ""
-            default_features: true
-            abi: gnu
-          - artifact: modcrawl
-            artifact_type: lib
-            os: linux
-            arch: arm64
-            runs_on: ubuntu-24.04-arm
-            output_name: libmodcrawl-linux-arm64-gnu
-            artifact_bin: modcrawl
-            target_triple: aarch64-unknown-linux-gnu
-            packages:
-              - bin
-              - tar.gz
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: true
-            include_files: []
-            apt_packages:
-              - gcc-aarch64-linux-gnu
-            bin_ext: ""
-            headers: true
-            linker: aarch64-linux-gnu-gcc
-            linker_env:
-              - CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-            features: []
-            features_str: ""
-            default_features: true
-            abi: gnu
-          - artifact: modcrawl
-            artifact_type: lib
-            os: linux
-            arch: x86_64
-            runs_on: ubuntu-24.04
-            output_name: libmodcrawl-linux-x86_64-musl
-            artifact_bin: modcrawl
-            target_triple: x86_64-unknown-linux-musl
-            packages:
-              - bin
-              - tar.gz
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: true
-            include_files: []
-            apt_packages:
-              - musl-tools
-            bin_ext: ""
-            headers: true
-            linker_env:
-              - CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc
-            features: []
-            features_str: ""
-            default_features: false
-            abi: musl
-          - artifact: modcrawl
-            artifact_type: lib
-            os: linux
-            arch: arm64
-            runs_on: ubuntu-24.04-arm
-            output_name: libmodcrawl-linux-arm64-musl
-            artifact_bin: modcrawl
-            target_triple: aarch64-unknown-linux-musl
-            packages:
-              - bin
-              - tar.gz
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: true
-            include_files: []
-            apt_packages:
-              - gcc-aarch64-linux-gnu
-              - musl-tools
-            bin_ext: ""
-            headers: true
-            linker: aarch64-linux-gnu-gcc
-            linker_env:
-              - CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc
-            features: []
-            features_str: ""
-            default_features: false
-            abi: musl
           - artifact: modcrawl
             artifact_type: lib
             os: linux
@@ -646,56 +330,6 @@ jobs:
             artifact_bin: modcrawl
             target_triple: x86_64-pc-windows-msvc
             packages:
-              - bin
-              - zip
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: true
-            include_files: []
-            apt_packages: []
-            bin_ext: .exe
-            headers: true
-            linker_env: []
-            features: []
-            features_str: ""
-            default_features: true
-            abi: msvc
-          - artifact: modcrawl
-            artifact_type: lib
-            os: windows
-            arch: arm64
-            runs_on: windows-11-arm
-            output_name: libmodcrawl-windows-arm64-msvc
-            artifact_bin: modcrawl
-            target_triple: aarch64-pc-windows-msvc
-            packages:
-              - bin
-              - zip
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: true
-            include_files: []
-            apt_packages: []
-            bin_ext: .exe
-            headers: true
-            linker_env: []
-            features: []
-            features_str: ""
-            default_features: true
-            abi: msvc
-          - artifact: modcrawl
-            artifact_type: lib
-            os: windows
-            arch: x86_64
-            runs_on: windows-2025
-            output_name: libmodcrawl-windows-x86_64-msvc
-            artifact_bin: modcrawl
-            target_triple: x86_64-pc-windows-msvc
-            packages:
               - zip
             has_deb: false
             has_rpm: false
@@ -705,7 +339,7 @@ jobs:
             include_files: []
             apt_packages: []
             bin_ext: .exe
-            headers: false
+            headers: true
             linker_env: []
             features: []
             features_str: ""
@@ -729,60 +363,12 @@ jobs:
             include_files: []
             apt_packages: []
             bin_ext: .exe
-            headers: false
+            headers: true
             linker_env: []
             features: []
             features_str: ""
             default_features: true
             abi: msvc
-          - artifact: modcrawl
-            artifact_type: lib
-            os: macos
-            arch: x86_64
-            runs_on: macos-26
-            output_name: libmodcrawl-macos-x86_64
-            artifact_bin: modcrawl
-            target_triple: x86_64-apple-darwin
-            packages:
-              - bin
-              - tar.gz
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: true
-            include_files: []
-            apt_packages: []
-            bin_ext: ""
-            headers: true
-            linker_env: []
-            features: []
-            features_str: ""
-            default_features: true
-          - artifact: modcrawl
-            artifact_type: lib
-            os: macos
-            arch: arm64
-            runs_on: macos-26
-            output_name: libmodcrawl-macos-arm64
-            artifact_bin: modcrawl
-            target_triple: aarch64-apple-darwin
-            packages:
-              - bin
-              - tar.gz
-            has_deb: false
-            has_rpm: false
-            has_msi: false
-            has_archive: true
-            has_bin: true
-            include_files: []
-            apt_packages: []
-            bin_ext: ""
-            headers: true
-            linker_env: []
-            features: []
-            features_str: ""
-            default_features: true
           - artifact: modcrawl
             artifact_type: lib
             os: macos
@@ -801,7 +387,7 @@ jobs:
             include_files: []
             apt_packages: []
             bin_ext: ""
-            headers: false
+            headers: true
             linker_env: []
             features: []
             features_str: ""
@@ -824,7 +410,7 @@ jobs:
             include_files: []
             apt_packages: []
             bin_ext: ""
-            headers: false
+            headers: true
             linker_env: []
             features: []
             features_str: ""
