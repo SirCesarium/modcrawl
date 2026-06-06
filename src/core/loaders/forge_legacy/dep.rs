@@ -22,6 +22,7 @@ pub fn extract(mng: &mut ZipManager) -> Result<Vec<DepEntry>> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::default_trait_access)]
 mod tests {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;

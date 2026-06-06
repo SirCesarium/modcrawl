@@ -25,7 +25,17 @@ pub fn extract(mng: &mut ZipManager) -> Result<Vec<DepEntry>> {
     Ok(deps)
 }
 
+fn forge_dep_kind(dep_type: Option<&str>) -> DepKind {
+    match dep_type {
+        Some("optional") => DepKind::Optional,
+        Some("incompatible") => DepKind::Incompatible,
+        Some("discouraged") => DepKind::Discouraged,
+        _ => DepKind::Required,
+    }
+}
+
 #[cfg(test)]
+#[allow(clippy::unwrap_used, clippy::default_trait_access)]
 mod tests {
     use std::io::{Cursor, Write};
     use zip::ZipWriter;
@@ -103,14 +113,5 @@ version = "1.0.0"
         let mut mng = ZipManager::from_reader(&mut Cursor::new(bytes)).unwrap();
         let deps = extract(&mut mng).unwrap();
         assert!(deps.is_empty());
-    }
-}
-
-fn forge_dep_kind(dep_type: Option<&str>) -> DepKind {
-    match dep_type {
-        Some("optional") => DepKind::Optional,
-        Some("incompatible") => DepKind::Incompatible,
-        Some("discouraged") => DepKind::Discouraged,
-        _ => DepKind::Required,
     }
 }

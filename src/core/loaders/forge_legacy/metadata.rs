@@ -76,6 +76,7 @@ impl fmt::Display for ForgeLegacyDisplay<'_> {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

@@ -36,15 +36,15 @@ pub enum Error {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
+    use std::io;
+
     use super::*;
 
     #[test]
     fn error_display_io() {
-        let e = Error::Io(std::io::Error::new(
-            std::io::ErrorKind::NotFound,
-            "file not found",
-        ));
+        let e = Error::Io(io::Error::new(io::ErrorKind::NotFound, "file not found"));
         assert!(e.to_string().contains("file not found"));
         assert!(e.to_string().contains("I/O error"));
     }
@@ -57,7 +57,7 @@ mod tests {
 
     #[test]
     fn error_from_io() {
-        let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "denied");
+        let io_err = io::Error::new(io::ErrorKind::PermissionDenied, "denied");
         let e: Error = io_err.into();
         assert!(matches!(e, Error::Io(_)));
     }

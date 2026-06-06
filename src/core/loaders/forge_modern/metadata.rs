@@ -136,6 +136,7 @@ impl fmt::Display for ModsTomlMetadata {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

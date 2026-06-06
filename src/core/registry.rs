@@ -120,6 +120,8 @@ impl Default for Registry {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use std::io::Cursor;
+
     use super::*;
     use crate::core::dep::types::{DepEntry, DepKind, VersionRange};
     use crate::core::detect_mod_type::{ForgeModFormat, PluginType};
@@ -269,7 +271,7 @@ mod tests {
     }
 
     fn make_mng() -> ZipManager {
-        let mut cursor = std::io::Cursor::new(empty_zip_bytes());
+        let mut cursor = Cursor::new(empty_zip_bytes());
         ZipManager::from_reader(&mut cursor).unwrap()
     }
 
