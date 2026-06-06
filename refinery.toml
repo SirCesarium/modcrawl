@@ -21,6 +21,7 @@ type = "bin"
 os = "linux"
 arch = ["x86_64", "arm64"]
 abi = "gnu"
+features = ["cli"]
 packages = ["bin"]
 
 [[targets]]
@@ -31,6 +32,7 @@ os = "linux"
 arch = ["x86_64", "arm64"]
 abi = "musl"
 defaultFeatures = false
+features = ["cli"]
 packages = ["bin"]
 
 # --- LINUX LIB ---
@@ -61,6 +63,7 @@ type = "bin"
 os = "windows"
 arch = ["x86_64", "arm64"]
 abi = "msvc"
+features = ["cli"]
 packages = ["bin"]
 
 # --- WINDOWS LIB ---
@@ -80,6 +83,7 @@ for = "modcrawl"
 type = "bin"
 os = "macos"
 arch = ["x86_64", "arm64"]
+features = ["cli"]
 packages = ["bin"]
 
 # --- MACOS LIB ---
