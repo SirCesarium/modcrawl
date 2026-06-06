@@ -17,7 +17,7 @@ pub enum Commands {
     ///
     /// Finds hidden dependencies in mod metadata.
     ///
-    /// By default, ignores Jar-In-Jar dependencies, use `-j` to include them.
+    /// By default, ignores Jar-In-Jar dependencies, use `--include-jar-in-jar` to include them.
     #[command(aliases = &["d", "deps", "dependencies"])]
     Dep(dep::Args),
 
