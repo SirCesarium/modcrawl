@@ -8,7 +8,7 @@ readme = "README.md"
 repository = "https://github.com/SirCesarium/modcrawl"
 homepage = "https://github.com/SirCesarium/modcrawl"
 documentation = "https://docs.rs/modcrawl"
-keywords = ["minecraft", "mod", "plugin", "fabric", "forge", "neoforge", "bukkit", "paper"]
+keywords = ["minecraft", "mod", "analyzer", "loaders", "forge"]
 categories = ["development-tools", "development-tools::ffi", "command-line-utilities"]
 
 [features]
