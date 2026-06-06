@@ -10,43 +10,88 @@ outputName = "{name}-{os}-{arch}-{abi}"
 [[artifacts]]
 type = "lib"
 name = "modcrawl"
-outputName = "{name}-{os}-{arch}-{abi}"
+outputName = "lib{name}-{os}-{arch}-{abi}"
 headers = true
 
-# --- LINUX ---
+# --- LINUX BIN ---
 [[targets]]
-id = "linux-gnu"
+id = "linux-gnu-bin"
 for = "modcrawl"
+type = "bin"
 os = "linux"
 arch = ["x86_64", "arm64"]
 abi = "gnu"
 packages = ["bin", "tar.gz"]
 
 [[targets]]
-id = "linux-musl"
+id = "linux-musl-bin"
 for = "modcrawl"
+type = "bin"
 os = "linux"
 arch = ["x86_64", "arm64"]
 abi = "musl"
 defaultFeatures = false
 packages = ["bin", "tar.gz"]
 
-# --- WINDOWS ---
+# --- LINUX LIB ---
 [[targets]]
-id = "windows-msvc"
+id = "linux-gnu-lib"
 for = "modcrawl"
+type = "lib"
+os = "linux"
+arch = ["x86_64", "arm64"]
+abi = "gnu"
+headers = true
+packages = ["tar.gz"]
+
+[[targets]]
+id = "linux-musl-lib"
+for = "modcrawl"
+type = "lib"
+os = "linux"
+arch = ["x86_64", "arm64"]
+abi = "musl"
+headers = true
+defaultFeatures = false
+packages = ["tar.gz"]
+
+# --- WINDOWS BIN ---
+[[targets]]
+id = "windows-msvc-bin"
+for = "modcrawl"
+type = "bin"
 os = "windows"
 arch = ["x86_64", "arm64"]
 abi = "msvc"
 packages = ["bin", "zip"]
 
-# --- MACOS ---
+# --- WINDOWS LIB ---
 [[targets]]
-id = "macos"
+id = "windows-msvc-lib"
 for = "modcrawl"
+type = "lib"
+os = "windows"
+arch = ["x86_64", "arm64"]
+abi = "msvc"
+packages = ["zip"]
+
+# --- MACOS BIN ---
+[[targets]]
+id = "macos-bin"
+for = "modcrawl"
+type = "bin"
 os = "macos"
 arch = ["x86_64", "arm64"]
 packages = ["bin", "tar.gz"]
+
+# --- MACOS LIB ---
+[[targets]]
+id = "macos-lib"
+for = "modcrawl"
+type = "lib"
+os = "macos"
+arch = ["x86_64", "arm64"]
+packages = ["tar.gz"]
 
 # --- PUBLISH ---
 [[publish]]
