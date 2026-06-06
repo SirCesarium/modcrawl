@@ -1,10 +1,22 @@
 [package]
 name = "modcrawl"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
+description = "Detect, inspect, and analyze Minecraft mods and plugins from JAR files"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/SirCesarium/modcrawl"
+homepage = "https://github.com/SirCesarium/modcrawl"
+documentation = "https://docs.rs/modcrawl"
+keywords = ["minecraft", "mod", "plugin", "fabric", "forge", "neoforge", "bukkit", "paper"]
+categories = ["development-tools", "development-tools::ffi", "command-line-utilities"]
+
+[features]
+default = ["cli"]
+cli = ["dep:clap"]
 
 [dependencies]
-clap = { version = "4.6.1", features = ["derive"] }
+clap = { version = "4.6.1", features = ["derive"], optional = true }
 miette = { version = "7.6.0", features = ["fancy"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde-saphyr = "0.0.27"
@@ -16,6 +28,7 @@ zipcrawl = { version = "2.1.0", default-features = false, features = ["serde"] }
 [[bin]]
 name = "modcrawl"
 path = "src/main.rs"
+required-features = ["cli"]
 
 [lib]
 name = "modcrawl"
