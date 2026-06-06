@@ -632,10 +632,36 @@ jobs:
         with:
           name: ${{ matrix.output_name }}
           path: _packages/
+  generate_headers:
+    name: Generate C Headers
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Install cbindgen
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cbindgen
+      - name: Generate modcrawl.h
+        run: |-
+          if [ -f "cbindgen.toml" ]; then
+            cbindgen --config cbindgen.toml --crate "modcrawl" --output "modcrawl.h"
+          else
+            cbindgen --crate "modcrawl" --output "modcrawl.h"
+          fi
+        shell: bash
+      - name: Upload Headers
+        uses: actions/upload-artifact@v7
+        with:
+          name: headers-artifacts
+          path: "*.h"
   release:
     name: Release Artifacts
     needs:
       - build
+      - generate_headers
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
