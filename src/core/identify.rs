@@ -3,10 +3,8 @@ use std::path::Path;
 
 use zipcrawl::ZipManager;
 
-use crate::{
-    core::detect_mod_type::{detect_mod_type, ModType},
-    error::Result,
-};
+use crate::core::detect_mod_type::ModType;
+use crate::error::Result;
 
 /// Detect the mod/plugin type from a JAR file on disk.
 ///
@@ -16,8 +14,7 @@ use crate::{
 pub fn identify(path: &Path) -> Result<ModType> {
     let mut mng = ZipManager::new(path)?;
     let entries = mng.entries()?;
-
-    Ok(detect_mod_type(&entries))
+    Ok(super::REGISTRY.detect(&entries))
 }
 
 /// Detect the mod/plugin type from a ZIP archive read via a `Read` impl.
@@ -28,6 +25,5 @@ pub fn identify(path: &Path) -> Result<ModType> {
 pub fn identify_reader<R: Read>(reader: &mut R) -> Result<ModType> {
     let mut mng = ZipManager::from_reader(reader)?;
     let entries = mng.entries()?;
-
-    Ok(detect_mod_type(&entries))
+    Ok(super::REGISTRY.detect(&entries))
 }
