@@ -31,6 +31,8 @@ pub struct Args {
 ///
 /// Returns an error if a JAR cannot be read.
 pub fn run(args: &Args) -> Result<()> {
+    let mut total_entries = 0usize;
+
     for file in &args.file {
         let entries = match classfile::mixins(file) {
             Ok(e) => e,
@@ -48,6 +50,8 @@ pub fn run(args: &Args) -> Result<()> {
         if entries.is_empty() {
             continue;
         }
+
+        total_entries += entries.len();
 
         if args.quiet {
             if args.file.len() > 1 {
@@ -76,5 +80,11 @@ pub fn run(args: &Args) -> Result<()> {
             }
         }
     }
+
+    if total_entries == 0 && !args.file.is_empty() {
+        let n = args.file.len();
+        eprintln!("No mixins found in {n} file(s).");
+    }
+
     Ok(())
 }

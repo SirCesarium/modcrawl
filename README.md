@@ -210,14 +210,37 @@ $ modcrawl mixins MyMod.jar
 
 Finds `.class` files that appear in more than one JAR — useful for detecting classpath conflicts between mods. Uses zip entry listing only, no classfile parsing needed.
 
+By default, output is grouped by conflict pair (two JARs that share classes):
+
 ```
 $ modcrawl dupes a.jar b.jar c.jar
-  com/example/SomeClass.class:
+── Classpath Conflicts ──
+
+  a.jar
+  b.jar
+  ── 3 shared classes ──
+    com/example/SomeClass.class
+    com/example/OtherClass.class
+    com/example/ThirdClass.class
+```
+
+`--by-class` / `-b` groups by class instead (legacy format), showing how many JARs each class appears in:
+
+```
+$ modcrawl dupes a.jar b.jar c.jar --by-class
+  com/example/SomeClass.class  (in 2 JARs)
     a.jar
     b.jar
 ```
 
-`--json` / `-j` for machine-readable output.
+`--count` / `-c` shows only a summary:
+
+```
+$ modcrawl dupes *.jar --count
+Found 42 duplicate classes across 15 JAR files.
+```
+
+`--json` / `-j` for machine-readable output. Combine with `--count` for a compact JSON summary.
 
 ## License
 

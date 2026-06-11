@@ -33,6 +33,8 @@ pub struct Args {
 ///
 /// Returns an error if a JAR cannot be read.
 pub fn run(args: &Args) -> Result<()> {
+    let mut total_matches = 0usize;
+
     for file in &args.file {
         let matches = match classfile::grep(file, &args.pattern) {
             Ok(m) => m,
@@ -50,6 +52,8 @@ pub fn run(args: &Args) -> Result<()> {
         if matches.is_empty() {
             continue;
         }
+
+        total_matches += matches.len();
 
         if args.quiet {
             if args.file.len() > 1 {
@@ -78,5 +82,14 @@ pub fn run(args: &Args) -> Result<()> {
             }
         }
     }
+
+    if total_matches == 0 && !args.file.is_empty() {
+        let n = args.file.len();
+        eprintln!(
+            "No matches found for pattern \"{}\" in {n} file(s).",
+            args.pattern
+        );
+    }
+
     Ok(())
 }
