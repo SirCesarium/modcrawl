@@ -14,12 +14,16 @@ modcrawl deps MyMod.jar                           # dependencies with version ra
 modcrawl deps MyMod.jar --include-jar-in-jar       # include embedded JARs
 modcrawl classes MyMod.jar                        # list .class files
 modcrawl grep "func_" MyMod.jar                   # search constant pool
+modcrawl mixins MyMod.jar                         # extract @Mixin targets
+modcrawl dupes a.jar b.jar c.jar                  # find duplicate classes
 ```
 
 ```bash
 cat *.jar | modcrawl type                         # detect many at once
 modcrawl deps *.jar                               # per-file, continues on error
 modcrawl grep "net/minecraft/world" *.jar --quiet  # which mods reference a class
+modcrawl mixins *.jar --quiet                      # which jars have mixins
+modcrawl dupes *.jar --json                        # JSON of all class dupes
 ```
 
 ## How it works
@@ -109,6 +113,8 @@ Every core function is exposed as a C-compatible export:
 | `modcrawl_deps_json_bytes(data, len, include_jij)` | JSON deps |
 | `modcrawl_classes_json(path)` | JSON list of .class files |
 | `modcrawl_grep_json(path, pattern)` | JSON grep matches |
+| `modcrawl_mixins_json(path)` | JSON list of mixin targets |
+| `modcrawl_dupes_json(paths)` | JSON list of duplicate classes |
 | `modcrawl_free_string(s)` | — (frees returned strings) |
 
 All string-returning functions return null-terminated C strings owned by the caller — free with `modcrawl_free_string`. NULL means an error occurred (details printed to stderr).
@@ -139,6 +145,8 @@ if (json) {
 | `dep` | `d`, `deps` | Analyze dependencies (`-j` JSON, `--include-jar-in-jar`/`--jij`) |
 | `classes` | `c`, `cls` | List `.class` files with Java version and access flags |
 | `grep` | `g`, `search` | Search constant pool strings across all `.class` files |
+| `mixins` | `m`, `mixin` | Extract `@Mixin` targets from class-level annotations |
+| `dupes` | `dp`, `duplicate` | Find duplicate `.class` entries across multiple JARs |
 
 ### `type`
 
@@ -183,6 +191,33 @@ $ modcrawl grep "net/minecraft/world" *.jar --quiet
 Useful for crash investigation: find which mod references an obfuscated function or class without opening a single JAR.
 
 Flags: `--quiet` / `-q` (only show class file names), `--json` / `-j` (JSON output).
+
+### `mixins` (requires `classfile` feature)
+
+Extracts `@Mixin` targets from SpongePowered mixin annotations at the class level. Parses `RuntimeVisibleAnnotations` / `RuntimeInvisibleAnnotations` attributes and resolves both `value` (Class ref) and `targets` (String ref) element pairs — no decompilation needed.
+
+```
+$ modcrawl mixins MyMod.jar
+  some/mod/mixin/ExampleMixin.class ->
+    net/minecraft/world/entity/player/Player
+  another/mod/mixin/TitleScreenMixin.class ->
+    net/minecraft/client/gui/screens/TitleScreen
+```
+
+`--quiet` / `-q` (only show mixin class names), `--json` / `-j` (JSON output).
+
+### `dupes` (requires `classfile` feature)
+
+Finds `.class` files that appear in more than one JAR — useful for detecting classpath conflicts between mods. Uses zip entry listing only, no classfile parsing needed.
+
+```
+$ modcrawl dupes a.jar b.jar c.jar
+  com/example/SomeClass.class:
+    a.jar
+    b.jar
+```
+
+`--json` / `-j` for machine-readable output.
 
 ## License
 
