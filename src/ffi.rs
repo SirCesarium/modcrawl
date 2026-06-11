@@ -2,6 +2,7 @@ use std::ffi::{CStr, CString};
 use std::io::Cursor;
 use std::os::raw::c_char;
 use std::path::Path;
+use std::path::PathBuf;
 use std::ptr;
 use std::slice;
 
@@ -292,6 +293,63 @@ pub unsafe extern "C" fn modcrawl_grep_json(
     to_c_string(
         classfile::grep(Path::new(path_str), pattern_str)
             .and_then(|matches| serde_json::to_string(&matches).map_err(Into::into)),
+    )
+}
+
+/// Extract mixin targets from a JAR, returning JSON.
+///
+/// Returns a JSON C string that must be freed with `modcrawl_free_string`.
+/// Returns NULL on error.
+///
+/// # Safety
+///
+/// `path` must be a valid null-terminated C string.
+#[cfg(feature = "classfile")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn modcrawl_mixins_json(path: *const c_char) -> *mut c_char {
+    if path.is_null() {
+        return ptr::null_mut();
+    }
+    let Ok(path_str) = unsafe { CStr::from_ptr(path) }.to_str() else {
+        return ptr::null_mut();
+    };
+    to_c_string(
+        classfile::mixins(Path::new(path_str))
+            .and_then(|entries| serde_json::to_string(&entries).map_err(Into::into)),
+    )
+}
+
+/// Find duplicate class entries across multiple JARs, returning JSON.
+///
+/// `paths` is a null-terminated array of null-terminated strings.
+/// Returns a JSON C string that must be freed with `modcrawl_free_string`.
+/// Returns NULL on error.
+///
+/// # Safety
+///
+/// `paths` must be a valid null-terminated array of valid null-terminated C strings.
+#[cfg(feature = "classfile")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn modcrawl_dupes_json(paths: *mut *const c_char) -> *mut c_char {
+    if paths.is_null() {
+        return ptr::null_mut();
+    }
+    let mut path_vec: Vec<PathBuf> = Vec::new();
+    let mut i = 0;
+    loop {
+        let p = unsafe { *paths.add(i) };
+        if p.is_null() {
+            break;
+        }
+        if let Ok(s) = unsafe { CStr::from_ptr(p) }.to_str() {
+            path_vec.push(PathBuf::from(s));
+        }
+        i += 1;
+    }
+    let path_refs: Vec<&Path> = path_vec.iter().map(PathBuf::as_path).collect();
+    to_c_string(
+        classfile::find_duplicates(&path_refs)
+            .and_then(|entries| serde_json::to_string(&entries).map_err(Into::into)),
     )
 }
 

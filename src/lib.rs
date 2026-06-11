@@ -15,4 +15,4 @@ pub use core::metadata::{read_metadata, read_metadata_reader, ModMetadata};
 pub use error::{Error, Result};
 
 #[cfg(feature = "classfile")]
-pub use core::classfile::{ClassEntry, GrepMatch};
+pub use core::classfile::{ClassEntry, DupEntry, GrepMatch, MixinEntry};

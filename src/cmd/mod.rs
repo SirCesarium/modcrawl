@@ -8,6 +8,12 @@ pub mod classes;
 #[cfg(feature = "classfile")]
 pub mod grep;
 
+#[cfg(feature = "classfile")]
+pub mod mixins;
+
+#[cfg(feature = "classfile")]
+pub mod dupes;
+
 use clap::Parser;
 
 #[derive(Parser)]
@@ -46,4 +52,19 @@ pub enum Commands {
     #[cfg(feature = "classfile")]
     #[command(aliases = &["g", "search"])]
     Grep(grep::Args),
+
+    /// Extract `@Mixin` targets from class-level annotations.
+    ///
+    /// Looks for `SpongePowered` `@Mixin` annotations to find which classes
+    /// are being mixed into by each class in the JAR.
+    #[cfg(feature = "classfile")]
+    #[command(aliases = &["m", "mixin"])]
+    Mixins(mixins::Args),
+
+    /// Find duplicate `.class` entries across multiple JARs.
+    ///
+    /// Useful for detecting classpath conflicts between mods.
+    #[cfg(feature = "classfile")]
+    #[command(aliases = &["dp", "duplicate"])]
+    Dupes(dupes::Args),
 }

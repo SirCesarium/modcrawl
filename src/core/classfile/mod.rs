@@ -1,8 +1,10 @@
+use std::collections::HashMap;
 use std::io::Read;
 use std::path::Path;
 
 use java_class_rs::{
-    get_entry, get_utf8, parse_classfile, ClassAccessFlags, ClassFile, ConstantPoolEntry,
+    get_entry, get_utf8, parse_classfile, parse_specialized_attribute, ClassAccessFlags,
+    ClassFile, ConstantPoolEntry, ElementValue, ParsedAttribute,
 };
 use serde::Serialize;
 use zipcrawl::ZipManager;
@@ -21,6 +23,18 @@ pub struct GrepMatch {
     pub class_file: String,
     pub pool_tag: String,
     pub value: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct MixinEntry {
+    pub mixin_class: String,
+    pub target: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DupEntry {
+    pub class_name: String,
+    pub files: Vec<String>,
 }
 
 /// List all `.class` files in a JAR with basic metadata.
@@ -79,6 +93,165 @@ pub fn grep(path: &Path, pattern: &str) -> Result<Vec<GrepMatch>> {
     }
 
     Ok(matches)
+}
+
+/// Extract mixin targets from all `.class` files in a JAR.
+///
+/// Looks for `@Mixin` (`SpongePowered`) annotations at the class level.
+///
+/// # Errors
+///
+/// Returns an error if the JAR cannot be read.
+pub fn mixins(path: &Path) -> Result<Vec<MixinEntry>> {
+    let mut manager = ZipManager::new(path)?;
+    let entries = manager.entries()?;
+    let mut results = Vec::new();
+
+    for entry in &entries {
+        if !is_class_entry(&entry.name) || entry.is_dir {
+            continue;
+        }
+
+        let Ok(Some(cf)) = parse_class_in_jar(&mut manager, &entry.name) else {
+            continue;
+        };
+
+        let targets = extract_mixin_targets(&cf, &entry.name);
+        results.extend(targets);
+    }
+
+    Ok(results)
+}
+
+/// Find duplicate class entries across multiple JARs.
+///
+/// # Errors
+///
+/// Returns an error if any JAR cannot be read.
+pub fn find_duplicates(paths: &[&Path]) -> Result<Vec<DupEntry>> {
+    let mut class_to_files: HashMap<String, Vec<String>> = HashMap::new();
+
+    for &path in paths {
+        let mut manager = ZipManager::new(path)?;
+        let entries = manager.entries()?;
+        let file_name = path
+            .file_name()
+            .map_or_else(|| path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
+
+        for entry in &entries {
+            if is_class_entry(&entry.name) && !entry.is_dir {
+                class_to_files
+                    .entry(entry.name.clone())
+                    .or_default()
+                    .push(file_name.clone());
+            }
+        }
+    }
+
+    Ok(class_to_files
+        .into_iter()
+        .filter(|(_, files)| files.len() > 1)
+        .map(|(class_name, files)| DupEntry { class_name, files })
+        .collect())
+}
+
+fn extract_mixin_targets(cf: &ClassFile, class_name: &str) -> Vec<MixinEntry> {
+    let mut results = Vec::new();
+
+    for attr in &cf.attributes {
+        let parsed = parse_specialized_attribute(attr, &cf.constant_pool);
+        match parsed {
+            ParsedAttribute::RuntimeVisibleAnnotations(ref anns)
+            | ParsedAttribute::RuntimeInvisibleAnnotations(ref anns) => {
+                for ann in &anns.annotations {
+                    let Some(ann_type) = resolve_utf8(&cf.constant_pool, ann.type_index) else {
+                        continue;
+                    };
+                    if !is_mixin_annotation(&ann_type) {
+                        continue;
+                    }
+                    for (name_idx, value) in &ann.element_value_pairs {
+                        let Some(elem_name) = resolve_utf8(&cf.constant_pool, *name_idx) else {
+                            continue;
+                        };
+                        if elem_name != "value" && elem_name != "targets" {
+                            continue;
+                        }
+                        match value {
+                            ElementValue::Class { class_info_index } => {
+                                if let Some(target) = resolve_class_descriptor(
+                                    &cf.constant_pool,
+                                    *class_info_index,
+                                ) {
+                                    results.push(MixinEntry {
+                                        mixin_class: class_name.to_string(),
+                                        target,
+                                    });
+                                }
+                            }
+                            ElementValue::String { const_value_index } => {
+                                if let Some(target) =
+                                    resolve_utf8(&cf.constant_pool, *const_value_index)
+                                {
+                                    // string targets use raw internal names (e.g. "net/minecraft/...")
+                                    results.push(MixinEntry {
+                                        mixin_class: class_name.to_string(),
+                                        target,
+                                    });
+                                }
+                            }
+                            ElementValue::Array { values } => {
+                                for val in values {
+                                    match val {
+                                        ElementValue::Class { class_info_index } => {
+                                            if let Some(target) = resolve_class_descriptor(
+                                                &cf.constant_pool,
+                                                *class_info_index,
+                                            ) {
+                                                results.push(MixinEntry {
+                                                    mixin_class: class_name.to_string(),
+                                                    target,
+                                                });
+                                            }
+                                        }
+                                        ElementValue::String { const_value_index } => {
+                                            if let Some(target) =
+                                                resolve_utf8(&cf.constant_pool, *const_value_index)
+                                            {
+                                                results.push(MixinEntry {
+                                                    mixin_class: class_name.to_string(),
+                                                    target,
+                                                });
+                                            }
+                                        }
+                                        _ => {}
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    results
+}
+
+fn is_mixin_annotation(descriptor: &str) -> bool {
+    descriptor == "Lorg/spongepowered/asm/mixin/Mixin;"
+}
+
+fn resolve_class_descriptor(cp: &[ConstantPoolEntry], index: u16) -> Option<String> {
+    let desc = resolve_utf8(cp, index)?;
+    // strip leading 'L' and trailing ';' if present
+    let cleaned = desc
+        .strip_prefix('L')
+        .and_then(|s| s.strip_suffix(';'))
+        .unwrap_or(&desc);
+    Some(cleaned.to_string())
 }
 
 fn is_class_entry(name: &str) -> bool {

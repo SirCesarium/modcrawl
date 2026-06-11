@@ -12,7 +12,7 @@ keywords = ["minecraft", "mod", "analyzer", "loaders", "forge"]
 categories = ["development-tools", "development-tools::ffi", "command-line-utilities"]
 
 [features]
-default = ["cli"]
+default = ["cli", "classfile"]
 cli = ["dep:clap"]
 classfile = ["dep:java-class-rs"]
 

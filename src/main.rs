@@ -13,6 +13,10 @@ fn main() -> miette::Result<()> {
         Commands::Classes(args) => cmd::classes::run(args),
         #[cfg(feature = "classfile")]
         Commands::Grep(args) => cmd::grep::run(args),
+        #[cfg(feature = "classfile")]
+        Commands::Mixins(args) => cmd::mixins::run(args),
+        #[cfg(feature = "classfile")]
+        Commands::Dupes(args) => cmd::dupes::run(args),
     };
     result.into_diagnostic()?;
     Ok(())
