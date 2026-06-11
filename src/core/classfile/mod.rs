@@ -202,7 +202,7 @@ fn resolve_ref(
 }
 
 fn java_version_string(major: u16, _minor: u16) -> String {
-    let version = match major {
+    match major {
         45 => "1.1".to_string(),
         46 => "1.2".to_string(),
         47 => "1.3".to_string(),
@@ -226,8 +226,7 @@ fn java_version_string(major: u16, _minor: u16) -> String {
         65 => "21".to_string(),
         m if m > 65 => format!("{}+", m - 44),
         m => format!("{m}"),
-    };
-    version
+    }
 }
 
 fn format_class_access_flags(flags: ClassAccessFlags) -> Vec<String> {
