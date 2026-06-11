@@ -13,3 +13,6 @@ pub use core::detect_mod_type::ModType;
 pub use core::identify::{identify, identify_reader};
 pub use core::metadata::{read_metadata, read_metadata_reader, ModMetadata};
 pub use error::{Error, Result};
+
+#[cfg(feature = "classfile")]
+pub use core::classfile::{ClassEntry, GrepMatch};

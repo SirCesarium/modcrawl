@@ -10,6 +10,9 @@ use crate::core::identify::{identify, identify_reader};
 use crate::core::metadata;
 use crate::error::Result;
 
+#[cfg(feature = "classfile")]
+use crate::core::classfile;
+
 fn to_c_string(result: Result<String>) -> *mut c_char {
     match result {
         Ok(s) => match CString::new(s) {
@@ -236,6 +239,59 @@ pub unsafe extern "C" fn modcrawl_deps_json_bytes(
     to_c_string(
         dep::analyze_reader(&mut cursor, include_jij)
             .and_then(|r| serde_json::to_string(&r).map_err(Into::into)),
+    )
+}
+
+/// List all .class files from a JAR, returning JSON.
+///
+/// Returns a JSON C string that must be freed with `modcrawl_free_string`.
+/// Returns NULL on error.
+///
+/// # Safety
+///
+/// `path` must be a valid null-terminated C string.
+#[cfg(feature = "classfile")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn modcrawl_classes_json(path: *const c_char) -> *mut c_char {
+    if path.is_null() {
+        return ptr::null_mut();
+    }
+    let Ok(path_str) = unsafe { CStr::from_ptr(path) }.to_str() else {
+        return ptr::null_mut();
+    };
+    to_c_string(
+        classfile::list_classes(Path::new(path_str))
+            .and_then(|entries| serde_json::to_string(&entries).map_err(Into::into)),
+    )
+}
+
+/// Search the constant pool of all .class files in a JAR, returning JSON.
+///
+/// Returns a JSON C string that must be freed with `modcrawl_free_string`.
+/// Returns NULL on error.
+///
+/// # Safety
+///
+/// `path` must be a valid null-terminated C string.
+/// `pattern` must be a valid null-terminated C string.
+#[cfg(feature = "classfile")]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn modcrawl_grep_json(
+    path: *const c_char,
+    pattern: *const c_char,
+) -> *mut c_char {
+    if path.is_null() || pattern.is_null() {
+        return ptr::null_mut();
+    }
+    let Ok(path_str) = unsafe { CStr::from_ptr(path) }.to_str() else {
+        return ptr::null_mut();
+    };
+    let Ok(pattern_str) = unsafe { CStr::from_ptr(pattern) }.to_str() else {
+        return ptr::null_mut();
+    };
+    to_c_string(
+        classfile::grep(Path::new(path_str), pattern_str)
+            .and_then(|matches| serde_json::to_string(&matches).map_err(Into::into)),
     )
 }
 

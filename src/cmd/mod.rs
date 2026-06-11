@@ -2,6 +2,12 @@ pub mod dep;
 pub mod metadata;
 pub mod r#type;
 
+#[cfg(feature = "classfile")]
+pub mod classes;
+
+#[cfg(feature = "classfile")]
+pub mod grep;
+
 use clap::Parser;
 
 #[derive(Parser)]
@@ -28,4 +34,16 @@ pub enum Commands {
     /// Get mod type. (eg. `NeoForge` mod, `Fabric` mod, ...)
     #[command(name = "type", aliases = &["t", "ty"])]
     Type(r#type::Args),
+
+    /// List all `.class` files inside a JAR with Java version and access flags.
+    #[cfg(feature = "classfile")]
+    #[command(aliases = &["c", "cls"])]
+    Classes(classes::Args),
+
+    /// Search strings in the constant pool of all `.class` files inside a JAR.
+    ///
+    /// Useful for finding references to classes, methods, fields, or annotations.
+    #[cfg(feature = "classfile")]
+    #[command(aliases = &["g", "search"])]
+    Grep(grep::Args),
 }

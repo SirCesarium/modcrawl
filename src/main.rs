@@ -9,6 +9,10 @@ fn main() -> miette::Result<()> {
         Commands::Dep(args) => cmd::dep::run(args),
         Commands::Metadata(args) => cmd::metadata::run(args),
         Commands::Type(args) => cmd::r#type::run(args),
+        #[cfg(feature = "classfile")]
+        Commands::Classes(args) => cmd::classes::run(args),
+        #[cfg(feature = "classfile")]
+        Commands::Grep(args) => cmd::grep::run(args),
     };
     result.into_diagnostic()?;
     Ok(())

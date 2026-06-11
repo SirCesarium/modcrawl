@@ -33,6 +33,16 @@ pub enum Error {
     #[error("Unsupported metadata format for {0}")]
     #[diagnostic(code(modcrawl::unsupported_metadata))]
     UnsupportedMetadata(String),
+
+    #[cfg(feature = "classfile")]
+    #[error("Class file error: {0}")]
+    #[diagnostic(code(modcrawl::classfile))]
+    ClassFile(String),
+
+    #[cfg(feature = "classfile")]
+    #[error("Parse error: {0}")]
+    #[diagnostic(code(modcrawl::parse))]
+    Parse(String),
 }
 
 #[cfg(test)]
