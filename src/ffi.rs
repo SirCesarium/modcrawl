@@ -2,7 +2,6 @@ use std::ffi::{CStr, CString};
 use std::io::Cursor;
 use std::os::raw::c_char;
 use std::path::Path;
-use std::path::PathBuf;
 use std::ptr;
 use std::slice;
 
@@ -13,6 +12,9 @@ use crate::error::Result;
 
 #[cfg(feature = "classfile")]
 use crate::core::classfile;
+
+#[cfg(feature = "classfile")]
+use std::path::PathBuf;
 
 fn to_c_string(result: Result<String>) -> *mut c_char {
     match result {
