@@ -12,11 +12,14 @@ modcrawl metadata MyMod.jar                       # mod name, version, authors, 
 modcrawl metadata MyMod.jar --json                # same, as JSON
 modcrawl deps MyMod.jar                           # dependencies with version ranges
 modcrawl deps MyMod.jar --include-jar-in-jar       # include embedded JARs
+modcrawl classes MyMod.jar                        # list .class files
+modcrawl grep "func_" MyMod.jar                   # search constant pool
 ```
 
 ```bash
 cat *.jar | modcrawl type                         # detect many at once
 modcrawl deps *.jar                               # per-file, continues on error
+modcrawl grep "net/minecraft/world" *.jar --quiet  # which mods reference a class
 ```
 
 ## How it works
@@ -104,6 +107,8 @@ Every core function is exposed as a C-compatible export:
 | `modcrawl_deps_json(path, include_jij)` | JSON deps |
 | `modcrawl_deps_bytes(data, len, include_jij)` | Human-readable deps |
 | `modcrawl_deps_json_bytes(data, len, include_jij)` | JSON deps |
+| `modcrawl_classes_json(path)` | JSON list of .class files |
+| `modcrawl_grep_json(path, pattern)` | JSON grep matches |
 | `modcrawl_free_string(s)` | — (frees returned strings) |
 
 All string-returning functions return null-terminated C strings owned by the caller — free with `modcrawl_free_string`. NULL means an error occurred (details printed to stderr).
@@ -132,6 +137,8 @@ if (json) {
 | `type` | `t` | Detect mod/plugin type |
 | `metadata` | `m` | Read mod metadata (human or `-j` JSON) |
 | `dep` | `d`, `deps` | Analyze dependencies (`-j` JSON, `--include-jar-in-jar`/`--jij`) |
+| `classes` | `c`, `cls` | List `.class` files with Java version and access flags |
+| `grep` | `g`, `search` | Search constant pool strings across all `.class` files |
 
 ### `type`
 
@@ -144,6 +151,38 @@ Takes one or more JAR paths. Multi-file output prefixes each result with the fil
 ### `dep` / `deps`
 
 Takes one or more JAR paths. `--json` / `-j` for pretty-printed JSON. `--include-jar-in-jar` / `--jij` to show embedded JARs. Bundled dependencies are always filtered out of the external dependency list regardless of this flag.
+
+### `classes` (requires `classfile` feature)
+
+Lists every `.class` file inside a JAR with its Java version and access flags.
+
+```
+$ modcrawl classes MyMod.jar
+  mezz/jei/JustEnoughItems.class    Java 8   public
+  mezz/jei/color/ColorGetter.class  Java 8   public final
+```
+
+`--json` / `-j` for machine-readable output.
+
+### `grep` (requires `classfile` feature)
+
+Searches the **constant pool** of every `.class` file inside a JAR — no decompilation needed. Finds class references, method calls, field accesses, annotations, and raw UTF-8 strings.
+
+```
+$ modcrawl grep "func_186724_a" MyMod.jar
+  mezz/jei/color/ColorGetter.class:
+    Utf8: "(Lnet/minecraft/world/IBlockAccess;...)I"
+    MethodRef: "net/minecraft/client/renderer/color/BlockColors.func_186724_a:..."
+
+$ modcrawl grep "net/minecraft/world" *.jar --quiet
+  jei_1.12.2-4.16.1.1013.jar:
+    mezz/jei/color/ColorGetter.class
+    mezz/jei/plugins/vanilla/anvil/AnvilRecipeMaker.class
+```
+
+Useful for crash investigation: find which mod references an obfuscated function or class without opening a single JAR.
+
+Flags: `--quiet` / `-q` (only show class file names), `--json` / `-j` (JSON output).
 
 ## License
 
