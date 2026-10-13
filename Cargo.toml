@@ -48,4 +48,4 @@ absolute_paths = "deny"
 cbindgen = "0.29.3"
 
 [dev-dependencies]
-zip = "8"
+zip = "9"
