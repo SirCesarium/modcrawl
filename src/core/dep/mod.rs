@@ -96,12 +96,22 @@ fn find_embedded_jars(entries: &[zipcrawl::ZipEntry]) -> Vec<JarInJar> {
 
 fn is_bundled(name: &str, jars: &[JarInJar]) -> bool {
     let prefix = format!("{name}-");
+
     jars.iter().any(|j| {
         let stem = Path::new(&j.path)
             .file_stem()
             .unwrap_or_default()
             .to_string_lossy();
-        stem == name || stem.starts_with(&prefix)
+
+        if stem == name {
+            return true;
+        }
+
+        // A versioned bundle is `<name>-<version>.jar`, where the version starts
+        // with a digit. Anything else after the dash (`-common`, `-core`) is a
+        // different artifact, not a bundled copy of this dependency.
+        stem.strip_prefix(&prefix)
+            .is_some_and(|suffix| suffix.starts_with(|c: char| c.is_ascii_digit()))
     })
 }
 
@@ -293,6 +303,24 @@ mod tests {
         assert!(is_bundled(
             "flywheel",
             &[jar("META-INF/jars/flywheel-1.0.0.jar")]
+        ));
+    }
+
+    #[test]
+    fn a_shared_artifact_prefix_does_not_bundle_a_real_dependency() {
+        assert!(!is_bundled("library", &[jar("library-common-2.0.jar")]));
+    }
+
+    #[test]
+    fn a_multi_segment_version_stem_bundles_the_dependency() {
+        assert!(is_bundled("fabric-api", &[jar("fabric-api-0.92.0.jar")]));
+    }
+
+    #[test]
+    fn a_hyphenated_name_with_a_version_bundles_the_dependency() {
+        assert!(is_bundled(
+            "cloth-config",
+            &[jar("cloth-config-16.0.0.jar")]
         ));
     }
 }
