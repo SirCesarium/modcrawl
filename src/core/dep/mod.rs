@@ -122,7 +122,7 @@ mod tests {
 
     #[test]
     fn dedup_empty() {
-        assert!(dedup_deps(vec![]).is_empty());
+        assert_eq!(dedup_deps(vec![]), []);
     }
 
     #[test]
@@ -178,7 +178,7 @@ mod tests {
     #[test]
     fn find_jars_empty_when_no_jars() {
         let entries = vec![zip_entry("META-INF/MANIFEST.MF", false)];
-        assert!(find_embedded_jars(&entries).is_empty());
+        assert_eq!(find_embedded_jars(&entries), []);
     }
 
     #[test]
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn find_jars_excludes_directories() {
         let entries = vec![zip_entry("libs/", true)];
-        assert!(find_embedded_jars(&entries).is_empty());
+        assert_eq!(find_embedded_jars(&entries), []);
     }
 
     #[test]

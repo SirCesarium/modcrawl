@@ -94,7 +94,7 @@ prefix: Test
         );
         assert_eq!(meta.softdepend, vec!["PlaceholderAPI".to_string()]);
         assert_eq!(meta.loadbefore, vec!["OtherPlugin".to_string()]);
-        assert!(meta.folia_supported == Some(true));
+        assert_eq!(meta.folia_supported, Some(true));
     }
 
     #[test]

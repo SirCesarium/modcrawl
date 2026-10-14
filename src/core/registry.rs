@@ -290,7 +290,7 @@ mod tests {
         let r = Registry::new();
         let mut mng = make_mng();
         let deps = r.extract_deps(&ModType::Fabric, &mut mng).unwrap();
-        assert!(deps.is_empty());
+        assert_eq!(deps, []);
     }
 
     #[test]

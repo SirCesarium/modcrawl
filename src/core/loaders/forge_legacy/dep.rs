@@ -66,6 +66,6 @@ mod tests {
         let bytes = make_zip_bytes(&[("mcmod.info", json)]);
         let mut mng = ZipManager::from_reader(&mut Cursor::new(bytes)).unwrap();
         let deps = extract(&mut mng).unwrap();
-        assert!(deps.is_empty());
+        assert_eq!(deps, []);
     }
 }
