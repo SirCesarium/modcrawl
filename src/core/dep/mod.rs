@@ -65,7 +65,10 @@ fn dedup_deps(raw: Vec<DepEntry>) -> Vec<DepEntry> {
     for dep in raw {
         if let Some(&pos) = indices.get(&dep.name) {
             if dep.kind.priority() > out[pos].kind.priority() {
+                // The winning entry brings its own version range along; keeping
+                // the loser's range would report the wrong constraint.
                 out[pos].kind = dep.kind;
+                out[pos].version_range = dep.version_range;
             }
         } else {
             indices.insert(dep.name.clone(), out.len());
@@ -110,6 +113,10 @@ mod tests {
 
     fn entry(name: &str, kind: DepKind) -> DepEntry {
         DepEntry::new(name, kind, VersionRange::parse(None))
+    }
+
+    fn entry_with_range(name: &str, kind: DepKind, range: &str) -> DepEntry {
+        DepEntry::new(name, kind, VersionRange::parse(Some(range.to_owned())))
     }
 
     fn jar(path: &str) -> JarInJar {
@@ -162,6 +169,48 @@ mod tests {
         assert_eq!(result[0].kind, DepKind::Required);
         assert_eq!(result[0].name, "a");
         assert_eq!(result[1].name, "b");
+    }
+
+    #[test]
+    fn dedup_keeps_the_winning_entries_version_range() {
+        let deps = vec![
+            entry_with_range("lib", DepKind::Suggested, ">=1.0"),
+            entry_with_range("lib", DepKind::Required, ">=2.0"),
+        ];
+
+        let result = dedup_deps(deps);
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].kind, DepKind::Required);
+        assert_eq!(result[0].version_range.raw, Some(">=2.0".to_owned()));
+    }
+
+    #[test]
+    fn dedup_result_is_the_same_regardless_of_input_order() {
+        let suggested = entry_with_range("lib", DepKind::Suggested, ">=1.0");
+        let required = entry_with_range("lib", DepKind::Required, ">=2.0");
+
+        let low_first = dedup_deps(vec![suggested.clone(), required.clone()]);
+        let high_first = dedup_deps(vec![required, suggested]);
+
+        assert_eq!(low_first[0].kind, DepKind::Required);
+        assert_eq!(low_first[0].version_range.raw, Some(">=2.0".to_owned()));
+        assert_eq!(high_first[0].kind, DepKind::Required);
+        assert_eq!(high_first[0].version_range.raw, Some(">=2.0".to_owned()));
+    }
+
+    #[test]
+    fn dedup_equal_priority_keeps_first_version_range() {
+        let deps = vec![
+            entry_with_range("lib", DepKind::Optional, ">=1.0"),
+            entry_with_range("lib", DepKind::Optional, ">=3.0"),
+        ];
+
+        let result = dedup_deps(deps);
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].kind, DepKind::Optional);
+        assert_eq!(result[0].version_range.raw, Some(">=1.0".to_owned()));
     }
 
     // ── find_embedded_jars ─────────────────────────────────────────────────
