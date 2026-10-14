@@ -140,9 +140,9 @@ if (json) {
 
 | Command | Alias | What |
 |---------|-------|------|
-| `type` | `t` | Detect mod/plugin type |
-| `metadata` | `m` | Read mod metadata (human or `-j` JSON) |
-| `dep` | `d`, `deps` | Analyze dependencies (`-j` JSON, `--include-jar-in-jar`/`--jij`) |
+| `type` | `t`, `ty` | Detect mod/plugin type |
+| `metadata` | `meta`, `md` | Read mod metadata (human or `-j` JSON) |
+| `dep` | `d`, `deps`, `dependencies` | Analyze dependencies (`-j` JSON, `--include-jar-in-jar`/`--jij`) |
 | `classes` | `c`, `cls` | List `.class` files with Java version and access flags |
 | `grep` | `g`, `search` | Search constant pool strings across all `.class` files |
 | `mixins` | `m`, `mixin` | Extract `@Mixin` targets from class-level annotations |
