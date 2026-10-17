@@ -14,6 +14,13 @@
 #include <stdio.h>
 #include <string.h>
 
+/* This test exercises the *full* surface we publish, so the header must declare
+ * it. Without this, a header that silently drops the classfile exports (the
+ * v0.5.2 musl package) would make the checks below quietly compile out. */
+#ifndef MODCRAWL_FEATURE_CLASSFILE
+#error "modcrawl.h must declare the classfile exports (MODCRAWL_FEATURE_CLASSFILE)"
+#endif
+
 /* Read a returned string the way a caller must: check it, then free it. */
 static int expect(char *value, const char *needle, const char *what) {
     if (!value) {
@@ -53,7 +60,6 @@ int main(int argc, char **argv) {
     failures += expect(modcrawl_deps(jar, false), "fabricloader", "modcrawl_deps");
     failures += expect(modcrawl_deps_json(jar, true), "fabricloader", "modcrawl_deps_json");
 
-#ifdef MODCRAWL_FEATURE_CLASSFILE
     failures += expect(modcrawl_classes_json(jar), "[]", "modcrawl_classes_json");
     failures += expect(modcrawl_mixins_json(jar), "[]", "modcrawl_mixins_json");
     failures += expect(modcrawl_grep_json(jar, "fabric"), "[]", "modcrawl_grep_json");
@@ -66,7 +72,6 @@ int main(int argc, char **argv) {
     }
     paths[count] = NULL;
     failures += expect(modcrawl_dupes_json(paths), NULL, "modcrawl_dupes_json");
-#endif
 
     /* Bad input is an error, not a crash. */
     failures += expect_null(modcrawl_identify(NULL), "modcrawl_identify(NULL)");
@@ -77,11 +82,9 @@ int main(int argc, char **argv) {
                             "modcrawl_metadata_json_bytes(NULL, 64)");
     failures += expect_null(modcrawl_identify_bytes((const uint8_t *)"PK\x03\x04", 0),
                             "modcrawl_identify_bytes(..., 0)");
-#ifdef MODCRAWL_FEATURE_CLASSFILE
     failures += expect_null(modcrawl_classes_json(NULL), "modcrawl_classes_json(NULL)");
     failures += expect_null(modcrawl_grep_json(jar, NULL), "modcrawl_grep_json(jar, NULL)");
     failures += expect_null(modcrawl_dupes_json(NULL), "modcrawl_dupes_json(NULL)");
-#endif
 
     modcrawl_free_string(NULL);
 

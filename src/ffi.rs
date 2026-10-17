@@ -464,6 +464,7 @@ mod tests {
 
     /// A valid class file header plus padding: `find_duplicates` only looks at
     /// entry names, and the classfile parsers reject the body without panicking.
+    #[cfg(feature = "classfile")]
     const FAKE_CLASS: &[u8] = b"\xca\xfe\xba\xbe\x00\x00\x00\x34 padding";
 
     fn tmpdir() -> PathBuf {
