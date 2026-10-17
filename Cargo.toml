@@ -44,8 +44,5 @@ unwrap_used = "deny"
 expect_used = "deny"
 absolute_paths = "deny"
 
-[build-dependencies]
-cbindgen = "0.29.3"
-
 [dev-dependencies]
 zip = "9"
