@@ -95,7 +95,7 @@ jobs:
             features:
               - cli
             features_str: cli
-            default_features: false
+            default_features: true
             abi: musl
           - artifact: modcrawl
             artifact_type: bin
@@ -124,7 +124,7 @@ jobs:
             features:
               - cli
             features_str: cli
-            default_features: false
+            default_features: true
             abi: musl
           - artifact: modcrawl
             artifact_type: bin
@@ -297,8 +297,9 @@ jobs:
             headers: true
             linker_env:
               - CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER=musl-gcc
-            features: []
-            features_str: ""
+            features:
+              - classfile
+            features_str: classfile
             default_features: false
             abi: musl
           - artifact: modcrawl
@@ -325,8 +326,9 @@ jobs:
             linker: aarch64-linux-gnu-gcc
             linker_env:
               - CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc
-            features: []
-            features_str: ""
+            features:
+              - classfile
+            features_str: classfile
             default_features: false
             abi: musl
           - artifact: modcrawl
@@ -527,9 +529,9 @@ jobs:
 
           if [ "${{ matrix.headers }}" = "true" ]; then
             if [ -f "cbindgen.toml" ]; then
-              cbindgen --config cbindgen.toml --crate "${NAME}" --output "$DSTDIR/${OUT}.h"
+              cbindgen --config cbindgen.toml --crate "${NAME}" --output "$DSTDIR/modcrawl.h"
             else
-              cbindgen --crate "${NAME}" --output "$DSTDIR/${OUT}.h"
+              cbindgen --crate "${NAME}" --output "$DSTDIR/modcrawl.h"
             fi
           fi
         shell: bash
@@ -592,6 +594,27 @@ jobs:
           else
             tar -czf "$ARCHIVE_DIR/${{ matrix.output_name }}.tar.gz" -C "$STAGING_DIR" .
           fi
+        shell: bash
+        if: matrix.artifact_type == 'lib' && matrix.has_archive
+      - name: Verify FFI surface
+        run: |-
+          .github/scripts/check-ffi-symbols.sh \
+            target/release/modcrawl.h \
+            target/release/lib${{ matrix.artifact_bin }}.*
+        shell: bash
+        if: matrix.artifact_type == 'lib' && runner.os != 'Windows'
+      - name: Verify packaged artifacts
+        run: |-
+          STAGING_DIR="target/archive_staging/${{ matrix.output_name }}"
+          ls -l "$STAGING_DIR"
+          count=$(ls "$STAGING_DIR" | grep -cE '\.(a|so|dylib|dll|lib)$' || true)
+          if [ "$count" -eq 0 ]; then
+            echo "error: no library was packaged in $STAGING_DIR" >&2
+            exit 1
+          fi
+          # musl packages a static library only: rustc drops the cdylib for
+          # static-by-default targets and the runner's musl toolchain cannot
+          # link a shared object either. Every other ABI ships both.
         shell: bash
         if: matrix.artifact_type == 'lib' && matrix.has_archive
       - name: Install cargo-deb

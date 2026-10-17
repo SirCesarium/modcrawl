@@ -20,3 +20,40 @@ jobs:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --all-features
+
+  # The C ABI is part of the public interface, so it is checked like one:
+  # the header must match the exported symbols and must compile as C and as
+  # C++ with warnings treated as errors.
+  ffi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cbindgen
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cbindgen
+      - name: Build library
+        run: cargo build --release
+      - name: Generate header
+        run: cbindgen --config cbindgen.toml --crate modcrawl --output modcrawl.h
+      - name: Check header against exported symbols
+        run: .github/scripts/check-ffi-symbols.sh modcrawl.h target/release/libmodcrawl.so
+      - name: Build smoke test as C and as C++
+        run: |
+          gcc -std=c11 -Wall -Wextra -Werror -I. tests/ffi/smoke.c -Ltarget/release -lmodcrawl -o /tmp/smoke-c
+          g++ -std=c++17 -Wall -Wextra -Werror -I. tests/ffi/smoke.c -Ltarget/release -lmodcrawl -o /tmp/smoke-cpp
+      - name: Run smoke test
+        run: |
+          python3 - <<'PY'
+          import json, zipfile
+          fabric = {
+              "schemaVersion": 1, "id": "testmod", "name": "Test Mod",
+              "version": "1.0.0", "environment": "*",
+              "depends": {"fabricloader": ">=0.15.0"},
+          }
+          with zipfile.ZipFile("/tmp/smoke.jar", "w") as jar:
+              jar.writestr("fabric.mod.json", json.dumps(fabric))
+          PY
+          LD_LIBRARY_PATH=target/release /tmp/smoke-c /tmp/smoke.jar
+          LD_LIBRARY_PATH=target/release /tmp/smoke-cpp /tmp/smoke.jar
