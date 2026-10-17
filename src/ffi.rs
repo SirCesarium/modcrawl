@@ -12,6 +12,7 @@
 //! - Panics are contained: they are reported on stderr and surface as NULL
 //!   instead of aborting the host process.
 
+use std::any::Any;
 use std::ffi::{CStr, CString};
 use std::io::Cursor;
 use std::os::raw::c_char;
@@ -34,14 +35,45 @@ use std::path::PathBuf;
 /// Run `f` behind a panic firewall.
 ///
 /// A panic unwinding out of an `extern "C"` function aborts the entire host
-/// process, so every export funnels through here: the panic hook prints the
-/// details on stderr, and the caller receives NULL rather than a dead process.
+/// process, so every export funnels through here: the panic is reported on
+/// stderr and the caller receives NULL rather than a dead process.
+///
+/// The message is re-printed from the payload on purpose. The default panic
+/// hook already printed the full report, but a host that installed its own
+/// hook — a Rust program linking this as a staticlib, say — may have swallowed
+/// it, and "NULL with no explanation" is exactly the failure this firewall
+/// exists to avoid.
 fn guard(f: impl FnOnce() -> *mut c_char) -> *mut c_char {
-    if let Ok(result) = catch_unwind(AssertUnwindSafe(f)) {
-        result
+    let outcome = catch_unwind(AssertUnwindSafe(f));
+    if let Err(panic) = &outcome {
+        // `&**panic`, deliberately not `panic`: `&Box<dyn Any + Send>` coerces to
+        // the *Box's own* `Any` impl, so the payload type seen by the callee
+        // would be `Box<dyn Any + Send>` and nothing would ever downcast.
+        eprintln!(
+            "modcrawl: internal panic{}; returning NULL",
+            panic_message(&**panic)
+        );
+        return ptr::null_mut();
+    }
+    // Reached only when the closure succeeded: the branch above is the sole
+    // other exit, and it returns early.
+    outcome.unwrap_or(ptr::null_mut())
+}
+
+/// Best-effort description of a panic payload, prefixed with `: `.
+///
+/// Callers must pass the *inner* trait object (`&**box`, or `&*box` from an
+/// owned `Box`); see `guard` for why the coercion is a trap.
+///
+/// The payload type is whatever `panic!` was given, so anything else — a panic
+/// raised through `resume_unwind`, say — yields an empty string.
+fn panic_message(panic: &(dyn Any + Send)) -> String {
+    if let Some(text) = panic.downcast_ref::<&str>() {
+        format!(": {text}")
+    } else if let Some(text) = panic.downcast_ref::<String>() {
+        format!(": {text}")
     } else {
-        eprintln!("modcrawl: internal panic; returning NULL (see the message above)");
-        ptr::null_mut()
+        String::new()
     }
 }
 
@@ -59,15 +91,13 @@ fn sanitize(s: String) -> String {
 }
 
 /// Turn a parsed result into an owned C string, or NULL on error.
+///
+/// `sanitize` has already stripped every interior NUL, so `CString::new`
+/// cannot fail here; an empty string is returned rather than panicking across
+/// the boundary on a path that cannot happen.
 fn to_c_string(result: Result<String>) -> *mut c_char {
     match result {
-        Ok(s) => match CString::new(sanitize(s)) {
-            Ok(cs) => cs.into_raw(),
-            Err(e) => {
-                eprintln!("modcrawl: CString error: {e}");
-                ptr::null_mut()
-            }
-        },
+        Ok(s) => CString::new(sanitize(s)).unwrap_or_default().into_raw(),
         Err(e) => {
             eprintln!("modcrawl: {e}");
             ptr::null_mut()
@@ -447,6 +477,7 @@ pub unsafe extern "C" fn modcrawl_free_string(s: *mut c_char) {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use std::any::Any;
     use std::env;
     use std::fs;
     use std::io::Write;
@@ -467,15 +498,31 @@ mod tests {
     #[cfg(feature = "classfile")]
     const FAKE_CLASS: &[u8] = b"\xca\xfe\xba\xbe\x00\x00\x00\x34 padding";
 
-    fn tmpdir() -> PathBuf {
-        let dir = env::temp_dir().join(format!("modcrawl-ffi-{}", process::id()));
-        fs::create_dir_all(&dir).unwrap();
-        dir
+    /// A scratch directory that removes itself when the test ends, so the suite
+    /// does not pile JARs up in the system temp directory.
+    struct TestDir(PathBuf);
+
+    impl TestDir {
+        fn new(test: &str) -> Self {
+            let dir = env::temp_dir().join(format!("modcrawl-ffi-{}-{test}", process::id()));
+            fs::create_dir_all(&dir).unwrap();
+            TestDir(dir)
+        }
+
+        fn path(&self) -> &Path {
+            &self.0
+        }
+    }
+
+    impl Drop for TestDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
     }
 
     /// Write a JAR holding the given `(entry name, contents)` pairs.
-    fn write_jar(name: &str, entries: &[(&str, &[u8])]) -> PathBuf {
-        let path = tmpdir().join(name);
+    fn write_jar(dir: &Path, name: &str, entries: &[(&str, &[u8])]) -> PathBuf {
+        let path = dir.join(name);
         let file = fs::File::create(&path).unwrap();
         let mut zip = ZipWriter::new(file);
         for (entry, contents) in entries {
@@ -486,8 +533,8 @@ mod tests {
         path
     }
 
-    fn fabric_jar(name: &str) -> PathBuf {
-        write_jar(name, &[("fabric.mod.json", FABRIC_MOD_JSON.as_bytes())])
+    fn fabric_jar(dir: &Path, name: &str) -> PathBuf {
+        write_jar(dir, name, &[("fabric.mod.json", FABRIC_MOD_JSON.as_bytes())])
     }
 
     /// Take a returned string the way a C caller would: read it, then free it.
@@ -506,7 +553,8 @@ mod tests {
 
     #[test]
     fn identify_from_path_and_bytes() {
-        let jar = fabric_jar("identify.jar");
+        let dir = TestDir::new("identify");
+        let jar = fabric_jar(dir.path(), "identify.jar");
         let path = c_path(&jar);
 
         let from_path = unsafe { take(modcrawl_identify(path.as_ptr())) };
@@ -520,22 +568,24 @@ mod tests {
 
     #[test]
     fn identify_rejects_null_empty_and_invalid_input() {
+        let dir = TestDir::new("identify-rejects");
         assert!(unsafe { take(modcrawl_identify(ptr::null())) }.is_none());
         assert!(unsafe { take(modcrawl_identify_bytes(ptr::null(), 16)) }.is_none());
         assert!(unsafe { take(modcrawl_identify_bytes(b"PK\x03\x04".as_ptr(), 0)) }.is_none());
 
-        let not_a_jar = tmpdir().join("not-a-jar.bin");
+        let not_a_jar = dir.path().join("not-a-jar.bin");
         fs::write(&not_a_jar, b"this is not a zip archive").unwrap();
         let path = c_path(&not_a_jar);
         assert!(unsafe { take(modcrawl_identify(path.as_ptr())) }.is_none());
 
-        let missing = c_path(&tmpdir().join("does-not-exist.jar"));
+        let missing = c_path(&dir.path().join("does-not-exist.jar"));
         assert!(unsafe { take(modcrawl_identify(missing.as_ptr())) }.is_none());
     }
 
     #[test]
     fn metadata_from_path_and_bytes() {
-        let jar = fabric_jar("metadata.jar");
+        let dir = TestDir::new("metadata");
+        let jar = fabric_jar(dir.path(), "metadata.jar");
         let path = c_path(&jar);
 
         let human = unsafe { take(modcrawl_metadata(path.as_ptr())) }.unwrap();
@@ -566,7 +616,8 @@ mod tests {
         let with_nul = format!(
             r#"{{"schemaVersion":1,"id":"nulmod","name":"bad{nul_escape}name","version":"1.0"}}"#
         );
-        let jar = write_jar("nul.jar", &[("fabric.mod.json", with_nul.as_bytes())]);
+        let dir = TestDir::new("nul");
+        let jar = write_jar(dir.path(), "nul.jar", &[("fabric.mod.json", with_nul.as_bytes())]);
         let path = c_path(&jar);
 
         let human = unsafe { take(modcrawl_metadata(path.as_ptr())) }.unwrap();
@@ -580,7 +631,8 @@ mod tests {
 
     #[test]
     fn deps_from_path_and_bytes() {
-        let jar = fabric_jar("deps.jar");
+        let dir = TestDir::new("deps");
+        let jar = fabric_jar(dir.path(), "deps.jar");
         let path = c_path(&jar);
 
         let human = unsafe { take(modcrawl_deps(path.as_ptr(), false)) }.unwrap();
@@ -604,7 +656,8 @@ mod tests {
     #[cfg(feature = "classfile")]
     #[test]
     fn classes_grep_and_mixins_on_a_classless_jar() {
-        let jar = fabric_jar("classless.jar");
+        let dir = TestDir::new("classless");
+        let jar = fabric_jar(dir.path(), "classless.jar");
         let path = c_path(&jar);
 
         assert_eq!(
@@ -628,7 +681,9 @@ mod tests {
     #[cfg(feature = "classfile")]
     #[test]
     fn dupes_reports_classes_shared_between_jars() {
+        let dir = TestDir::new("dupes-shared");
         let a = write_jar(
+            dir.path(),
             "dupes-a.jar",
             &[
                 ("fabric.mod.json", FABRIC_MOD_JSON.as_bytes()),
@@ -636,6 +691,7 @@ mod tests {
             ],
         );
         let b = write_jar(
+            dir.path(),
             "dupes-b.jar",
             &[
                 ("fabric.mod.json", FABRIC_MOD_JSON.as_bytes()),
@@ -661,6 +717,7 @@ mod tests {
     #[cfg(feature = "classfile")]
     #[test]
     fn dupes_rejects_null_and_non_utf8_input() {
+        let dir = TestDir::new("dupes-rejects");
         assert!(unsafe { take(modcrawl_dupes_json(ptr::null())) }.is_none());
 
         // A NULL-terminated empty list is valid: no jars, no dupes.
@@ -671,7 +728,7 @@ mod tests {
         );
 
         // A path that is not valid UTF-8 is an error, not a silently skipped jar.
-        let good = CString::new(fabric_jar("dupes-good.jar").to_str().unwrap()).unwrap();
+        let good = CString::new(fabric_jar(dir.path(), "dupes-good.jar").to_str().unwrap()).unwrap();
         let bad = CString::new(b"/tmp/not-utf8-\xff.jar".to_vec()).unwrap();
         let paths: [*mut c_char; 3] = [
             good.as_ptr().cast_mut(),
@@ -686,17 +743,29 @@ mod tests {
         unsafe { modcrawl_free_string(ptr::null_mut()) };
     }
 
-    /// A panic must reach the caller as NULL instead of aborting the process.
+    /// A panic must reach the caller as NULL instead of aborting the process,
+    /// and its message must survive a host that replaced the panic hook.
     #[test]
     fn panics_are_contained() {
         let result = guard(|| panic!("boom behind the FFI boundary"));
         assert!(result.is_null());
+
+        let borrowed: Box<dyn Any + Send> = Box::new("boom");
+        assert_eq!(panic_message(&*borrowed), ": boom");
+
+        let owned: Box<dyn Any + Send> = Box::new(String::from("boom"));
+        assert_eq!(panic_message(&*owned), ": boom");
+
+        // `resume_unwind` and friends carry payloads we cannot describe.
+        let other: Box<dyn Any + Send> = Box::new(42_u8);
+        assert_eq!(panic_message(&*other), "");
     }
 
     /// The registry is a shared global, so the exports must be usable in parallel.
     #[test]
     fn concurrent_calls_are_safe() {
-        let jar = fabric_jar("concurrent.jar");
+        let dir = TestDir::new("concurrent");
+        let jar = fabric_jar(dir.path(), "concurrent.jar");
         let path = c_path(&jar);
 
         thread::scope(|scope| {
