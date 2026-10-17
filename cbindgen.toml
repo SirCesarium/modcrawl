@@ -1,5 +1,21 @@
 language = "C"
 
+# Without this, including the header from C++ declares mangled names that then
+# fail to link against the unmangled symbols the library exports.
+cpp_compat = true
+
+# `#[cfg(feature = "...")]` gates are invisible to cbindgen: without an entry it
+# warns and declares the item unconditionally. Every library we ship is built
+# with the default features (which include `classfile`), so the header keeps
+# describing that build and defines the macro itself.
+after_includes = """
+/* Built with the default features; see cbindgen.toml. */
+#define MODCRAWL_FEATURE_CLASSFILE 1
+"""
+
+[defines]
+"feature = classfile" = "MODCRAWL_FEATURE_CLASSFILE"
+
 [export]
 exclude = ["DepKind", "VersionRange", "DepEntry", "JarInJar", "DepReport",
            "ForgeModFormat", "PluginType", "ModType", "ModMetadata",
