@@ -17,6 +17,8 @@ cli = ["dep:clap"]
 classfile = ["dep:java-class-rs"]
 
 [dependencies]
+anstream = "1.0.0"
+anstyle = "1.0.14"
 clap = { version = "4.6.1", features = ["derive"], optional = true }
 java-class-rs = { version = "0.1.0", default-features = false, optional = true }
 miette = { version = "7.6.0", features = ["fancy"] }

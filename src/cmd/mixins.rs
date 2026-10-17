@@ -1,10 +1,9 @@
-use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use crate::core::classfile;
 use crate::error::Result;
-use crate::MixinEntry;
+use crate::ui;
 
 #[derive(clap::Args)]
 pub struct Args {
@@ -31,13 +30,14 @@ pub struct Args {
 ///
 /// Returns an error if a JAR cannot be read.
 pub fn run(args: &Args) -> Result<()> {
+    let multi = args.file.len() > 1;
     let mut total_entries = 0usize;
 
     for file in &args.file {
         let entries = match classfile::mixins(file) {
             Ok(e) => e,
             Err(e) => {
-                eprintln!("{}: {e:#}", file.display());
+                ui::file_error(&file.display().to_string(), &e);
                 continue;
             }
         };
@@ -53,37 +53,26 @@ pub fn run(args: &Args) -> Result<()> {
 
         total_entries += entries.len();
 
+        if multi {
+            ui::file_header(&file.display().to_string());
+        }
+
         if args.quiet {
-            if args.file.len() > 1 {
-                println!("{}:", file.display());
-            }
             let mut seen: BTreeSet<&str> = BTreeSet::new();
             for e in &entries {
                 seen.insert(e.mixin_class.as_str());
             }
+
             for class_file in seen {
-                println!("  {class_file}");
+                println!("{class_file}");
             }
         } else {
-            if args.file.len() > 1 {
-                println!("{}:", file.display());
-            }
-            let mut grouped: BTreeMap<&str, Vec<&MixinEntry>> = BTreeMap::new();
-            for e in &entries {
-                grouped.entry(e.mixin_class.as_str()).or_default().push(e);
-            }
-            for (class_file, class_entries) in &grouped {
-                println!("  {class_file} ->");
-                for e in class_entries {
-                    println!("    {}", e.target);
-                }
-            }
+            ui::render_mixins(&entries);
         }
     }
 
     if total_entries == 0 && !args.file.is_empty() {
-        let n = args.file.len();
-        eprintln!("No mixins found in {n} file(s).");
+        ui::no_results("No mixins found.");
     }
 
     Ok(())

@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use crate::core::identify::{identify, identify_reader};
 use crate::error::Result;
+use crate::ui;
 
 const EOCD_MAGIC: &[u8] = b"PK\x05\x06";
 
@@ -65,27 +66,47 @@ pub fn run(args: &Args) -> Result<()> {
             handle.read_to_end(&mut data)?;
             process_zip_chunks(&data);
         } else {
+            let mut entries = Vec::new();
             let mut line_buf = String::new();
+
             loop {
                 line_buf.clear();
                 if handle.read_line(&mut line_buf)? == 0 {
                     break;
                 }
+
                 let line = line_buf.trim().to_owned();
                 if line.is_empty() {
                     continue;
                 }
+
                 let path = PathBuf::from(line);
-                let mod_type = identify(&path)?;
-                println!("{}: {mod_type}", path.display());
+                match identify(&path) {
+                    Ok(mod_type) => entries.push((path.display().to_string(), mod_type)),
+                    Err(e) => ui::file_error(&path.display().to_string(), &e),
+                }
             }
+
+            ui::render_type_multi(&entries);
         }
         Ok(())
     } else {
-        for file in &args.file {
-            let mod_type = identify(file)?;
-            println!("{}: {mod_type}", file.display());
+        if args.file.len() == 1 {
+            let mod_type = identify(&args.file[0])?;
+            ui::render_type(&mod_type);
+        } else {
+            let mut entries = Vec::new();
+
+            for file in &args.file {
+                match identify(file) {
+                    Ok(mod_type) => entries.push((file.display().to_string(), mod_type)),
+                    Err(e) => ui::file_error(&file.display().to_string(), &e),
+                }
+            }
+
+            ui::render_type_multi(&entries);
         }
+
         Ok(())
     }
 }

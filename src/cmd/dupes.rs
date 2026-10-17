@@ -1,10 +1,10 @@
-use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::path::Path;
 use std::path::PathBuf;
 
 use crate::core::classfile;
 use crate::error::Result;
+use crate::ui;
 
 #[derive(clap::Args)]
 pub struct Args {
@@ -31,70 +31,6 @@ pub struct Args {
         help = "Output as JSON instead of human-readable text"
     )]
     pub json: bool,
-}
-
-fn print_conflict_pairs(entries: &[classfile::DupEntry]) {
-    let mut conflicts: BTreeMap<(String, String), Vec<&str>> = BTreeMap::new();
-
-    for entry in entries {
-        let files = &entry.files;
-        for i in 0..files.len() {
-            for j in (i + 1)..files.len() {
-                let (a, b) = if files[i] < files[j] {
-                    (files[i].as_str(), files[j].as_str())
-                } else {
-                    (files[j].as_str(), files[i].as_str())
-                };
-                conflicts
-                    .entry((a.to_string(), b.to_string()))
-                    .or_default()
-                    .push(&entry.class_name);
-            }
-        }
-    }
-
-    if conflicts.is_empty() {
-        return;
-    }
-
-    println!("── Classpath Conflicts ──");
-    println!();
-
-    for ((file_a, file_b), classes) in &conflicts {
-        println!("  {file_a}");
-        println!("  {file_b}");
-        println!(
-            "  ── {} shared {} ──",
-            classes.len(),
-            if classes.len() == 1 {
-                "class"
-            } else {
-                "classes"
-            }
-        );
-        for class_name in classes {
-            println!("    {class_name}");
-        }
-        println!();
-    }
-}
-
-fn print_by_class(entries: &[classfile::DupEntry]) {
-    for entry in entries {
-        println!(
-            "  {}  (in {} {})",
-            entry.class_name,
-            entry.files.len(),
-            if entry.files.len() == 1 {
-                "JAR"
-            } else {
-                "JARs"
-            }
-        );
-        for file in &entry.files {
-            println!("    {file}");
-        }
-    }
 }
 
 /// Run the `dupes` command.
@@ -142,15 +78,11 @@ pub fn run(args: &Args) -> Result<()> {
     }
 
     if entries.is_empty() {
-        println!("No duplicate classes found.");
+        ui::no_results("No duplicate classes found.");
         return Ok(());
     }
 
-    if args.by_class {
-        print_by_class(&entries);
-    } else {
-        print_conflict_pairs(&entries);
-    }
+    ui::render_dupes(&entries, args.by_class);
 
     Ok(())
 }

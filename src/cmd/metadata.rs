@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use crate::core::metadata::read_metadata;
 use crate::error::Result;
+use crate::ui;
 
 #[derive(clap::Args)]
 pub struct Args {
@@ -20,26 +21,27 @@ pub struct Args {
 /// Returns an error if an archive cannot be read.
 pub fn run(args: &Args) -> Result<()> {
     let multi = args.file.len() > 1;
+
     for file in &args.file {
-        let result = read_metadata(file);
-        let meta = match result {
+        let meta = match read_metadata(file) {
             Ok(m) => m,
             Err(e) => {
-                eprintln!("{}: {e:#}", file.display());
+                ui::file_error(&file.display().to_string(), &e);
                 continue;
             }
         };
+
         if args.json {
             println!("{}", serde_json::to_string(&meta)?);
-        } else {
-            if multi {
-                println!("{}:", file.display());
-            }
-            println!("{meta}");
-            if multi {
-                println!();
-            }
+            continue;
         }
+
+        if multi {
+            ui::file_header(&file.display().to_string());
+        }
+
+        ui::render_metadata(&meta);
     }
+
     Ok(())
 }

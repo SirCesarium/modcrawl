@@ -896,6 +896,8 @@ dependencies = [
 name = "modcrawl"
 version = "0.5.2"
 dependencies = [
+ "anstream",
+ "anstyle",
  "clap",
  "java-class-rs",
  "miette",
