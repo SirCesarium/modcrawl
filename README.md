@@ -178,6 +178,14 @@ CI verifies on every push that the header compiles as C and C++ with
 `-Wall -Wextra -Werror`, that it matches the symbols each library actually
 exports, and that a C smoke test runs end to end (`tests/ffi/smoke.c`).
 
+**The header describes a default-features build.** If you compile the crate
+yourself with `--no-default-features`, the `classfile` feature (and with it
+`modcrawl_classes_json`, `modcrawl_grep_json`, `modcrawl_mixins_json` and
+`modcrawl_dupes_json`) is compiled out — the library exports 11 symbols while
+the header declares 15. Every library we publish is built with the default
+features, so this only bites source builds; CI pins the contract so it cannot
+drift silently.
+
 One packaging note: the musl libraries ship a **static library only**
 (`libmodcrawl.a`). Rust drops the cdylib on static-by-default targets and the
 musl toolchain used in CI cannot link a shared object. Every other ABI ships

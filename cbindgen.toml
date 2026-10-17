@@ -5,11 +5,19 @@ language = "C"
 cpp_compat = true
 
 # `#[cfg(feature = "...")]` gates are invisible to cbindgen: without an entry it
-# warns and declares the item unconditionally. Every library we ship is built
-# with the default features (which include `classfile`), so the header keeps
-# describing that build and defines the macro itself.
+# warns and declares the item unconditionally. Rather than leave those four
+# warnings buried in every CI run (which is how the v0.5.2 musl package shipped
+# a header the library could not satisfy), the macro is defined here — so the
+# header describes the *default-features* build, unconditionally.
+#
+# Every library we package is built that way, and CI pins the one shape that is
+# not: a `--no-default-features` build omits `classfile` and therefore exports
+# 11 symbols instead of 15. If `classfile` ever leaves [features] default, this
+# header becomes a lie for every consumer — the "no-default-features symbol
+# contract" step in ci.yml is what catches it.
 after_includes = """
-/* Built with the default features; see cbindgen.toml. */
+/* Generated for a default-features build (see cbindgen.toml); a build with
+ * --no-default-features omits the classfile exports below. */
 #define MODCRAWL_FEATURE_CLASSFILE 1
 """
 

@@ -57,3 +57,36 @@ jobs:
           PY
           LD_LIBRARY_PATH=target/release /tmp/smoke-c /tmp/smoke.jar
           LD_LIBRARY_PATH=target/release /tmp/smoke-cpp /tmp/smoke.jar
+      # `classfile` is a default feature, so a `--no-default-features` build is
+      # the one shape where the header — which describes the default build —
+      # does *not* match the library. Nothing we ship is built that way, but the
+      # crate is on crates.io, so the contract is pinned here rather than left
+      # to be rediscovered as a link error.
+      - name: Pin the no-default-features symbol contract
+        run: |
+          CARGO_TARGET_DIR=target/nodefault cargo build --release --no-default-features
+          lib=target/nodefault/release/libmodcrawl.so
+          syms=$(nm -g --defined-only "$lib" | awk '{print $NF}' | grep -E '^modcrawl_' | sort -u)
+          status=0
+          for s in modcrawl_identify modcrawl_identify_bytes \
+                   modcrawl_metadata modcrawl_metadata_json \
+                   modcrawl_metadata_bytes modcrawl_metadata_json_bytes \
+                   modcrawl_deps modcrawl_deps_json \
+                   modcrawl_deps_bytes modcrawl_deps_json_bytes \
+                   modcrawl_free_string; do
+            echo "$syms" | grep -qx "$s" || {
+              echo "error: core symbol $s missing from a no-default-features build" >&2
+              status=1
+            }
+          done
+          for s in modcrawl_classes_json modcrawl_grep_json \
+                   modcrawl_mixins_json modcrawl_dupes_json; do
+            if echo "$syms" | grep -qx "$s"; then
+              echo "error: $s is exported without the classfile feature;" >&2
+              echo "       the shipped header declares it, so either keep it in" >&2
+              echo "       [features] default or stop declaring it in cbindgen.toml" >&2
+              status=1
+            fi
+          done
+          echo "no-default-features contract holds: 11 core exports, classfile exports absent"
+          exit $status
