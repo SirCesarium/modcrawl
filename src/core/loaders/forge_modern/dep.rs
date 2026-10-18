@@ -25,7 +25,7 @@ pub fn extract(mng: &mut ZipManager) -> Result<Vec<DepEntry>> {
     Ok(deps)
 }
 
-fn forge_dep_kind(dep_type: Option<&str>) -> DepKind {
+pub(crate) fn forge_dep_kind(dep_type: Option<&str>) -> DepKind {
     match dep_type {
         Some("optional") => DepKind::Optional,
         Some("incompatible") => DepKind::Incompatible,

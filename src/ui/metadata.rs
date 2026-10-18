@@ -4,10 +4,11 @@
 //! field/value table, then an optional depends table. Each loader branch
 //! extracts its own fields; the shared printer below does the rendering.
 
-use super::style::dim;
-use super::style::{loader_style, paint};
-use super::table::{cell, print_table, styled_cell};
+use super::style::{dim, kind_label, kind_style, loader_style, paint};
+use super::table::{Cell, cell, print_table, styled_cell};
+use crate::core::dep::types::DepKind;
 use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
+use crate::core::loaders::forge_modern::dep::forge_dep_kind;
 use crate::core::loaders::{
     bukkit::metadata::BukkitPluginMetadata, fabric::metadata::FabricModMetadata,
     forge_legacy::metadata::ForgeLegacyModEntry, forge_modern::metadata::ModsTomlMetadata,
@@ -19,12 +20,22 @@ use serde_json::Value;
 /// A single labeled field row.
 struct Field(&'static str, String);
 
+/// One row of the depends table: the dependency's name plus everything the
+/// loader tells us about it. `kind` and `side` are optional because not every
+/// loader records them (`side` only exists in `mods.toml`).
+struct DepRow {
+    name: String,
+    version: String,
+    kind: Option<DepKind>,
+    side: Option<String>,
+}
+
 /// Everything one loader's metadata renders as.
 struct Block {
     kind: ModType,
     title: String,
     fields: Vec<Field>,
-    depends: Vec<(String, String)>,
+    depends: Vec<DepRow>,
 }
 
 /// Render one JAR's metadata.
@@ -64,14 +75,46 @@ fn print_block(block: &Block) {
 
     if !block.depends.is_empty() {
         println!();
-        let rows: Vec<_> = block
-            .depends
-            .iter()
-            .map(|(name, version)| vec![cell(name), styled_cell(dim(), version)])
-            .collect();
-
-        print_table(&["DEPENDS", "VERSION"], &rows);
+        print_depends(&block.depends);
     }
+}
+
+/// Print the depends table, adding KIND and SIDE columns only when at least
+/// one row carries that datum. Loaders that don't record a side (everything
+/// but `mods.toml`) therefore stay two columns wide.
+fn print_depends(depends: &[DepRow]) {
+    let show_kind = depends.iter().any(|d| d.kind.is_some());
+    let show_side = depends.iter().any(|d| d.side.is_some());
+
+    let mut headers = vec!["DEPENDS", "VERSION"];
+    if show_kind {
+        headers.push("KIND");
+    }
+    if show_side {
+        headers.push("SIDE");
+    }
+
+    let rows: Vec<Vec<Cell>> = depends
+        .iter()
+        .map(|dep| {
+            let mut row = vec![cell(&dep.name), styled_cell(dim(), &dep.version)];
+
+            if show_kind {
+                row.push(match dep.kind {
+                    Some(k) => styled_cell(kind_style(k), kind_label(k)),
+                    None => cell(""),
+                });
+            }
+
+            if show_side {
+                row.push(styled_cell(dim(), dep.side.as_deref().unwrap_or("both")));
+            }
+
+            row
+        })
+        .collect();
+
+    print_table(&headers, &rows);
 }
 
 /// Append `(label, value)` only when the value is non-empty.
@@ -152,11 +195,17 @@ fn fabric(m: &FabricModMetadata) -> Block {
     }
 }
 
-/// Fabric's `depends` map rendered as name/version pairs.
-fn fabric_depends(m: &FabricModMetadata) -> Vec<(String, String)> {
+/// Fabric's `depends` map rendered as rows. Fabric records no per-dependency
+/// side, so those stay `None` and the SIDE column is omitted.
+fn fabric_depends(m: &FabricModMetadata) -> Vec<DepRow> {
     m.depends
         .iter()
-        .map(|(name, range)| (name.clone(), version_string(range)))
+        .map(|(name, range)| DepRow {
+            name: name.clone(),
+            version: version_string(range),
+            kind: Some(DepKind::Required),
+            side: None,
+        })
         .collect()
 }
 
@@ -166,6 +215,16 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Block {
 
     let mut fields = Vec::new();
 
+    push_field(
+        &mut fields,
+        "Loader",
+        m.mod_loader.clone().unwrap_or_default(),
+    );
+    push_field(
+        &mut fields,
+        "Loader Version",
+        m.loader_version.clone().unwrap_or_default(),
+    );
     push_field(
         &mut fields,
         "Mod ID",
@@ -213,14 +272,18 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Block {
     }
 }
 
-/// Forge/NeoForge `dependencies` map rendered as name/version pairs.
-fn forge_modern_depends(m: &ModsTomlMetadata) -> Vec<(String, String)> {
+/// Forge/NeoForge `dependencies` map rendered as rows. This loader is the one
+/// that records a per-dependency `side` (CLIENT/SERVER/BOTH), so the SIDE
+/// column gets populated here and omitted everywhere else.
+fn forge_modern_depends(m: &ModsTomlMetadata) -> Vec<DepRow> {
     m.dependencies
         .values()
         .flat_map(|deps| {
-            deps.iter().map(|d| {
-                let version = d.version_range.clone().unwrap_or_default();
-                (d.mod_id.clone(), version)
+            deps.iter().map(|d| DepRow {
+                name: d.mod_id.clone(),
+                version: d.version_range.clone().unwrap_or_default(),
+                kind: Some(forge_dep_kind(d.dep_type.as_deref())),
+                side: d.side.as_ref().map(|s| s.to_lowercase()),
             })
         })
         .collect()
@@ -314,7 +377,7 @@ fn bukkit(m: &BukkitPluginMetadata) -> Block {
         kind: ModType::Plugin(PluginType::Bukkit),
         title: m.name.clone(),
         fields,
-        depends: plugin_depends(&m.depend, &m.softdepend),
+        depends: plugin_depends(m),
     }
 }
 
@@ -358,17 +421,31 @@ fn paper(m: &PaperPluginMetadata) -> Block {
     }
 }
 
-/// Combine a plugin's hard and soft dependencies into name/version pairs.
-fn plugin_depends(hard: &[String], soft: &[String]) -> Vec<(String, String)> {
-    let mut pairs: Vec<(String, String)> = hard
-        .iter()
-        .map(|name| (name.clone(), "required".to_owned()))
-        .collect();
+/// A plugin's hard, soft, and load-before dependencies as rows. Bukkit records
+/// no side, so only the KIND column is filled in.
+fn plugin_depends(m: &BukkitPluginMetadata) -> Vec<DepRow> {
+    let mut rows: Vec<DepRow> = Vec::new();
 
-    pairs.extend(
-        soft.iter()
-            .map(|name| (name.clone(), "optional".to_owned())),
-    );
+    rows.extend(m.depend.iter().map(|name| DepRow {
+        name: name.clone(),
+        version: String::new(),
+        kind: Some(DepKind::Required),
+        side: None,
+    }));
 
-    pairs
+    rows.extend(m.softdepend.iter().map(|name| DepRow {
+        name: name.clone(),
+        version: String::new(),
+        kind: Some(DepKind::Optional),
+        side: None,
+    }));
+
+    rows.extend(m.loadbefore.iter().map(|name| DepRow {
+        name: name.clone(),
+        version: String::new(),
+        kind: Some(DepKind::LoadBefore),
+        side: None,
+    }));
+
+    rows
 }
