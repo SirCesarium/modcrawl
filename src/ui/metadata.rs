@@ -4,7 +4,7 @@
 //! field/value table, then an optional depends table. Each loader branch
 //! extracts its own fields; the shared printer below does the rendering.
 
-use super::style::{dim, kind_label, kind_style, loader_style, paint};
+use super::style::{dim, kind_label, kind_style, loader_name, loader_style, paint};
 use super::table::{Cell, cell, print_table, styled_cell};
 use crate::core::dep::types::DepKind;
 use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
@@ -65,10 +65,11 @@ pub(crate) fn render(meta: &ModMetadata) {
 
 /// Print the header, field table, and optional depends table for a block.
 fn print_block(block: &Block) {
+    let name = loader_name(&block.kind);
     let title = if block.title.is_empty() {
-        block.kind.to_string()
+        name.to_owned()
     } else {
-        format!("{} {}", block.kind, block.title)
+        format!("{} {}", name, block.title)
     };
 
     println!("{}", paint(loader_style(&block.kind), &title));
@@ -237,11 +238,10 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
     if let Some(first) = entries.next() {
         let mut fields = Vec::new();
 
-        push_field(
-            &mut fields,
-            "Loader",
-            m.mod_loader.clone().unwrap_or_default(),
-        );
+        // `modLoader` is the format identifier (`javafml`) and is identical
+        // across every Forge/NeoForge mod, so it carries no signal. Show the
+        // detected loader itself, which the filename detection already knows.
+        push_field(&mut fields, "Loader", loader_name(&kind).to_owned());
         push_field(
             &mut fields,
             "Loader Version",
@@ -288,11 +288,7 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
         // No `mods[]` entries — still surface the loader and dependencies.
         let mut fields = Vec::new();
 
-        push_field(
-            &mut fields,
-            "Loader",
-            m.mod_loader.clone().unwrap_or_default(),
-        );
+        push_field(&mut fields, "Loader", loader_name(&kind).to_owned());
         push_field(
             &mut fields,
             "Loader Version",

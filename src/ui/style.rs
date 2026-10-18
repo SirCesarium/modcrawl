@@ -6,7 +6,7 @@
 use anstyle::{AnsiColor, Color, Style};
 
 use crate::core::dep::types::DepKind;
-use crate::core::detect_mod_type::{ModType, PluginType};
+use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
 
 /// Foreground color for a loader or plugin type.
 pub(crate) fn loader_color(t: &ModType) -> Color {
@@ -25,6 +25,26 @@ pub(crate) fn loader_color(t: &ModType) -> Color {
 /// Style for a loader name: bold and in the loader's color.
 pub(crate) fn loader_style(t: &ModType) -> Style {
     Style::new().bold().fg_color(Some(loader_color(t)))
+}
+
+/// The loader name as a label, stripped of the `Display` detail.
+///
+/// `ModType`'s `Display` writes `Forge (mods.toml)` and `Plugin (Bukkit/Spigot)`
+/// for the FFI; tables want `Forge` and `Bukkit/Spigot`. Only the legacy
+/// `mcmod.info` form carries a suffix, because it is the one case where the
+/// file format is worth spelling out — the modern one is just Forge.
+pub(crate) fn loader_name(t: &ModType) -> &'static str {
+    match t {
+        ModType::Fabric => "Fabric",
+        ModType::Forge(ForgeModFormat::ModsToml) => "Forge",
+        ModType::Forge(ForgeModFormat::McmodInfo) => "Forge (legacy format)",
+        ModType::NeoForge => "NeoForge",
+        ModType::Plugin(PluginType::Bukkit) => "Bukkit/Spigot",
+        ModType::Plugin(PluginType::Paper) => "Paper",
+        ModType::Plugin(PluginType::Bungee) => "BungeeCord",
+        ModType::Plugin(PluginType::Velocity) => "Velocity",
+        ModType::Unknown => "Unknown",
+    }
 }
 
 /// Foreground color for a dependency kind.

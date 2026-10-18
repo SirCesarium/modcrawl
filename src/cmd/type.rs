@@ -15,7 +15,7 @@ pub struct Args {
 fn process_zip_chunks(data: &[u8]) {
     let mut cursor = io::Cursor::new(data);
     if let Ok(mod_type) = identify_reader(&mut cursor) {
-        println!("{mod_type}");
+        ui::render_type(&mod_type);
         return;
     }
 
@@ -42,7 +42,7 @@ fn process_zip_chunks(data: &[u8]) {
         let mut cursor = io::Cursor::new(chunk);
         if let Ok(mod_type) = identify_reader(&mut cursor) {
             n += 1;
-            println!("[{n}] {mod_type}");
+            ui::render_type_tagged(n, &mod_type);
         }
         prev = chunk_end;
     }
