@@ -6,8 +6,8 @@ use zipcrawl::ZipManager;
 
 use crate::error::{Error, Result};
 
-use super::loaders::{bukkit, fabric, forge_legacy, forge_modern, paper};
 use super::REGISTRY;
+use super::loaders::{bukkit, fabric, forge_legacy, forge_modern, paper};
 
 /// Parsed mod/plugin metadata from a JAR file.
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]

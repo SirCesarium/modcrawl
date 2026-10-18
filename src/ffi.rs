@@ -16,7 +16,7 @@ use std::any::Any;
 use std::ffi::{CStr, CString};
 use std::io::Cursor;
 use std::os::raw::c_char;
-use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::Path;
 use std::ptr;
 use std::slice;
@@ -485,8 +485,8 @@ mod tests {
     use std::process;
     use std::thread;
 
-    use zip::write::SimpleFileOptions;
     use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
 
     use super::*;
 
@@ -526,7 +526,8 @@ mod tests {
         let file = fs::File::create(&path).unwrap();
         let mut zip = ZipWriter::new(file);
         for (entry, contents) in entries {
-            zip.start_file(*entry, SimpleFileOptions::default()).unwrap();
+            zip.start_file(*entry, SimpleFileOptions::default())
+                .unwrap();
             zip.write_all(contents).unwrap();
         }
         zip.finish().unwrap();
@@ -534,7 +535,11 @@ mod tests {
     }
 
     fn fabric_jar(dir: &Path, name: &str) -> PathBuf {
-        write_jar(dir, name, &[("fabric.mod.json", FABRIC_MOD_JSON.as_bytes())])
+        write_jar(
+            dir,
+            name,
+            &[("fabric.mod.json", FABRIC_MOD_JSON.as_bytes())],
+        )
     }
 
     /// Take a returned string the way a C caller would: read it, then free it.
@@ -561,8 +566,7 @@ mod tests {
         assert_eq!(from_path.as_deref(), Some("Fabric"));
 
         let data = fs::read(&jar).unwrap();
-        let from_bytes =
-            unsafe { take(modcrawl_identify_bytes(data.as_ptr(), data.len())) };
+        let from_bytes = unsafe { take(modcrawl_identify_bytes(data.as_ptr(), data.len())) };
         assert_eq!(from_bytes.as_deref(), Some("Fabric"));
     }
 
@@ -596,10 +600,8 @@ mod tests {
         assert!(json.contains("\"testmod\""), "unexpected output: {json}");
 
         let data = fs::read(&jar).unwrap();
-        let bytes_json = unsafe {
-            take(modcrawl_metadata_json_bytes(data.as_ptr(), data.len()))
-        }
-        .unwrap();
+        let bytes_json =
+            unsafe { take(modcrawl_metadata_json_bytes(data.as_ptr(), data.len())) }.unwrap();
         assert_eq!(bytes_json, json);
 
         let bytes_human =
@@ -617,12 +619,22 @@ mod tests {
             r#"{{"schemaVersion":1,"id":"nulmod","name":"bad{nul_escape}name","version":"1.0"}}"#
         );
         let dir = TestDir::new("nul");
-        let jar = write_jar(dir.path(), "nul.jar", &[("fabric.mod.json", with_nul.as_bytes())]);
+        let jar = write_jar(
+            dir.path(),
+            "nul.jar",
+            &[("fabric.mod.json", with_nul.as_bytes())],
+        );
         let path = c_path(&jar);
 
         let human = unsafe { take(modcrawl_metadata(path.as_ptr())) }.unwrap();
-        assert!(!human.contains('\0'), "NUL leaked into the C string: {human:?}");
-        assert!(human.contains("bad\u{FFFD}name"), "unexpected output: {human}");
+        assert!(
+            !human.contains('\0'),
+            "NUL leaked into the C string: {human:?}"
+        );
+        assert!(
+            human.contains("bad\u{FFFD}name"),
+            "unexpected output: {human}"
+        );
 
         // The JSON variant escapes the NUL, so it round-trips intact.
         let json = unsafe { take(modcrawl_metadata_json(path.as_ptr())) }.unwrap();
@@ -643,11 +655,12 @@ mod tests {
         assert!(json.contains("Required"), "unexpected output: {json}");
 
         let data = fs::read(&jar).unwrap();
-        let bytes_json = unsafe {
-            take(modcrawl_deps_json_bytes(data.as_ptr(), data.len(), false))
-        }
-        .unwrap();
-        assert!(bytes_json.contains("fabricloader"), "unexpected: {bytes_json}");
+        let bytes_json =
+            unsafe { take(modcrawl_deps_json_bytes(data.as_ptr(), data.len(), false)) }.unwrap();
+        assert!(
+            bytes_json.contains("fabricloader"),
+            "unexpected: {bytes_json}"
+        );
 
         assert!(unsafe { take(modcrawl_deps(ptr::null(), false)) }.is_none());
         assert!(unsafe { take(modcrawl_deps_json_bytes(data.as_ptr(), 0, false)) }.is_none());
@@ -708,7 +721,10 @@ mod tests {
             ptr::null_mut(),
         ];
         let json = unsafe { take(modcrawl_dupes_json(paths.as_ptr())) }.unwrap();
-        assert!(json.contains("com/example/Shared.class"), "unexpected: {json}");
+        assert!(
+            json.contains("com/example/Shared.class"),
+            "unexpected: {json}"
+        );
         assert!(json.contains("dupes-a.jar"), "unexpected: {json}");
         assert!(json.contains("dupes-b.jar"), "unexpected: {json}");
         assert!(!json.contains("OnlyInB"), "unexpected: {json}");
@@ -728,7 +744,8 @@ mod tests {
         );
 
         // A path that is not valid UTF-8 is an error, not a silently skipped jar.
-        let good = CString::new(fabric_jar(dir.path(), "dupes-good.jar").to_str().unwrap()).unwrap();
+        let good =
+            CString::new(fabric_jar(dir.path(), "dupes-good.jar").to_str().unwrap()).unwrap();
         let bad = CString::new(b"/tmp/not-utf8-\xff.jar".to_vec()).unwrap();
         let paths: [*mut c_char; 3] = [
             good.as_ptr().cast_mut(),

@@ -79,12 +79,14 @@ mod tests {
         let mut mng = ZipManager::from_reader(&mut Cursor::new(bytes)).unwrap();
         let deps = extract(&mut mng).unwrap();
         assert_eq!(deps.len(), 2);
-        assert!(deps
-            .iter()
-            .any(|d| d.name == "fabric-api" && d.kind == DepKind::Required));
-        assert!(deps
-            .iter()
-            .any(|d| d.name == "minecraft" && d.kind == DepKind::Required));
+        assert!(
+            deps.iter()
+                .any(|d| d.name == "fabric-api" && d.kind == DepKind::Required)
+        );
+        assert!(
+            deps.iter()
+                .any(|d| d.name == "minecraft" && d.kind == DepKind::Required)
+        );
     }
 
     #[test]
@@ -104,12 +106,14 @@ mod tests {
         let mut mng = ZipManager::from_reader(&mut Cursor::new(bytes)).unwrap();
         let deps = extract(&mut mng).unwrap();
         assert_eq!(deps.len(), 2);
-        assert!(deps
-            .iter()
-            .any(|d| d.name == "sodium" && d.kind == DepKind::Recommended));
-        assert!(deps
-            .iter()
-            .any(|d| d.name == "iris" && d.kind == DepKind::Suggested));
+        assert!(
+            deps.iter()
+                .any(|d| d.name == "sodium" && d.kind == DepKind::Recommended)
+        );
+        assert!(
+            deps.iter()
+                .any(|d| d.name == "iris" && d.kind == DepKind::Suggested)
+        );
     }
 
     #[test]

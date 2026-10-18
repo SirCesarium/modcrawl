@@ -68,18 +68,22 @@ loadbefore: [OtherPlugin]
         let mut mng = ZipManager::from_reader(&mut Cursor::new(bytes)).unwrap();
         let deps = extract(&mut mng).unwrap();
         assert_eq!(deps.len(), 4);
-        assert!(deps
-            .iter()
-            .any(|d| d.name == "Vault" && d.kind == DepKind::Required));
-        assert!(deps
-            .iter()
-            .any(|d| d.name == "WorldEdit" && d.kind == DepKind::Required));
-        assert!(deps
-            .iter()
-            .any(|d| d.name == "PlaceholderAPI" && d.kind == DepKind::Optional));
-        assert!(deps
-            .iter()
-            .any(|d| d.name == "OtherPlugin" && d.kind == DepKind::LoadBefore));
+        assert!(
+            deps.iter()
+                .any(|d| d.name == "Vault" && d.kind == DepKind::Required)
+        );
+        assert!(
+            deps.iter()
+                .any(|d| d.name == "WorldEdit" && d.kind == DepKind::Required)
+        );
+        assert!(
+            deps.iter()
+                .any(|d| d.name == "PlaceholderAPI" && d.kind == DepKind::Optional)
+        );
+        assert!(
+            deps.iter()
+                .any(|d| d.name == "OtherPlugin" && d.kind == DepKind::LoadBefore)
+        );
     }
 
     #[test]

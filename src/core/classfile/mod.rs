@@ -3,8 +3,8 @@ use std::io::Read;
 use std::path::Path;
 
 use java_class_rs::{
-    get_entry, get_utf8, parse_classfile, parse_specialized_attribute, ClassAccessFlags,
-    ClassFile, ConstantPoolEntry, ElementValue, ParsedAttribute,
+    ClassAccessFlags, ClassFile, ConstantPoolEntry, ElementValue, ParsedAttribute, get_entry,
+    get_utf8, parse_classfile, parse_specialized_attribute,
 };
 use serde::Serialize;
 use zipcrawl::ZipManager;
@@ -134,9 +134,10 @@ pub fn find_duplicates(paths: &[&Path]) -> Result<Vec<DupEntry>> {
     for &path in paths {
         let mut manager = ZipManager::new(path)?;
         let entries = manager.entries()?;
-        let file_name = path
-            .file_name()
-            .map_or_else(|| path.to_string_lossy().to_string(), |n| n.to_string_lossy().to_string());
+        let file_name = path.file_name().map_or_else(
+            || path.to_string_lossy().to_string(),
+            |n| n.to_string_lossy().to_string(),
+        );
 
         for entry in &entries {
             if is_class_entry(&entry.name) && !entry.is_dir {
@@ -179,10 +180,9 @@ fn extract_mixin_targets(cf: &ClassFile, class_name: &str) -> Vec<MixinEntry> {
                         }
                         match value {
                             ElementValue::Class { class_info_index } => {
-                                if let Some(target) = resolve_class_descriptor(
-                                    &cf.constant_pool,
-                                    *class_info_index,
-                                ) {
+                                if let Some(target) =
+                                    resolve_class_descriptor(&cf.constant_pool, *class_info_index)
+                                {
                                     results.push(MixinEntry {
                                         mixin_class: class_name.to_string(),
                                         target,
@@ -260,10 +260,7 @@ fn is_class_entry(name: &str) -> bool {
         .is_some_and(|ext| ext.eq_ignore_ascii_case("class"))
 }
 
-fn parse_class_in_jar(
-    manager: &mut ZipManager,
-    name: &str,
-) -> Result<Option<ClassFile>> {
+fn parse_class_in_jar(manager: &mut ZipManager, name: &str) -> Result<Option<ClassFile>> {
     let mut file = manager.open_file(name)?;
     let mut bytes = Vec::new();
     file.read_to_end(&mut bytes).map_err(Error::Io)?;
@@ -303,9 +300,11 @@ fn search_constant_pool(cf: &ClassFile, class_name: &str, pattern: &str) -> Vec<
                 }
             }
             ConstantPoolEntry::Methodref(info) => {
-                if let Some(resolved) =
-                    resolve_ref(&cf.constant_pool, info.class_index, info.name_and_type_index)
-                    && resolved.contains(pattern)
+                if let Some(resolved) = resolve_ref(
+                    &cf.constant_pool,
+                    info.class_index,
+                    info.name_and_type_index,
+                ) && resolved.contains(pattern)
                 {
                     results.push(GrepMatch {
                         class_file: class_name.to_string(),
@@ -315,9 +314,11 @@ fn search_constant_pool(cf: &ClassFile, class_name: &str, pattern: &str) -> Vec<
                 }
             }
             ConstantPoolEntry::Fieldref(info) => {
-                if let Some(resolved) =
-                    resolve_ref(&cf.constant_pool, info.class_index, info.name_and_type_index)
-                    && resolved.contains(pattern)
+                if let Some(resolved) = resolve_ref(
+                    &cf.constant_pool,
+                    info.class_index,
+                    info.name_and_type_index,
+                ) && resolved.contains(pattern)
                 {
                     results.push(GrepMatch {
                         class_file: class_name.to_string(),
@@ -327,9 +328,11 @@ fn search_constant_pool(cf: &ClassFile, class_name: &str, pattern: &str) -> Vec<
                 }
             }
             ConstantPoolEntry::InterfaceMethodref(info) => {
-                if let Some(resolved) =
-                    resolve_ref(&cf.constant_pool, info.class_index, info.name_and_type_index)
-                    && resolved.contains(pattern)
+                if let Some(resolved) = resolve_ref(
+                    &cf.constant_pool,
+                    info.class_index,
+                    info.name_and_type_index,
+                ) && resolved.contains(pattern)
                 {
                     results.push(GrepMatch {
                         class_file: class_name.to_string(),
@@ -358,11 +361,7 @@ fn resolve_class_name(cp: &[ConstantPoolEntry], class_index: u16) -> Option<Stri
     }
 }
 
-fn resolve_ref(
-    cp: &[ConstantPoolEntry],
-    class_index: u16,
-    nat_index: u16,
-) -> Option<String> {
+fn resolve_ref(cp: &[ConstantPoolEntry], class_index: u16, nat_index: u16) -> Option<String> {
     let class_name = resolve_class_name(cp, class_index)?;
     let nat = get_entry(cp, nat_index)?;
     if let ConstantPoolEntry::NameAndType(nat) = nat {
