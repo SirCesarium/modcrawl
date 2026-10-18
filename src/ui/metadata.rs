@@ -6,7 +6,7 @@
 
 use super::style::{dim, kind_label, kind_style, loader_name, loader_style, paint};
 use super::table::{Cell, cell, print_table, styled_cell};
-use crate::core::dep::types::DepKind;
+use crate::core::dep::types::{DepKind, VersionRange};
 use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
 use crate::core::loaders::forge_modern::dep::forge_dep_kind;
 use crate::core::loaders::{
@@ -242,11 +242,7 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
         // across every Forge/NeoForge mod, so it carries no signal. Show the
         // detected loader itself, which the filename detection already knows.
         push_field(&mut fields, "Loader", loader_name(&kind).to_owned());
-        push_field(
-            &mut fields,
-            "Loader Version",
-            m.loader_version.clone().unwrap_or_default(),
-        );
+        push_field(&mut fields, "Loader Version", loader_version(m, &kind));
         push_field(
             &mut fields,
             "License",
@@ -289,11 +285,7 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
         let mut fields = Vec::new();
 
         push_field(&mut fields, "Loader", loader_name(&kind).to_owned());
-        push_field(
-            &mut fields,
-            "Loader Version",
-            m.loader_version.clone().unwrap_or_default(),
-        );
+        push_field(&mut fields, "Loader Version", loader_version(m, &kind));
         push_field(
             &mut fields,
             "License",
@@ -314,6 +306,32 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
     }
 
     blocks
+}
+
+/// The loader's own version, as a bare number.
+///
+/// `loaderVersion` is FML's range, and `NeoForge` mods set it to `[0,)` — Create
+/// even says so in a comment right above it: "the loader version doesn't
+/// matter". The figure a reader actually wants lives in the dependency on the
+/// loader itself, `neoforge` or `forge`, so take its lower bound. Falls back to
+/// `loaderVersion` verbatim when a mod declares no such dependency, so the
+/// field is never dropped.
+fn loader_version(m: &ModsTomlMetadata, kind: &ModType) -> String {
+    let loader_id = match kind {
+        ModType::NeoForge => "neoforge",
+        ModType::Forge(_) => "forge",
+        _ => "",
+    };
+
+    let from_dep = m
+        .dependencies
+        .values()
+        .flatten()
+        .filter(|d| d.mod_id == loader_id)
+        .filter_map(|d| d.version_range.clone())
+        .find_map(|raw| VersionRange::parse(Some(raw)).min);
+
+    from_dep.unwrap_or_else(|| m.loader_version.clone().unwrap_or_default())
 }
 
 /// The per-entry fields every `mods[]` block carries.
@@ -526,4 +544,72 @@ fn plugin_depends(m: &BukkitPluginMetadata) -> Vec<DepRow> {
     }));
 
     rows
+}
+
+#[cfg(test)]
+#[allow(clippy::expect_used)]
+mod tests {
+    use super::*;
+
+    /// `NeoForge`'s `loaderVersion` is always `[0,)`, so the real figure has to
+    /// come from the `neoforge` dependency's lower bound.
+    #[test]
+    fn loader_version_prefers_the_loader_dependency() {
+        let m: ModsTomlMetadata = toml::from_str(
+            r#"
+loaderVersion = "[0,)"
+
+[[mods]]
+modId = "create"
+
+[[dependencies.create]]
+modId = "neoforge"
+versionRange = "[21.1.219,)"
+"#,
+        )
+        .expect("toml parses");
+
+        let v = loader_version(&m, &ModType::NeoForge);
+        assert_eq!(v, "21.1.219");
+    }
+
+    /// Forge's loader dependency is `forge`, not `neoforge`.
+    #[test]
+    fn loader_version_uses_the_forge_dependency_for_forge() {
+        let m: ModsTomlMetadata = toml::from_str(
+            r#"
+loaderVersion = "[47,)"
+
+[[mods]]
+modId = "forgedemo"
+
+[[dependencies.forgedemo]]
+modId = "forge"
+versionRange = "[47,)"
+"#,
+        )
+        .expect("toml parses");
+
+        assert_eq!(
+            loader_version(&m, &ModType::Forge(ForgeModFormat::ModsToml)),
+            "47"
+        );
+    }
+
+    /// A mod declaring no loader dependency keeps `loaderVersion` verbatim, so
+    /// the field is never emptied out.
+    #[test]
+    fn loader_version_falls_back_to_loader_version_field() {
+        let m: ModsTomlMetadata = toml::from_str(
+            r#"
+loaderVersion = "[4,)"
+
+[[mods]]
+modId = "nodep"
+"#,
+        )
+        .expect("toml parses");
+
+        assert_eq!(loader_version(&m, &ModType::NeoForge), "[4,)");
+    }
 }
