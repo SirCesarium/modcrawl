@@ -10,8 +10,10 @@ use crate::core::dep::types::DepKind;
 use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
 use crate::core::loaders::forge_modern::dep::forge_dep_kind;
 use crate::core::loaders::{
-    bukkit::metadata::BukkitPluginMetadata, fabric::metadata::FabricModMetadata,
-    forge_legacy::metadata::ForgeLegacyModEntry, forge_modern::metadata::ModsTomlMetadata,
+    bukkit::metadata::BukkitPluginMetadata,
+    fabric::metadata::FabricModMetadata,
+    forge_legacy::metadata::ForgeLegacyModEntry,
+    forge_modern::metadata::{ModsTomlMetadata, ModsTomlMod},
     paper::metadata::PaperPluginMetadata,
 };
 use crate::core::metadata::ModMetadata;
@@ -39,8 +41,12 @@ struct Block {
 }
 
 /// Render one JAR's metadata.
+///
+/// Most loaders yield a single block, but `mods.toml` and `mcmod.info` can
+/// declare several entries in one file — each becomes its own block, separated
+/// by a blank line, so nothing is dropped.
 pub(crate) fn render(meta: &ModMetadata) {
-    let block = match meta {
+    let blocks = match meta {
         ModMetadata::Fabric(m) => fabric(m),
         ModMetadata::ForgeLegacy(entries) => forge_legacy(entries),
         ModMetadata::ForgeModern(m) => forge_modern(m, ModType::Forge(ForgeModFormat::ModsToml)),
@@ -49,7 +55,12 @@ pub(crate) fn render(meta: &ModMetadata) {
         ModMetadata::Paper(m) => paper(m),
     };
 
-    print_block(&block);
+    for (i, block) in blocks.iter().enumerate() {
+        if i > 0 {
+            println!();
+        }
+        print_block(block);
+    }
 }
 
 /// Print the header, field table, and optional depends table for a block.
@@ -152,7 +163,7 @@ fn version_string(value: &Value) -> String {
 }
 
 /// Fabric's `fabric.mod.json`.
-fn fabric(m: &FabricModMetadata) -> Block {
+fn fabric(m: &FabricModMetadata) -> Vec<Block> {
     let mut fields = Vec::new();
 
     push_field(&mut fields, "ID", m.id.clone());
@@ -180,6 +191,11 @@ fn fabric(m: &FabricModMetadata) -> Block {
     if let Some(contact) = &m.contact {
         push_field(
             &mut fields,
+            "Sources",
+            contact.sources.clone().unwrap_or_default(),
+        );
+        push_field(
+            &mut fields,
             "Homepage",
             contact.homepage.clone().unwrap_or_default(),
         );
@@ -187,12 +203,12 @@ fn fabric(m: &FabricModMetadata) -> Block {
 
     let title = m.name.clone().unwrap_or_else(|| m.id.clone());
 
-    Block {
+    vec![Block {
         kind: ModType::Fabric,
         title,
         fields,
         depends: fabric_depends(m),
-    }
+    }]
 }
 
 /// Fabric's `depends` map rendered as rows. Fabric records no per-dependency
@@ -210,66 +226,123 @@ fn fabric_depends(m: &FabricModMetadata) -> Vec<DepRow> {
 }
 
 /// Forge/NeoForge `mods.toml`.
-fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Block {
-    let first = m.mods.first();
+///
+/// The file-level fields (loader, license, URLs) ride on the first block; each
+/// `mods[]` entry gets its own block; the merged dependency table goes on the
+/// last block so it still reads once, like the old layout.
+fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
+    let mut blocks = Vec::new();
+    let mut entries = m.mods.iter();
 
-    let mut fields = Vec::new();
+    if let Some(first) = entries.next() {
+        let mut fields = Vec::new();
 
-    push_field(
-        &mut fields,
-        "Loader",
-        m.mod_loader.clone().unwrap_or_default(),
-    );
-    push_field(
-        &mut fields,
-        "Loader Version",
-        m.loader_version.clone().unwrap_or_default(),
-    );
-    push_field(
-        &mut fields,
-        "Mod ID",
-        first.map_or_else(String::new, |e| e.mod_id.clone()),
-    );
-    push_field(
-        &mut fields,
-        "Version",
-        first.and_then(|e| e.version.clone()).unwrap_or_default(),
-    );
+        push_field(
+            &mut fields,
+            "Loader",
+            m.mod_loader.clone().unwrap_or_default(),
+        );
+        push_field(
+            &mut fields,
+            "Loader Version",
+            m.loader_version.clone().unwrap_or_default(),
+        );
+        push_field(
+            &mut fields,
+            "License",
+            m.license.clone().unwrap_or_default(),
+        );
+        push_field(
+            &mut fields,
+            "Display URL",
+            m.display_url.clone().unwrap_or_default(),
+        );
 
-    push_field(
-        &mut fields,
-        "Description",
-        first
-            .and_then(|e| e.description.clone())
-            .unwrap_or_default(),
-    );
+        push_mod_fields(&mut fields, first);
 
-    let authors = first
-        .and_then(|e| e.authors.as_ref())
-        .map_or_else(String::new, version_string);
-    push_field(&mut fields, "Authors", authors);
-
-    push_field(
-        &mut fields,
-        "License",
-        m.license.clone().unwrap_or_default(),
-    );
-    push_field(
-        &mut fields,
-        "Display URL",
-        m.display_url.clone().unwrap_or_default(),
-    );
-
-    let title = first
-        .and_then(|e| e.display_name.clone())
-        .unwrap_or_default();
-
-    Block {
-        kind,
-        title,
-        fields,
-        depends: forge_modern_depends(m),
+        blocks.push(Block {
+            kind: kind.clone(),
+            title: mod_title(first),
+            fields,
+            depends: Vec::new(),
+        });
     }
+
+    for entry in entries {
+        let mut fields = Vec::new();
+        push_mod_fields(&mut fields, entry);
+
+        blocks.push(Block {
+            kind: kind.clone(),
+            title: mod_title(entry),
+            fields,
+            depends: Vec::new(),
+        });
+    }
+
+    let depends = forge_modern_depends(m);
+
+    if let Some(last) = blocks.last_mut() {
+        last.depends = depends;
+    } else {
+        // No `mods[]` entries — still surface the loader and dependencies.
+        let mut fields = Vec::new();
+
+        push_field(
+            &mut fields,
+            "Loader",
+            m.mod_loader.clone().unwrap_or_default(),
+        );
+        push_field(
+            &mut fields,
+            "Loader Version",
+            m.loader_version.clone().unwrap_or_default(),
+        );
+        push_field(
+            &mut fields,
+            "License",
+            m.license.clone().unwrap_or_default(),
+        );
+        push_field(
+            &mut fields,
+            "Display URL",
+            m.display_url.clone().unwrap_or_default(),
+        );
+
+        blocks.push(Block {
+            kind,
+            title: String::new(),
+            fields,
+            depends,
+        });
+    }
+
+    blocks
+}
+
+/// The per-entry fields every `mods[]` block carries.
+fn push_mod_fields(fields: &mut Vec<Field>, entry: &ModsTomlMod) {
+    push_field(fields, "Mod ID", entry.mod_id.clone());
+    push_field(fields, "Version", entry.version.clone().unwrap_or_default());
+    push_field(
+        fields,
+        "Description",
+        entry.description.clone().unwrap_or_default(),
+    );
+
+    let authors = entry
+        .authors
+        .as_ref()
+        .map_or_else(String::new, version_string);
+    push_field(fields, "Authors", authors);
+}
+
+/// A `mods[]` entry's display title: its name, falling back to the mod ID.
+fn mod_title(entry: &ModsTomlMod) -> String {
+    entry
+        .display_name
+        .clone()
+        .unwrap_or_else(|| entry.mod_id.clone())
 }
 
 /// Forge/NeoForge `dependencies` map rendered as rows. This loader is the one
@@ -289,61 +362,70 @@ fn forge_modern_depends(m: &ModsTomlMetadata) -> Vec<DepRow> {
         .collect()
 }
 
-/// Legacy Forge `mcmod.info`.
-fn forge_legacy(entries: &[ForgeLegacyModEntry]) -> Block {
-    let first = entries.first();
+/// Legacy Forge `mcmod.info`. The file is an array, so every entry becomes
+/// its own block (the old renderer separated them with `---`).
+fn forge_legacy(entries: &[ForgeLegacyModEntry]) -> Vec<Block> {
+    entries
+        .iter()
+        .map(|entry| {
+            let mut fields = Vec::new();
 
-    let mut fields = Vec::new();
+            push_field(&mut fields, "Mod ID", entry.modid.clone());
+            push_field(&mut fields, "Name", entry.name.clone().unwrap_or_default());
+            push_field(
+                &mut fields,
+                "Version",
+                entry.version.clone().unwrap_or_default(),
+            );
 
-    push_field(
-        &mut fields,
-        "Mod ID",
-        first.map_or_else(String::new, |e| e.modid.clone()),
-    );
-    push_field(
-        &mut fields,
-        "Name",
-        first.and_then(|e| e.name.clone()).unwrap_or_default(),
-    );
-    push_field(
-        &mut fields,
-        "Version",
-        first.and_then(|e| e.version.clone()).unwrap_or_default(),
-    );
+            push_field(
+                &mut fields,
+                "MC Version",
+                entry.mcversion.clone().unwrap_or_default(),
+            );
 
-    push_field(
-        &mut fields,
-        "MC Version",
-        first.and_then(|e| e.mcversion.clone()).unwrap_or_default(),
-    );
+            push_field(
+                &mut fields,
+                "Description",
+                entry.description.clone().unwrap_or_default(),
+            );
 
-    push_field(
-        &mut fields,
-        "Description",
-        first.map_or_else(String::new, |e| e.description.clone().unwrap_or_default()),
-    );
+            let authors = if entry.author_list.is_empty() {
+                entry.authors.clone().join(", ")
+            } else {
+                entry.author_list.join(", ")
+            };
+            push_field(&mut fields, "Authors", authors);
 
-    let authors = first.map_or_else(String::new, |e| {
-        if e.author_list.is_empty() {
-            e.authors.clone().join(", ")
-        } else {
-            e.author_list.join(", ")
-        }
-    });
-    push_field(&mut fields, "Authors", authors);
+            let title = entry.name.clone().unwrap_or_else(|| entry.modid.clone());
 
-    let title = first.and_then(|e| e.name.clone()).unwrap_or_default();
+            Block {
+                kind: ModType::Forge(ForgeModFormat::McmodInfo),
+                title,
+                fields,
+                depends: legacy_depends(entry),
+            }
+        })
+        .collect()
+}
 
-    Block {
-        kind: ModType::Forge(ForgeModFormat::McmodInfo),
-        title,
-        fields,
-        depends: Vec::new(),
-    }
+/// A legacy entry's `dependencies` list rendered as rows. This format records
+/// neither version nor side, so only the name and KIND are filled in.
+fn legacy_depends(entry: &ForgeLegacyModEntry) -> Vec<DepRow> {
+    entry
+        .dependencies
+        .iter()
+        .map(|name| DepRow {
+            name: name.clone(),
+            version: String::new(),
+            kind: Some(DepKind::Required),
+            side: None,
+        })
+        .collect()
 }
 
 /// Bukkit/Spigot `plugin.yml`.
-fn bukkit(m: &BukkitPluginMetadata) -> Block {
+fn bukkit(m: &BukkitPluginMetadata) -> Vec<Block> {
     let mut fields = Vec::new();
 
     push_field(&mut fields, "Name", m.name.clone());
@@ -373,16 +455,16 @@ fn bukkit(m: &BukkitPluginMetadata) -> Block {
         m.website.clone().unwrap_or_default(),
     );
 
-    Block {
+    vec![Block {
         kind: ModType::Plugin(PluginType::Bukkit),
         title: m.name.clone(),
         fields,
         depends: plugin_depends(m),
-    }
+    }]
 }
 
 /// Paper's `paper-plugin.yml`.
-fn paper(m: &PaperPluginMetadata) -> Block {
+fn paper(m: &PaperPluginMetadata) -> Vec<Block> {
     let mut fields = Vec::new();
 
     push_field(&mut fields, "Name", m.name.clone());
@@ -413,12 +495,12 @@ fn paper(m: &PaperPluginMetadata) -> Block {
     );
     push_field(&mut fields, "Load", m.load.clone().unwrap_or_default());
 
-    Block {
+    vec![Block {
         kind: ModType::Plugin(PluginType::Paper),
         title: m.name.clone(),
         fields,
         depends: Vec::new(),
-    }
+    }]
 }
 
 /// A plugin's hard, soft, and load-before dependencies as rows. Bukkit records
