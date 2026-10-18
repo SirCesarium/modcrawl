@@ -8,12 +8,18 @@ use std::fmt;
 use anstream::{eprintln, println};
 use anstyle::Style;
 
-use super::style::paint;
+use super::style::{dim, paint};
+
+/// Width of the rule that separates one JAR's block from the next.
+const RULE_WIDTH: usize = 48;
 
 /// The dimmed file banner printed above each JAR in a multi-file run, so the
-/// reader always knows which file the following lines describe.
+/// reader always knows which file the following lines describe. A faint rule
+/// above the path keeps adjacent JARs from running together.
 pub(crate) fn file_header(path: &str) {
-    println!("\n{}", paint(Style::new().bold(), path));
+    println!();
+    println!("{}", paint(dim(), &"─".repeat(RULE_WIDTH)));
+    println!("{}", paint(Style::new().bold(), path));
 }
 
 /// A note that a search produced nothing. Goes to stderr so it never pollutes
