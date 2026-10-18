@@ -1,6 +1,6 @@
 //! The borderless table: the one primitive every listing renders through.
 //!
-//! No box-drawing, no vertical rules — just a dimmed, letter-spaced header and
+//! No box, no vertical rules — a dimmed header, a dashed rule beneath it, and
 //! two-space-gapped columns that line up. That is what makes the whole CLI
 //! legible at a glance.
 
@@ -29,8 +29,9 @@ pub(crate) fn styled_cell(style: Style, text: &str) -> Cell {
     }
 }
 
-/// Print a borderless table: a dimmed uppercase header row, then one aligned
-/// row per entry. Columns are padded to the widest cell they contain.
+/// Print a borderless table: a dimmed uppercase header row, a rule spanning
+/// the full table width, then one aligned row per entry. Columns are padded to
+/// the widest cell they contain.
 pub(crate) fn print_table(headers: &[&str], rows: &[Vec<Cell>]) {
     if rows.is_empty() {
         return;
@@ -57,6 +58,7 @@ pub(crate) fn print_table(headers: &[&str], rows: &[Vec<Cell>]) {
         .collect();
 
     println!("{}", header_line.join("  "));
+    print_rule(&widths);
 
     for row in rows {
         let line: Vec<String> = row
@@ -70,4 +72,14 @@ pub(crate) fn print_table(headers: &[&str], rows: &[Vec<Cell>]) {
 
         println!("{}", line.join("  "));
     }
+}
+
+/// Draw the rule under a header row: one `╌` per visible column, plus the
+/// two-space gaps, so it spans exactly as wide as the table. Dashed rather
+/// than solid so it can't be mistaken for the solid rule `file_header` prints
+/// between one JAR's block and the next.
+fn print_rule(widths: &[usize]) {
+    let total = widths.iter().sum::<usize>() + widths.len().saturating_sub(1) * 2;
+
+    println!("{}", paint(dim(), &"╌".repeat(total)));
 }
