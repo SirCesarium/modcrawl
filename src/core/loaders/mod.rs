@@ -4,6 +4,7 @@ pub(crate) mod forge_legacy;
 pub(crate) mod forge_modern;
 pub(crate) mod neoforge;
 pub(crate) mod paper;
+pub(crate) mod velocity;
 
 use crate::core::registry::Registry;
 
@@ -18,6 +19,7 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(forge_modern::ForgeModernHandler));
     registry.register(Box::new(forge_legacy::ForgeLegacyHandler));
     registry.register(Box::new(fabric::FabricHandler));
+    registry.register(Box::new(velocity::VelocityHandler));
 }
 
 #[cfg(test)]
@@ -37,6 +39,7 @@ mod tests {
             "Forge (mcmod.info)" => "mcmod.info",
             "Plugin (Bukkit/Spigot)" => "plugin.yml",
             "Plugin (Paper)" => "paper-plugin.yml",
+            "Plugin (Velocity)" => "velocity-plugin.json",
             _ => panic!("unknown mod type: {mod_type}"),
         });
         assert!(handler.is_some(), "handler for {mod_type} not found");
@@ -71,5 +74,10 @@ mod tests {
     #[test]
     fn test_paper_handler() {
         test_handler("Plugin (Paper)");
+    }
+
+    #[test]
+    fn test_velocity_handler() {
+        test_handler("Plugin (Velocity)");
     }
 }

@@ -13,6 +13,7 @@ use crate::core::loaders::{
     forge_legacy::metadata::ForgeLegacyModEntry,
     forge_modern::metadata::{ModsTomlMetadata, ModsTomlMod},
     paper::metadata::PaperPluginMetadata,
+    velocity::metadata::VelocityPluginMetadata,
 };
 use crate::core::metadata::ModMetadata;
 use serde_json::Value;
@@ -47,6 +48,7 @@ pub(crate) fn render(meta: &ModMetadata) {
         ModMetadata::NeoForge(m) => forge_modern(m, ModType::NeoForge),
         ModMetadata::Bukkit(m) => bukkit(m),
         ModMetadata::Paper(m) => paper(m),
+        ModMetadata::Velocity(m) => velocity(m),
     };
 
     for (i, block) in blocks.iter().enumerate() {
@@ -491,6 +493,48 @@ fn paper(m: &PaperPluginMetadata) -> Vec<Block> {
         title: m.name.clone(),
         fields,
         depends: Vec::new(),
+    }]
+}
+
+/// Velocity's `velocity-plugin.json`.
+fn velocity(m: &VelocityPluginMetadata) -> Vec<Block> {
+    let mut fields = Vec::new();
+
+    push_field(&mut fields, "ID", m.id.clone());
+    push_field(&mut fields, "Name", m.name.clone().unwrap_or_default());
+    push_field(
+        &mut fields,
+        "Version",
+        m.version.clone().unwrap_or_default(),
+    );
+    push_field(&mut fields, "Main", m.main.clone().unwrap_or_default());
+    push_field(
+        &mut fields,
+        "Description",
+        m.description.clone().unwrap_or_default(),
+    );
+    push_field(&mut fields, "Authors", join_authors(&m.authors));
+
+    let depends = m
+        .dependencies
+        .iter()
+        .map(|d| DepRow {
+            name: d.id.clone(),
+            version: String::new(),
+            kind: Some(if d.optional {
+                DepKind::Optional
+            } else {
+                DepKind::Required
+            }),
+            side: None,
+        })
+        .collect();
+
+    vec![Block {
+        kind: ModType::Plugin(PluginType::Velocity),
+        title: m.name.clone().unwrap_or_else(|| m.id.clone()),
+        fields,
+        depends,
     }]
 }
 
