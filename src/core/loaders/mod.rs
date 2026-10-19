@@ -1,5 +1,5 @@
-pub(crate) mod bungee;
 pub(crate) mod bukkit;
+pub(crate) mod bungee;
 pub(crate) mod fabric;
 pub(crate) mod forge_legacy;
 pub(crate) mod forge_modern;

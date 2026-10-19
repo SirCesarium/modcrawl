@@ -5,7 +5,7 @@ use crate::core::metadata::ModMetadata;
 use crate::core::registry::ModHandler;
 use crate::error::Result;
 
-/// BungeeCord proxy plugins (`bungee.yml`). Metadata only; dependency
+/// `BungeeCord` proxy plugins (`bungee.yml`). Metadata only; dependency
 /// extraction is left to the trait default.
 pub struct BungeeHandler;
 
@@ -30,6 +30,6 @@ mod tests {
 
     #[test]
     fn no_dep_extraction() {
-        assert!(BungeeHandler.extract_deps("").unwrap().is_empty());
+        assert_eq!(BungeeHandler.extract_deps("").unwrap(), []);
     }
 }

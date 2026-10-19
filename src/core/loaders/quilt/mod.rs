@@ -30,6 +30,6 @@ mod tests {
 
     #[test]
     fn no_dep_extraction() {
-        assert!(QuiltHandler.extract_deps("{}").unwrap().is_empty());
+        assert_eq!(QuiltHandler.extract_deps("{}").unwrap(), []);
     }
 }

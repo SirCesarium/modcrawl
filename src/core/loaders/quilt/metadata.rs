@@ -65,8 +65,7 @@ impl QuiltDep {
     #[must_use]
     pub fn id(&self) -> &str {
         match self {
-            Self::Bare(id) => id,
-            Self::Detailed { id, .. } => id,
+            Self::Bare(id) | Self::Detailed { id, .. } => id,
         }
     }
 
@@ -189,7 +188,7 @@ mod tests {
         assert_eq!(meta.schema_version, Some(1));
         assert_eq!(meta.quilt_loader.id, "example_mod");
         assert_eq!(meta.quilt_loader.version.as_deref(), Some("1.0.0"));
-        assert!(meta.quilt_loader.depends.is_empty());
+        assert_eq!(meta.quilt_loader.depends, []);
     }
 
     #[test]

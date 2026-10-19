@@ -76,7 +76,7 @@ mod tests {
         let meta = parse(json).unwrap();
         assert_eq!(meta.id, "myplugin");
         assert_eq!(meta.main.as_deref(), Some("com.example.MyPlugin"));
-        assert!(meta.dependencies.is_empty());
+        assert_eq!(meta.dependencies, []);
     }
 
     #[test]

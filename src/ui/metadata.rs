@@ -14,7 +14,7 @@ use crate::core::loaders::{
     forge_legacy::metadata::ForgeLegacyModEntry,
     forge_modern::metadata::{ModsTomlMetadata, ModsTomlMod},
     paper::metadata::PaperPluginMetadata,
-    quilt::metadata::QuiltModMetadata,
+    quilt::metadata::{QuiltModMetadata, QuiltVersions, StringOrList},
     velocity::metadata::VelocityPluginMetadata,
 };
 use crate::core::metadata::ModMetadata;
@@ -244,7 +244,9 @@ fn quilt(m: &QuiltModMetadata) -> Vec<Block> {
     push_field(
         &mut fields,
         "License",
-        meta.license.as_ref().map_or_else(String::new, |l| l.join()),
+        meta.license
+            .as_ref()
+            .map_or_else(String::new, StringOrList::join),
     );
 
     let contributors: Vec<String> = meta
@@ -278,7 +280,7 @@ fn quilt(m: &QuiltModMetadata) -> Vec<Block> {
         .iter()
         .map(|d| DepRow {
             name: d.id().to_owned(),
-            version: d.versions().map_or_else(String::new, |v| v.join()),
+            version: d.versions().map_or_else(String::new, QuiltVersions::join),
             kind: Some(DepKind::Required),
             side: None,
         })

@@ -30,6 +30,6 @@ mod tests {
 
     #[test]
     fn no_dep_extraction() {
-        assert!(VelocityHandler.extract_deps("{}").unwrap().is_empty());
+        assert_eq!(VelocityHandler.extract_deps("{}").unwrap(), []);
     }
 }

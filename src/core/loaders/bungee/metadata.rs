@@ -61,7 +61,7 @@ main: me.example.TestPlugin
         assert_eq!(meta.name, "TestPlugin");
         assert_eq!(meta.version, "1.0.0");
         assert_eq!(meta.main, "me.example.TestPlugin");
-        assert!(meta.depends.is_empty());
+        assert_eq!(meta.depends, Vec::<String>::new());
     }
 
     #[test]
