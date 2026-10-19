@@ -76,7 +76,7 @@ pub fn run(args: &Args) -> Result<()> {
         }
     }
 
-    if total_matches == 0 && !args.file.is_empty() {
+    if total_matches == 0 && !args.file.is_empty() && !args.json {
         ui::no_results(&format!(
             "No matches found for pattern \"{}\".",
             args.pattern

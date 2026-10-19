@@ -74,7 +74,7 @@ pub fn run(args: &Args) -> Result<()> {
         }
     }
 
-    if total_entries == 0 && !args.file.is_empty() {
+    if total_entries == 0 && !args.file.is_empty() && !args.json {
         ui::no_results("No mixins found.");
     }
 
