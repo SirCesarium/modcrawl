@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
@@ -23,7 +23,7 @@ pub struct ModsTomlMetadata {
     #[serde(default)]
     pub mods: Vec<ModsTomlMod>,
     #[serde(default)]
-    pub dependencies: HashMap<String, Vec<ModsTomlDependency>>,
+    pub dependencies: BTreeMap<String, Vec<ModsTomlDependency>>,
     #[serde(rename = "displayURL")]
     pub display_url: Option<String>,
     #[serde(rename = "logoFile")]
@@ -37,7 +37,7 @@ pub struct ModsTomlMetadata {
     #[serde(default)]
     pub mixins: Vec<ModsTomlMixin>,
     #[serde(default)]
-    pub modproperties: HashMap<String, Value>,
+    pub modproperties: BTreeMap<String, Value>,
     #[serde(rename = "enumExtensions")]
     pub enum_extensions: Option<String>,
 }
@@ -105,9 +105,9 @@ impl fmt::Display for ModsTomlMetadata {
             }
         }
         if !self.dependencies.is_empty() {
-            use std::collections::{HashMap, HashSet};
+            use std::collections::{BTreeMap, HashSet};
             writeln!(f, "Dependencies:")?;
-            let mut merged: HashMap<&str, (&str, HashSet<Option<&str>>)> = HashMap::new();
+            let mut merged: BTreeMap<&str, (&str, HashSet<Option<&str>>)> = BTreeMap::new();
             for deps in self.dependencies.values() {
                 for dep in deps {
                     let (vr, sides) = merged.entry(dep.mod_id.as_str()).or_insert_with(|| {

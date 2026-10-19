@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
@@ -25,23 +25,23 @@ pub struct FabricModMetadata {
     pub icon: Option<String>,
     pub environment: Option<String>,
     #[serde(default)]
-    pub entrypoints: HashMap<String, Vec<String>>,
+    pub entrypoints: BTreeMap<String, Vec<String>>,
     #[serde(default)]
     pub mixins: Vec<Value>,
     #[serde(default)]
-    pub depends: HashMap<String, Value>,
+    pub depends: BTreeMap<String, Value>,
     #[serde(default)]
-    pub recommends: HashMap<String, Value>,
+    pub recommends: BTreeMap<String, Value>,
     #[serde(default)]
-    pub suggests: HashMap<String, Value>,
+    pub suggests: BTreeMap<String, Value>,
     #[serde(default)]
-    pub breaks: HashMap<String, Value>,
+    pub breaks: BTreeMap<String, Value>,
     #[serde(default)]
-    pub conflicts: HashMap<String, Value>,
+    pub conflicts: BTreeMap<String, Value>,
     #[serde(default)]
     pub jars: Vec<FabricJarEntry>,
     #[serde(default)]
-    pub custom: HashMap<String, Value>,
+    pub custom: BTreeMap<String, Value>,
     #[serde(rename = "accessWidener")]
     pub access_widener: Option<String>,
     #[serde(default)]
@@ -50,7 +50,7 @@ pub struct FabricModMetadata {
     pub contributors: Vec<Value>,
     #[serde(default)]
     #[serde(rename = "languageAdapters")]
-    pub language_adapters: HashMap<String, String>,
+    pub language_adapters: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
