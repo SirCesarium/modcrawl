@@ -1,3 +1,4 @@
+pub(crate) mod bungee;
 pub(crate) mod bukkit;
 pub(crate) mod fabric;
 pub(crate) mod forge_legacy;
@@ -23,6 +24,7 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(fabric::FabricHandler));
     registry.register(Box::new(quilt::QuiltHandler));
     registry.register(Box::new(velocity::VelocityHandler));
+    registry.register(Box::new(bungee::BungeeHandler));
 }
 
 #[cfg(test)]
@@ -44,6 +46,7 @@ mod tests {
             "Plugin (Bukkit/Spigot)" => "plugin.yml",
             "Plugin (Paper)" => "paper-plugin.yml",
             "Plugin (Velocity)" => "velocity-plugin.json",
+            "Plugin (BungeeCord)" => "bungee.yml",
             _ => panic!("unknown mod type: {mod_type}"),
         });
         assert!(handler.is_some(), "handler for {mod_type} not found");
@@ -114,5 +117,10 @@ mod tests {
     #[test]
     fn test_velocity_handler() {
         test_handler("Plugin (Velocity)");
+    }
+
+    #[test]
+    fn test_bungee_handler() {
+        test_handler("Plugin (BungeeCord)");
     }
 }

@@ -16,7 +16,6 @@ impl fmt::Display for ForgeModFormat {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code)]
 pub enum PluginType {
     Bukkit,
     Paper,

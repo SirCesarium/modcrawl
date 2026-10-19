@@ -9,6 +9,7 @@ use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
 use crate::core::loaders::forge_modern::dep::forge_dep_kind;
 use crate::core::loaders::{
     bukkit::metadata::BukkitPluginMetadata,
+    bungee::metadata::BungeePluginMetadata,
     fabric::metadata::FabricModMetadata,
     forge_legacy::metadata::ForgeLegacyModEntry,
     forge_modern::metadata::{ModsTomlMetadata, ModsTomlMod},
@@ -49,6 +50,7 @@ pub(crate) fn render(meta: &ModMetadata) {
         ModMetadata::ForgeModern(m) => forge_modern(m, ModType::Forge(ForgeModFormat::ModsToml)),
         ModMetadata::NeoForge(m) => forge_modern(m, ModType::NeoForge),
         ModMetadata::Bukkit(m) => bukkit(m),
+        ModMetadata::Bungee(m) => bungee(m),
         ModMetadata::Paper(m) => paper(m),
         ModMetadata::Velocity(m) => velocity(m),
     };
@@ -524,6 +526,45 @@ fn bukkit(m: &BukkitPluginMetadata) -> Vec<Block> {
         title: m.name.clone(),
         fields,
         depends: plugin_depends(m),
+    }]
+}
+
+/// Bungee's `bungee.yml`.
+fn bungee(m: &BungeePluginMetadata) -> Vec<Block> {
+    let mut fields = Vec::new();
+
+    push_field(&mut fields, "Name", m.name.clone());
+    push_field(&mut fields, "Version", m.version.clone());
+    push_field(&mut fields, "Main", m.main.clone());
+    push_field(
+        &mut fields,
+        "Description",
+        m.description.clone().unwrap_or_default(),
+    );
+
+    let authors = if m.authors.is_empty() {
+        m.author.clone().unwrap_or_default()
+    } else {
+        m.authors.join(", ")
+    };
+    push_field(&mut fields, "Authors", authors);
+
+    let depends = m
+        .depends
+        .iter()
+        .map(|name| DepRow {
+            name: name.clone(),
+            version: String::new(),
+            kind: Some(DepKind::Required),
+            side: None,
+        })
+        .collect();
+
+    vec![Block {
+        kind: ModType::Plugin(PluginType::Bungee),
+        title: m.name.clone(),
+        fields,
+        depends,
     }]
 }
 

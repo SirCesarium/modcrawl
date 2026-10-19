@@ -8,7 +8,7 @@ use zipcrawl::ZipManager;
 use crate::error::{Error, Result};
 
 use super::REGISTRY;
-use super::loaders::{bukkit, fabric, forge_legacy, forge_modern, paper, quilt, velocity};
+use super::loaders::{bukkit, bungee, fabric, forge_legacy, forge_modern, paper, quilt, velocity};
 
 /// Parsed mod/plugin metadata from a JAR file.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -19,6 +19,7 @@ pub enum ModMetadata {
     ForgeModern(Box<forge_modern::metadata::ModsTomlMetadata>),
     NeoForge(Box<forge_modern::metadata::ModsTomlMetadata>),
     Bukkit(bukkit::metadata::BukkitPluginMetadata),
+    Bungee(bungee::metadata::BungeePluginMetadata),
     Paper(paper::metadata::PaperPluginMetadata),
     Velocity(velocity::metadata::VelocityPluginMetadata),
 }
@@ -48,6 +49,10 @@ impl fmt::Display for ModMetadata {
             }
             Self::Bukkit(m) => {
                 writeln!(f, "Type:     Bukkit/Spigot")?;
+                write!(f, "{m}")?;
+            }
+            Self::Bungee(m) => {
+                writeln!(f, "Type:     BungeeCord")?;
                 write!(f, "{m}")?;
             }
             Self::Paper(m) => {
