@@ -3,13 +3,15 @@ use std::path::PathBuf;
 use clap::Args as ClapArgs;
 use serde_json::to_string_pretty;
 
+use crate::cmd::collect_jar_paths;
 use crate::core::dep;
 use crate::error::Result;
 use crate::ui;
 
 #[derive(ClapArgs)]
 pub struct Args {
-    pub file: Vec<PathBuf>,
+    /// Path of JAR file or directory containing JAR files
+    pub path: Vec<PathBuf>,
 
     #[arg(
         long = "include-jar-in-jar",
@@ -32,9 +34,10 @@ pub struct Args {
 ///
 /// Returns an error if an archive cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let multi = args.file.len() > 1;
+    let files = collect_jar_paths(&args.path)?;
+    let multi = files.len() > 1;
 
-    for file in &args.file {
+    for file in &files {
         let report = match dep::analyze(file, args.include_jar_in_jar) {
             Ok(r) => r,
             Err(e) => {

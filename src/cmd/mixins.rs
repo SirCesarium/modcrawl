@@ -4,13 +4,15 @@ use std::path::PathBuf;
 use clap::Args as ClapArgs;
 use serde_json::to_string_pretty;
 
+use crate::cmd::collect_jar_paths;
 use crate::core::classfile;
 use crate::error::Result;
 use crate::ui;
 
 #[derive(ClapArgs)]
 pub struct Args {
-    pub file: Vec<PathBuf>,
+    /// Path of JAR file or directory containing JAR files
+    pub path: Vec<PathBuf>,
 
     #[arg(
         short = 'q',
@@ -33,10 +35,11 @@ pub struct Args {
 ///
 /// Returns an error if a JAR cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let multi = args.file.len() > 1;
+    let files = collect_jar_paths(&args.path)?;
+    let multi = files.len() > 1;
     let mut total_entries = 0usize;
 
-    for file in &args.file {
+    for file in &files {
         let entries = match classfile::mixins(file) {
             Ok(e) => e,
             Err(e) => {
@@ -74,7 +77,7 @@ pub fn run(args: &Args) -> Result<()> {
         }
     }
 
-    if total_entries == 0 && !args.file.is_empty() && !args.json {
+    if total_entries == 0 && !files.is_empty() && !args.json {
         ui::no_results("No mixins found.");
     }
 

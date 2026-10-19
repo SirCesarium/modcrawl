@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use clap::Args as ClapArgs;
 
+use crate::cmd::collect_jar_paths;
 use crate::core::identify::{identify, identify_reader};
 use crate::error::Result;
 use crate::ui;
@@ -11,7 +12,8 @@ const EOCD_MAGIC: &[u8] = b"PK\x05\x06";
 
 #[derive(ClapArgs)]
 pub struct Args {
-    pub file: Vec<PathBuf>,
+    /// Path of JAR file or directory containing JAR files
+    pub path: Vec<PathBuf>,
 }
 
 fn process_zip_chunks(data: &[u8]) {
@@ -60,7 +62,7 @@ fn process_zip_chunks(data: &[u8]) {
 ///
 /// Returns an error if I/O fails or a ZIP archive cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    if args.file.is_empty() || (args.file.len() == 1 && args.file[0].to_string_lossy() == "-") {
+    if args.path.is_empty() || (args.path.len() == 1 && args.path[0].to_string_lossy() == "-") {
         let mut handle = io::stdin().lock();
         let buf = handle.fill_buf()?;
         if buf.starts_with(b"PK\x03\x04") {
@@ -93,9 +95,12 @@ pub fn run(args: &Args) -> Result<()> {
         }
         Ok(())
     } else {
-        let single = args.file.len() == 1;
-        let entries: Vec<(String, _)> = args
-            .file
+        let files = collect_jar_paths(&args.path)?;
+        // A directory is always rendered as a table: its caller never named the
+        // file, so the FILE column is the only thing identifying it.
+        let named_only = matches!(args.path.as_slice(), [one] if !one.is_dir());
+
+        let entries: Vec<(String, _)> = files
             .iter()
             .filter_map(|file| match identify(file) {
                 Ok(mod_type) => Some((file.display().to_string(), mod_type)),
@@ -106,8 +111,7 @@ pub fn run(args: &Args) -> Result<()> {
             })
             .collect();
 
-        match (single, entries.as_slice()) {
-            (true, []) => {}
+        match (named_only, entries.as_slice()) {
             (true, [entry]) => ui::render_type(&entry.1),
             _ => ui::render_type_multi(&entries),
         }

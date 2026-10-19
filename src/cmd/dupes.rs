@@ -5,14 +5,15 @@ use std::path::PathBuf;
 use clap::Args as ClapArgs;
 use serde_json::{json, to_string_pretty};
 
+use crate::cmd::collect_jar_paths;
 use crate::core::classfile;
 use crate::error::Result;
 use crate::ui;
 
 #[derive(ClapArgs)]
 pub struct Args {
-    /// One or more JAR files to compare for duplicate classes.
-    pub file: Vec<PathBuf>,
+    /// Path of JAR file or directory containing JAR files
+    pub path: Vec<PathBuf>,
 
     #[arg(
         short = 'b',
@@ -42,7 +43,8 @@ pub struct Args {
 ///
 /// Returns an error if any JAR cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let paths: Vec<&Path> = args.file.iter().map(PathBuf::as_path).collect();
+    let paths = collect_jar_paths(&args.path)?;
+    let paths: Vec<&Path> = paths.iter().map(PathBuf::as_path).collect();
     let entries = classfile::find_duplicates(&paths)?;
 
     if args.json && args.count {
