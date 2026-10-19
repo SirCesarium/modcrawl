@@ -1,8 +1,6 @@
 pub mod dep;
 pub mod metadata;
 
-use zipcrawl::ZipManager;
-
 use crate::core::dep::types::DepEntry;
 use crate::core::detect_mod_type::{ForgeModFormat, ModType};
 use crate::core::metadata::ModMetadata;
@@ -20,8 +18,8 @@ impl ModHandler for ForgeModernHandler {
         &["META-INF/mods.toml"]
     }
 
-    fn extract_deps(&self, mng: &mut ZipManager) -> Result<Vec<DepEntry>> {
-        dep::extract(mng)
+    fn extract_deps(&self, raw: &str) -> Result<Vec<DepEntry>> {
+        dep::extract(raw)
     }
 
     fn read_metadata(&self, raw: &str) -> Result<ModMetadata> {

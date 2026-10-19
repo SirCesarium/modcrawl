@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::io::Read;
 use std::path::Path;
 
@@ -129,7 +129,7 @@ pub fn mixins(path: &Path) -> Result<Vec<MixinEntry>> {
 ///
 /// Returns an error if any JAR cannot be read.
 pub fn find_duplicates(paths: &[&Path]) -> Result<Vec<DupEntry>> {
-    let mut class_to_files: HashMap<String, Vec<String>> = HashMap::new();
+    let mut class_to_files: BTreeMap<String, Vec<String>> = BTreeMap::new();
 
     for &path in paths {
         let mut manager = ZipManager::new(path)?;

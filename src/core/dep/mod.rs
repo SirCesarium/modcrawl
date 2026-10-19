@@ -1,10 +1,10 @@
 pub mod types;
 
 use std::collections::HashMap;
-use std::io::Read;
+use std::io::{Read, Seek};
 use std::path::Path;
 
-use zipcrawl::ZipManager;
+use zipcrawl::{ZipEntry, ZipManager};
 
 pub use types::{DepEntry, DepReport, JarInJar};
 
@@ -38,11 +38,17 @@ pub fn analyze_reader<R: Read>(reader: &mut R, include_jij: bool) -> Result<DepR
     analyze_impl(&mut mng, include_jij)
 }
 
-fn analyze_impl(mng: &mut ZipManager, include_jij: bool) -> Result<DepReport> {
+fn analyze_impl<R: Read + Seek>(mng: &mut ZipManager<R>, include_jij: bool) -> Result<DepReport> {
     let entries = mng.entries()?;
     let mod_type = REGISTRY.detect(&entries);
 
-    let mut dependencies = dedup_deps(REGISTRY.extract_deps(&mod_type, mng)?);
+    let mut dependencies = match REGISTRY.metadata_file_path(&mod_type) {
+        Some(file) => {
+            let raw = mng.read_to_string(file)?;
+            dedup_deps(REGISTRY.extract_deps(&mod_type, &raw)?)
+        }
+        None => Vec::new(),
+    };
 
     let jar_in_jar = find_embedded_jars(&entries);
     if !jar_in_jar.is_empty() {
@@ -79,7 +85,7 @@ fn dedup_deps(raw: Vec<DepEntry>) -> Vec<DepEntry> {
     out
 }
 
-fn find_embedded_jars(entries: &[zipcrawl::ZipEntry]) -> Vec<JarInJar> {
+fn find_embedded_jars(entries: &[ZipEntry]) -> Vec<JarInJar> {
     entries
         .iter()
         .filter(|e| {
@@ -225,8 +231,8 @@ mod tests {
 
     // ── find_embedded_jars ─────────────────────────────────────────────────
 
-    fn zip_entry(name: &str, is_dir: bool) -> zipcrawl::ZipEntry {
-        zipcrawl::ZipEntry {
+    fn zip_entry(name: &str, is_dir: bool) -> ZipEntry {
+        ZipEntry {
             name: name.to_owned(),
             is_dir,
             size: 0,

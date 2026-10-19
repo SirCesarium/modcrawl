@@ -1,11 +1,12 @@
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
+use serde_saphyr::from_str;
 
 use crate::error::Result;
 
 pub fn parse(input: &str) -> Result<PaperPluginMetadata> {
-    Ok(serde_saphyr::from_str(input)?)
+    Ok(from_str(input)?)
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -1,12 +1,15 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
+use clap::Args as ClapArgs;
+use serde_json::to_string_pretty;
+
 use crate::cmd::collect_jar_paths;
 use crate::core::classfile;
 use crate::error::Result;
 use crate::ui;
 
-#[derive(clap::Args)]
+#[derive(ClapArgs)]
 pub struct Args {
     /// Path of JAR file or directory containing JAR files
     pub path: Vec<PathBuf>,
@@ -46,7 +49,7 @@ pub fn run(args: &Args) -> Result<()> {
         };
 
         if args.json {
-            println!("{}", serde_json::to_string_pretty(&entries)?);
+            println!("{}", to_string_pretty(&entries)?);
             continue;
         }
 
@@ -74,7 +77,7 @@ pub fn run(args: &Args) -> Result<()> {
         }
     }
 
-    if total_entries == 0 && !args.path.is_empty() {
+    if total_entries == 0 && !args.path.is_empty() && !args.json {
         ui::no_results("No mixins found.");
     }
 

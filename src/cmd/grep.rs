@@ -1,12 +1,15 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
+use clap::Args as ClapArgs;
+use serde_json::to_string_pretty;
+
 use crate::cmd::collect_jar_paths;
 use crate::core::classfile;
 use crate::error::Result;
 use crate::ui;
 
-#[derive(clap::Args)]
+#[derive(ClapArgs)]
 pub struct Args {
     pub pattern: String,
 
@@ -48,7 +51,7 @@ pub fn run(args: &Args) -> Result<()> {
         };
 
         if args.json {
-            println!("{}", serde_json::to_string_pretty(&matches)?);
+            println!("{}", to_string_pretty(&matches)?);
             continue;
         }
 
@@ -76,7 +79,7 @@ pub fn run(args: &Args) -> Result<()> {
         }
     }
 
-    if total_matches == 0 && !args.path.is_empty() {
+    if total_matches == 0 && !args.path.is_empty() && !args.json {
         ui::no_results(&format!(
             "No matches found for pattern \"{}\".",
             args.pattern

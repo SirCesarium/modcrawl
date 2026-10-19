@@ -1,12 +1,12 @@
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, from_str};
 
 use crate::error::Result;
 
 pub fn parse(input: &str) -> Result<ForgeLegacyMetadata> {
-    Ok(serde_json::from_str(input)?)
+    Ok(from_str(input)?)
 }
 
 pub type ForgeLegacyMetadata = Vec<ForgeLegacyModEntry>;

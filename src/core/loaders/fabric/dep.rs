@@ -1,8 +1,7 @@
-use zipcrawl::ZipManager;
-
-use serde_json::Value;
+use serde_json::{Value, from_str};
 
 use super::super::super::dep::types::{DepEntry, DepKind, VersionRange};
+use super::metadata::FabricModMetadata;
 use crate::error::Result;
 
 fn ver(value: Value) -> Option<String> {
@@ -13,9 +12,8 @@ fn ver(value: Value) -> Option<String> {
     }
 }
 
-pub fn extract(mng: &mut ZipManager) -> Result<Vec<DepEntry>> {
-    let raw = mng.read_to_string("fabric.mod.json")?;
-    let meta = serde_json::from_str::<super::metadata::FabricModMetadata>(&raw)?;
+pub fn extract(raw: &str) -> Result<Vec<DepEntry>> {
+    let meta = from_str::<FabricModMetadata>(raw)?;
     let mut deps = Vec::new();
 
     for (name, range) in meta.depends {
@@ -46,23 +44,8 @@ pub fn extract(mng: &mut ZipManager) -> Result<Vec<DepEntry>> {
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::default_trait_access)]
 mod tests {
-    use std::io::{Cursor, Write};
-    use zip::ZipWriter;
-
     use super::*;
     use crate::core::dep::types::DepKind;
-
-    fn make_zip_bytes(contents: &[(&str, &str)]) -> Vec<u8> {
-        let mut buf = Cursor::new(Vec::new());
-        let mut zip = ZipWriter::new(&mut buf);
-        for (name, content) in contents {
-            zip.start_file::<&str, ()>(name, Default::default())
-                .unwrap();
-            zip.write_all(content.as_bytes()).unwrap();
-        }
-        zip.finish().unwrap();
-        buf.into_inner()
-    }
 
     #[test]
     fn extract_depends() {
@@ -75,9 +58,7 @@ mod tests {
                 "minecraft": "~1.20.1"
             }
         }"#;
-        let bytes = make_zip_bytes(&[("fabric.mod.json", json)]);
-        let mut mng = ZipManager::from_reader(&mut Cursor::new(bytes)).unwrap();
-        let deps = extract(&mut mng).unwrap();
+        let deps = extract(json).unwrap();
         assert_eq!(deps.len(), 2);
         assert!(
             deps.iter()
@@ -102,9 +83,7 @@ mod tests {
                 "iris": "*"
             }
         }"#;
-        let bytes = make_zip_bytes(&[("fabric.mod.json", json)]);
-        let mut mng = ZipManager::from_reader(&mut Cursor::new(bytes)).unwrap();
-        let deps = extract(&mut mng).unwrap();
+        let deps = extract(json).unwrap();
         assert_eq!(deps.len(), 2);
         assert!(
             deps.iter()
@@ -119,9 +98,7 @@ mod tests {
     #[test]
     fn extract_empty_when_no_deps() {
         let json = r#"{"schemaVersion": 1, "id": "testmod", "version": "1.0.0"}"#;
-        let bytes = make_zip_bytes(&[("fabric.mod.json", json)]);
-        let mut mng = ZipManager::from_reader(&mut Cursor::new(bytes)).unwrap();
-        let deps = extract(&mut mng).unwrap();
+        let deps = extract(json).unwrap();
         assert_eq!(deps, []);
     }
 }

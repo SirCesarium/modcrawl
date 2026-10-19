@@ -1,23 +1,27 @@
 use std::fmt;
-use std::io::Read;
+use std::io::{Read, Seek};
 use std::path::Path;
 
+use serde::Serialize;
 use zipcrawl::ZipManager;
 
 use crate::error::{Error, Result};
 
 use super::REGISTRY;
-use super::loaders::{bukkit, fabric, forge_legacy, forge_modern, paper};
+use super::loaders::{bukkit, bungee, fabric, forge_legacy, forge_modern, paper, quilt, velocity};
 
 /// Parsed mod/plugin metadata from a JAR file.
-#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum ModMetadata {
     Fabric(Box<fabric::metadata::FabricModMetadata>),
+    Quilt(Box<quilt::metadata::QuiltModMetadata>),
     ForgeLegacy(forge_legacy::metadata::ForgeLegacyMetadata),
     ForgeModern(Box<forge_modern::metadata::ModsTomlMetadata>),
     NeoForge(Box<forge_modern::metadata::ModsTomlMetadata>),
     Bukkit(bukkit::metadata::BukkitPluginMetadata),
+    Bungee(bungee::metadata::BungeePluginMetadata),
     Paper(paper::metadata::PaperPluginMetadata),
+    Velocity(velocity::metadata::VelocityPluginMetadata),
 }
 
 impl fmt::Display for ModMetadata {
@@ -25,6 +29,10 @@ impl fmt::Display for ModMetadata {
         match self {
             Self::Fabric(m) => {
                 writeln!(f, "Type:     Fabric")?;
+                write!(f, "{m}")?;
+            }
+            Self::Quilt(m) => {
+                writeln!(f, "Type:     Quilt")?;
                 write!(f, "{m}")?;
             }
             Self::ForgeLegacy(entries) => {
@@ -43,8 +51,16 @@ impl fmt::Display for ModMetadata {
                 writeln!(f, "Type:     Bukkit/Spigot")?;
                 write!(f, "{m}")?;
             }
+            Self::Bungee(m) => {
+                writeln!(f, "Type:     BungeeCord")?;
+                write!(f, "{m}")?;
+            }
             Self::Paper(m) => {
                 writeln!(f, "Type:     Paper")?;
+                write!(f, "{m}")?;
+            }
+            Self::Velocity(m) => {
+                writeln!(f, "Type:     Velocity")?;
                 write!(f, "{m}")?;
             }
         }
@@ -75,7 +91,7 @@ pub fn read_metadata_reader<R: Read>(reader: &mut R) -> Result<ModMetadata> {
     read_metadata_impl(&mut mng)
 }
 
-fn read_metadata_impl(mng: &mut ZipManager) -> Result<ModMetadata> {
+fn read_metadata_impl<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<ModMetadata> {
     let entries = mng.entries()?;
     let mod_type = REGISTRY.detect(&entries);
 

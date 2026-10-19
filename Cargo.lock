@@ -380,12 +380,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fastrand"
-version = "2.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f1f227452a390804cdb637b74a86990f2a7d7ba4b7d5693aac9b4dd6defd8d6"
-
-[[package]]
 name = "find-msvc-tools"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -684,7 +678,7 @@ dependencies = [
 
 [[package]]
 name = "modcrawl"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "anstream",
  "anstyle",
@@ -1037,19 +1031,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
-]
-
-[[package]]
-name = "tempfile"
-version = "3.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
-dependencies = [
- "fastrand",
- "getrandom 0.4.2",
- "once_cell",
- "rustix",
- "windows-sys",
 ]
 
 [[package]]
@@ -1447,14 +1428,13 @@ dependencies = [
 
 [[package]]
 name = "zipcrawl"
-version = "2.5.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae29716bf64b3a71263d44b6efcbace81f548f9d031ad70b034c360dba3501b2"
+checksum = "9ae0a83e650a8c90c63a4cf74ef60fc73c973fb7e1ece2509f5d500cb24b4b34"
 dependencies = [
  "miette",
  "serde",
  "serde_json",
- "tempfile",
  "thiserror",
  "toml",
  "zip",

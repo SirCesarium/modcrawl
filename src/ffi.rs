@@ -21,6 +21,8 @@ use std::path::Path;
 use std::ptr;
 use std::slice;
 
+use serde_json::to_string;
+
 use crate::core::dep;
 use crate::core::identify::{identify, identify_reader};
 use crate::core::metadata;
@@ -202,7 +204,7 @@ pub unsafe extern "C" fn modcrawl_metadata_json(path: *const c_char) -> *mut c_c
         };
         to_c_string(
             metadata::read_metadata(Path::new(path_str))
-                .and_then(|m| serde_json::to_string(&m).map_err(Into::into)),
+                .and_then(|m| to_string(&m).map_err(Into::into)),
         )
     })
 }
@@ -243,7 +245,7 @@ pub unsafe extern "C" fn modcrawl_metadata_json_bytes(data: *const u8, len: usiz
         let mut cursor = Cursor::new(buf);
         to_c_string(
             metadata::read_metadata_reader(&mut cursor)
-                .and_then(|m| serde_json::to_string(&m).map_err(Into::into)),
+                .and_then(|m| to_string(&m).map_err(Into::into)),
         )
     })
 }
@@ -286,7 +288,7 @@ pub unsafe extern "C" fn modcrawl_deps_json(path: *const c_char, include_jij: bo
         };
         to_c_string(
             dep::analyze(Path::new(path_str), include_jij)
-                .and_then(|r| serde_json::to_string(&r).map_err(Into::into)),
+                .and_then(|r| to_string(&r).map_err(Into::into)),
         )
     })
 }
@@ -339,7 +341,7 @@ pub unsafe extern "C" fn modcrawl_deps_json_bytes(
         let mut cursor = Cursor::new(buf);
         to_c_string(
             dep::analyze_reader(&mut cursor, include_jij)
-                .and_then(|r| serde_json::to_string(&r).map_err(Into::into)),
+                .and_then(|r| to_string(&r).map_err(Into::into)),
         )
     })
 }
@@ -361,7 +363,7 @@ pub unsafe extern "C" fn modcrawl_classes_json(path: *const c_char) -> *mut c_ch
         };
         to_c_string(
             classfile::list_classes(Path::new(path_str))
-                .and_then(|entries| serde_json::to_string(&entries).map_err(Into::into)),
+                .and_then(|entries| to_string(&entries).map_err(Into::into)),
         )
     })
 }
@@ -388,7 +390,7 @@ pub unsafe extern "C" fn modcrawl_grep_json(
         };
         to_c_string(
             classfile::grep(Path::new(path_str), pattern_str)
-                .and_then(|matches| serde_json::to_string(&matches).map_err(Into::into)),
+                .and_then(|matches| to_string(&matches).map_err(Into::into)),
         )
     })
 }
@@ -410,7 +412,7 @@ pub unsafe extern "C" fn modcrawl_mixins_json(path: *const c_char) -> *mut c_cha
         };
         to_c_string(
             classfile::mixins(Path::new(path_str))
-                .and_then(|entries| serde_json::to_string(&entries).map_err(Into::into)),
+                .and_then(|entries| to_string(&entries).map_err(Into::into)),
         )
     })
 }
@@ -453,7 +455,7 @@ pub unsafe extern "C" fn modcrawl_dupes_json(paths: *const *mut c_char) -> *mut 
         let path_refs: Vec<&Path> = path_vec.iter().map(PathBuf::as_path).collect();
         to_c_string(
             classfile::find_duplicates(&path_refs)
-                .and_then(|entries| serde_json::to_string(&entries).map_err(Into::into)),
+                .and_then(|entries| to_string(&entries).map_err(Into::into)),
         )
     })
 }

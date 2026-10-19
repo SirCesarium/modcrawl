@@ -1,5 +1,7 @@
 //! `modcrawl metadata` — the key/value mod information table.
 
+use anstream::println;
+
 use super::style::{dim, kind_label, kind_style, loader_name, loader_style, paint};
 use super::table::{Cell, cell, print_table, styled_cell};
 use crate::core::dep::types::{DepKind, VersionRange};
@@ -7,10 +9,13 @@ use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
 use crate::core::loaders::forge_modern::dep::forge_dep_kind;
 use crate::core::loaders::{
     bukkit::metadata::BukkitPluginMetadata,
+    bungee::metadata::BungeePluginMetadata,
     fabric::metadata::FabricModMetadata,
     forge_legacy::metadata::ForgeLegacyModEntry,
     forge_modern::metadata::{ModsTomlMetadata, ModsTomlMod},
     paper::metadata::PaperPluginMetadata,
+    quilt::metadata::{QuiltModMetadata, QuiltVersions, StringOrList},
+    velocity::metadata::VelocityPluginMetadata,
 };
 use crate::core::metadata::ModMetadata;
 use serde_json::Value;
@@ -40,11 +45,14 @@ struct Block {
 pub(crate) fn render(meta: &ModMetadata) {
     let blocks = match meta {
         ModMetadata::Fabric(m) => fabric(m),
+        ModMetadata::Quilt(m) => quilt(m),
         ModMetadata::ForgeLegacy(entries) => forge_legacy(entries),
         ModMetadata::ForgeModern(m) => forge_modern(m, ModType::Forge(ForgeModFormat::ModsToml)),
         ModMetadata::NeoForge(m) => forge_modern(m, ModType::NeoForge),
         ModMetadata::Bukkit(m) => bukkit(m),
+        ModMetadata::Bungee(m) => bungee(m),
         ModMetadata::Paper(m) => paper(m),
+        ModMetadata::Velocity(m) => velocity(m),
     };
 
     for (i, block) in blocks.iter().enumerate() {
@@ -213,6 +221,77 @@ fn fabric_depends(m: &FabricModMetadata) -> Vec<DepRow> {
             side: None,
         })
         .collect()
+}
+
+/// Quilt's `quilt.mod.json`.
+fn quilt(m: &QuiltModMetadata) -> Vec<Block> {
+    let loader = &m.quilt_loader;
+    let meta = &loader.metadata;
+    let mut fields = Vec::new();
+
+    push_field(&mut fields, "ID", loader.id.clone());
+    push_field(&mut fields, "Name", meta.name.clone().unwrap_or_default());
+    push_field(
+        &mut fields,
+        "Version",
+        loader.version.clone().unwrap_or_default(),
+    );
+    push_field(
+        &mut fields,
+        "Description",
+        meta.description.clone().unwrap_or_default(),
+    );
+    push_field(
+        &mut fields,
+        "License",
+        meta.license
+            .as_ref()
+            .map_or_else(String::new, StringOrList::join),
+    );
+
+    let contributors: Vec<String> = meta
+        .contributors
+        .iter()
+        .map(|(name, role)| {
+            if role.is_empty() {
+                name.clone()
+            } else {
+                format!("{name} ({role})")
+            }
+        })
+        .collect();
+    push_field(&mut fields, "Contributors", contributors.join(", "));
+
+    if let Some(contact) = &meta.contact {
+        push_field(
+            &mut fields,
+            "Sources",
+            contact.sources.clone().unwrap_or_default(),
+        );
+        push_field(
+            &mut fields,
+            "Homepage",
+            contact.homepage.clone().unwrap_or_default(),
+        );
+    }
+
+    let depends = loader
+        .depends
+        .iter()
+        .map(|d| DepRow {
+            name: d.id().to_owned(),
+            version: d.versions().map_or_else(String::new, QuiltVersions::join),
+            kind: Some(DepKind::Required),
+            side: None,
+        })
+        .collect();
+
+    vec![Block {
+        kind: ModType::Quilt,
+        title: meta.name.clone().unwrap_or_else(|| loader.id.clone()),
+        fields,
+        depends,
+    }]
 }
 
 /// Forge/NeoForge `mods.toml`. File-level fields ride on the first block, each
@@ -452,6 +531,45 @@ fn bukkit(m: &BukkitPluginMetadata) -> Vec<Block> {
     }]
 }
 
+/// Bungee's `bungee.yml`.
+fn bungee(m: &BungeePluginMetadata) -> Vec<Block> {
+    let mut fields = Vec::new();
+
+    push_field(&mut fields, "Name", m.name.clone());
+    push_field(&mut fields, "Version", m.version.clone());
+    push_field(&mut fields, "Main", m.main.clone());
+    push_field(
+        &mut fields,
+        "Description",
+        m.description.clone().unwrap_or_default(),
+    );
+
+    let authors = if m.authors.is_empty() {
+        m.author.clone().unwrap_or_default()
+    } else {
+        m.authors.join(", ")
+    };
+    push_field(&mut fields, "Authors", authors);
+
+    let depends = m
+        .depends
+        .iter()
+        .map(|name| DepRow {
+            name: name.clone(),
+            version: String::new(),
+            kind: Some(DepKind::Required),
+            side: None,
+        })
+        .collect();
+
+    vec![Block {
+        kind: ModType::Plugin(PluginType::Bungee),
+        title: m.name.clone(),
+        fields,
+        depends,
+    }]
+}
+
 /// Paper's `paper-plugin.yml`.
 fn paper(m: &PaperPluginMetadata) -> Vec<Block> {
     let mut fields = Vec::new();
@@ -492,6 +610,48 @@ fn paper(m: &PaperPluginMetadata) -> Vec<Block> {
     }]
 }
 
+/// Velocity's `velocity-plugin.json`.
+fn velocity(m: &VelocityPluginMetadata) -> Vec<Block> {
+    let mut fields = Vec::new();
+
+    push_field(&mut fields, "ID", m.id.clone());
+    push_field(&mut fields, "Name", m.name.clone().unwrap_or_default());
+    push_field(
+        &mut fields,
+        "Version",
+        m.version.clone().unwrap_or_default(),
+    );
+    push_field(&mut fields, "Main", m.main.clone().unwrap_or_default());
+    push_field(
+        &mut fields,
+        "Description",
+        m.description.clone().unwrap_or_default(),
+    );
+    push_field(&mut fields, "Authors", join_authors(&m.authors));
+
+    let depends = m
+        .dependencies
+        .iter()
+        .map(|d| DepRow {
+            name: d.id.clone(),
+            version: String::new(),
+            kind: Some(if d.optional {
+                DepKind::Optional
+            } else {
+                DepKind::Required
+            }),
+            side: None,
+        })
+        .collect();
+
+    vec![Block {
+        kind: ModType::Plugin(PluginType::Velocity),
+        title: m.name.clone().unwrap_or_else(|| m.id.clone()),
+        fields,
+        depends,
+    }]
+}
+
 /// A plugin's hard, soft, and load-before dependencies as rows.
 fn plugin_depends(m: &BukkitPluginMetadata) -> Vec<DepRow> {
     let mut rows: Vec<DepRow> = Vec::new();
@@ -524,10 +684,11 @@ fn plugin_depends(m: &BukkitPluginMetadata) -> Vec<DepRow> {
 #[allow(clippy::expect_used)]
 mod tests {
     use super::*;
+    use toml::from_str;
 
     #[test]
     fn loader_version_prefers_the_loader_dependency() {
-        let m: ModsTomlMetadata = toml::from_str(
+        let m: ModsTomlMetadata = from_str(
             r#"
 loaderVersion = "[0,)"
 
@@ -547,7 +708,7 @@ versionRange = "[21.1.219,)"
 
     #[test]
     fn loader_version_uses_the_forge_dependency_for_forge() {
-        let m: ModsTomlMetadata = toml::from_str(
+        let m: ModsTomlMetadata = from_str(
             r#"
 loaderVersion = "[47,)"
 
@@ -569,7 +730,7 @@ versionRange = "[47,)"
 
     #[test]
     fn loader_version_falls_back_to_loader_version_field() {
-        let m: ModsTomlMetadata = toml::from_str(
+        let m: ModsTomlMetadata = from_str(
             r#"
 loaderVersion = "[4,)"
 

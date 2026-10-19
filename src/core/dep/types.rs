@@ -1,7 +1,9 @@
 use std::fmt;
 
+use serde::Serialize;
+
 /// The kind/semantics of a dependency entry.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum DepKind {
     Required,
     Optional,
@@ -41,7 +43,7 @@ impl DepKind {
 }
 
 /// A parsed version range with structured bounds.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct VersionRange {
     pub min: Option<String>,
     pub max: Option<String>,
@@ -151,7 +153,7 @@ impl fmt::Display for VersionRange {
 }
 
 /// A single dependency entry extracted from mod metadata.
-#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DepEntry {
     pub name: String,
     pub kind: DepKind,
@@ -170,13 +172,13 @@ impl DepEntry {
 }
 
 /// An embedded JAR found inside the main archive.
-#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct JarInJar {
     pub path: String,
 }
 
 /// Full dependency analysis report for a single JAR.
-#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DepReport {
     pub dependencies: Vec<DepEntry>,
     pub jar_in_jar: Vec<JarInJar>,
