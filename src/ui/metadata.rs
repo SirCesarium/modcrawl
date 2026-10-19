@@ -1,5 +1,7 @@
 //! `modcrawl metadata` — the key/value mod information table.
 
+use anstream::println;
+
 use super::style::{dim, kind_label, kind_style, loader_name, loader_style, paint};
 use super::table::{Cell, cell, print_table, styled_cell};
 use crate::core::dep::types::{DepKind, VersionRange};
