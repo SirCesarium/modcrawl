@@ -1,12 +1,14 @@
 use std::path::PathBuf;
 
+use crate::cmd::collect_jar_paths;
 use crate::core::dep;
 use crate::error::Result;
 use crate::ui;
 
 #[derive(clap::Args)]
 pub struct Args {
-    pub file: Vec<PathBuf>,
+    /// Path of JAR file or directory containing JAR files
+    pub path: Vec<PathBuf>,
 
     #[arg(
         long = "include-jar-in-jar",
@@ -29,9 +31,10 @@ pub struct Args {
 ///
 /// Returns an error if an archive cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let multi = args.file.len() > 1;
+    let multi = args.path.len() > 1;
+    let files = collect_jar_paths(&args.path)?;
 
-    for file in &args.file {
+    for file in &files {
         let report = match dep::analyze(file, args.include_jar_in_jar) {
             Ok(r) => r,
             Err(e) => {

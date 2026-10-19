@@ -2,14 +2,15 @@ use std::collections::BTreeSet;
 use std::path::Path;
 use std::path::PathBuf;
 
+use crate::cmd::collect_jar_paths;
 use crate::core::classfile;
 use crate::error::Result;
 use crate::ui;
 
 #[derive(clap::Args)]
 pub struct Args {
-    /// One or more JAR files to compare for duplicate classes.
-    pub file: Vec<PathBuf>,
+    /// Path of JAR file or directory containing JAR files
+    pub path: Vec<PathBuf>,
 
     #[arg(
         short = 'b',
@@ -39,7 +40,8 @@ pub struct Args {
 ///
 /// Returns an error if any JAR cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let paths: Vec<&Path> = args.file.iter().map(PathBuf::as_path).collect();
+    let paths = collect_jar_paths(&args.path)?;
+    let paths: Vec<&Path> = paths.iter().map(PathBuf::as_path).collect();
     let entries = classfile::find_duplicates(&paths)?;
 
     if args.json && args.count {

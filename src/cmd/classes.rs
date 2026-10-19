@@ -1,12 +1,14 @@
 use std::path::PathBuf;
 
+use crate::cmd::collect_jar_paths;
 use crate::core::classfile;
 use crate::error::Result;
 use crate::ui;
 
 #[derive(clap::Args)]
 pub struct Args {
-    pub file: Vec<PathBuf>,
+    /// Path of JAR file or directory containing JAR files
+    pub path: Vec<PathBuf>,
 
     #[arg(
         short = 'j',
@@ -22,9 +24,10 @@ pub struct Args {
 ///
 /// Returns an error if a JAR cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let multi = args.file.len() > 1;
+    let multi = args.path.len() > 1;
+    let files = collect_jar_paths(&args.path)?;
 
-    for file in &args.file {
+    for file in &files {
         let entries = match classfile::list_classes(file) {
             Ok(e) => e,
             Err(e) => {

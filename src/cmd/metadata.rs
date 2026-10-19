@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+use crate::cmd::collect_jar_paths;
 use crate::core::metadata::read_metadata;
 use crate::error::Result;
 use crate::ui;
@@ -10,8 +11,8 @@ pub struct Args {
     #[arg(short, long)]
     pub json: bool,
 
-    /// Paths to the mod/plugin JAR files
-    pub file: Vec<PathBuf>,
+    /// Path of JAR file or directory containing JAR files
+    pub path: Vec<PathBuf>,
 }
 
 /// Run the `metadata` command.
@@ -20,9 +21,10 @@ pub struct Args {
 ///
 /// Returns an error if an archive cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let multi = args.file.len() > 1;
+    let multi = args.path.len() > 1;
+    let files = collect_jar_paths(&args.path)?;
 
-    for file in &args.file {
+    for file in &files {
         let meta = match read_metadata(file) {
             Ok(m) => m,
             Err(e) => {

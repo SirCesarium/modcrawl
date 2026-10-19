@@ -1,6 +1,7 @@
 use std::io::{self, BufRead, Read};
 use std::path::PathBuf;
 
+use crate::cmd::collect_jar_paths;
 use crate::core::identify::{identify, identify_reader};
 use crate::error::Result;
 use crate::ui;
@@ -9,7 +10,8 @@ const EOCD_MAGIC: &[u8] = b"PK\x05\x06";
 
 #[derive(clap::Args)]
 pub struct Args {
-    pub file: Vec<PathBuf>,
+    /// Path of JAR file or directory containing JAR files
+    pub path: Vec<PathBuf>,
 }
 
 fn process_zip_chunks(data: &[u8]) {
@@ -58,7 +60,7 @@ fn process_zip_chunks(data: &[u8]) {
 ///
 /// Returns an error if I/O fails or a ZIP archive cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    if args.file.is_empty() || (args.file.len() == 1 && args.file[0].to_string_lossy() == "-") {
+    if args.path.is_empty() || (args.path.len() == 1 && args.path[0].to_string_lossy() == "-") {
         let mut handle = io::stdin().lock();
         let buf = handle.fill_buf()?;
         if buf.starts_with(b"PK\x03\x04") {
@@ -91,9 +93,8 @@ pub fn run(args: &Args) -> Result<()> {
         }
         Ok(())
     } else {
-        let single = args.file.len() == 1;
-        let entries: Vec<(String, _)> = args
-            .file
+        let single = args.path.len() == 1;
+        let entries: Vec<(String, _)> = collect_jar_paths(&args.path)?
             .iter()
             .filter_map(|file| match identify(file) {
                 Ok(mod_type) => Some((file.display().to_string(), mod_type)),

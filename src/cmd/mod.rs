@@ -14,6 +14,8 @@ pub mod mixins;
 #[cfg(feature = "classfile")]
 pub mod dupes;
 
+use std::{fs, io, path::PathBuf};
+
 use clap::Parser;
 
 #[derive(Parser)]
@@ -67,4 +69,33 @@ pub enum Commands {
     #[cfg(feature = "classfile")]
     #[command(aliases = &["dp", "duplicate"])]
     Dupes(dupes::Args),
+}
+
+/// Collects jar paths from the given files and directories.
+///
+/// The input may mix files and directories. For a directory, only its **direct**
+/// child files with `.jar` suffix are collected. Other paths are kept as-is.
+///
+/// # Errors
+///
+/// Return an error if a directory cannot be read.
+pub fn collect_jar_paths(paths: &Vec<PathBuf>) -> io::Result<Vec<PathBuf>> {
+    let mut ret = Vec::new();
+    for path in paths {
+        if path.is_dir() {
+            for entry in fs::read_dir(path)? {
+                let path = entry?.path();
+                if path
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("jar"))
+                {
+                    ret.push(path);
+                }
+            }
+        } else {
+            ret.push(path.clone());
+        }
+    }
+
+    Ok(ret)
 }
