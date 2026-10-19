@@ -42,7 +42,13 @@ fn analyze_impl(mng: &mut ZipManager, include_jij: bool) -> Result<DepReport> {
     let entries = mng.entries()?;
     let mod_type = REGISTRY.detect(&entries);
 
-    let mut dependencies = dedup_deps(REGISTRY.extract_deps(&mod_type, mng)?);
+    let mut dependencies = match REGISTRY.metadata_file_path(&mod_type) {
+        Some(file) => {
+            let raw = mng.read_to_string(file)?;
+            dedup_deps(REGISTRY.extract_deps(&mod_type, &raw)?)
+        }
+        None => Vec::new(),
+    };
 
     let jar_in_jar = find_embedded_jars(&entries);
     if !jar_in_jar.is_empty() {

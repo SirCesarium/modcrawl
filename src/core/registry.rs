@@ -1,4 +1,4 @@
-use zipcrawl::{ZipEntry, ZipManager};
+use zipcrawl::ZipEntry;
 
 use crate::core::dep::types::DepEntry;
 use crate::core::detect_mod_type::ModType;
@@ -11,13 +11,12 @@ pub trait ModHandler: Send + Sync {
     fn mod_type(&self) -> ModType;
     fn detection_files(&self) -> &'static [&'static str];
 
-    /// Extract dependencies from a JAR.
+    /// Extract dependencies from the raw content of the metadata file.
     ///
     /// # Errors
     ///
-    /// Returns an error if the JAR cannot be read or parsed.
-    fn extract_deps(&self, mng: &mut ZipManager) -> Result<Vec<DepEntry>> {
-        let _ = mng;
+    /// Returns an error if the metadata cannot be parsed.
+    fn extract_deps(&self, _raw: &str) -> Result<Vec<DepEntry>> {
         Ok(Vec::new())
     }
 
@@ -86,14 +85,14 @@ impl Registry {
             .and_then(ModHandler::metadata_file_path)
     }
 
-    /// Extract dependencies for a given mod type.
+    /// Extract dependencies for a given mod type from raw metadata content.
     ///
     /// # Errors
     ///
-    /// Returns an error if the JAR cannot be read or parsed.
-    pub fn extract_deps(&self, mod_type: &ModType, mng: &mut ZipManager) -> Result<Vec<DepEntry>> {
+    /// Returns an error if the metadata cannot be parsed.
+    pub fn extract_deps(&self, mod_type: &ModType, raw: &str) -> Result<Vec<DepEntry>> {
         match self.handler(mod_type) {
-            Some(h) => h.extract_deps(mng),
+            Some(h) => h.extract_deps(raw),
             None => Ok(Vec::new()),
         }
     }
@@ -120,8 +119,6 @@ impl Default for Registry {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
-    use std::io::Cursor;
-
     use super::*;
     use crate::core::dep::types::{DepEntry, DepKind, VersionRange};
     use crate::core::detect_mod_type::{ForgeModFormat, PluginType};
@@ -137,7 +134,7 @@ mod tests {
         fn read_metadata(&self, _raw: &str) -> Result<ModMetadata> {
             Err(Error::UnsupportedMetadata("mock".to_owned()))
         }
-        fn extract_deps(&self, _mng: &mut ZipManager) -> Result<Vec<DepEntry>> {
+        fn extract_deps(&self, _raw: &str) -> Result<Vec<DepEntry>> {
             Ok(vec![DepEntry::new(
                 "mock-dep",
                 DepKind::Required,
@@ -256,31 +253,11 @@ mod tests {
         assert_eq!(r.metadata_file_path(&ModType::Fabric), None);
     }
 
-    /// Minimal valid ZIP bytes (empty archive).
-    fn empty_zip_bytes() -> Vec<u8> {
-        vec![
-            0x50, 0x4B, 0x05, 0x06, // EOCD signature
-            0x00, 0x00, // disk number
-            0x00, 0x00, // disk with central dir
-            0x00, 0x00, // entries on disk
-            0x00, 0x00, // total entries
-            0x00, 0x00, 0x00, 0x00, // central dir size
-            0x00, 0x00, 0x00, 0x00, // central dir offset
-            0x00, 0x00, // comment length
-        ]
-    }
-
-    fn make_mng() -> ZipManager {
-        let mut cursor = Cursor::new(empty_zip_bytes());
-        ZipManager::from_reader(&mut cursor).unwrap()
-    }
-
     #[test]
     fn registry_extract_deps_found() {
         let mut r = Registry::new();
         r.register(Box::new(MockFabricHandler));
-        let mut mng = make_mng();
-        let deps = r.extract_deps(&ModType::Fabric, &mut mng).unwrap();
+        let deps = r.extract_deps(&ModType::Fabric, "").unwrap();
         assert_eq!(deps.len(), 1);
         assert_eq!(deps[0].name, "mock-dep");
     }
@@ -288,8 +265,7 @@ mod tests {
     #[test]
     fn registry_extract_deps_not_found() {
         let r = Registry::new();
-        let mut mng = make_mng();
-        let deps = r.extract_deps(&ModType::Fabric, &mut mng).unwrap();
+        let deps = r.extract_deps(&ModType::Fabric, "").unwrap();
         assert_eq!(deps, []);
     }
 

@@ -1,7 +1,5 @@
 pub mod dep;
 
-use zipcrawl::ZipManager;
-
 use super::forge_modern::metadata;
 use crate::core::dep::types::DepEntry;
 use crate::core::detect_mod_type::ModType;
@@ -20,8 +18,8 @@ impl ModHandler for NeoForgeHandler {
         &["META-INF/neoforge.mods.toml"]
     }
 
-    fn extract_deps(&self, mng: &mut ZipManager) -> Result<Vec<DepEntry>> {
-        dep::extract(mng)
+    fn extract_deps(&self, raw: &str) -> Result<Vec<DepEntry>> {
+        dep::extract(raw)
     }
 
     fn read_metadata(&self, raw: &str) -> Result<ModMetadata> {
