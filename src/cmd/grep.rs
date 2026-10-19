@@ -37,8 +37,8 @@ pub struct Args {
 ///
 /// Returns an error if a JAR cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let multi = args.path.len() > 1;
     let files = collect_jar_paths(&args.path)?;
+    let multi = files.len() > 1;
     let mut total_matches = 0usize;
 
     for file in &files {
@@ -79,7 +79,7 @@ pub fn run(args: &Args) -> Result<()> {
         }
     }
 
-    if total_matches == 0 && !args.path.is_empty() && !args.json {
+    if total_matches == 0 && !files.is_empty() && !args.json {
         ui::no_results(&format!(
             "No matches found for pattern \"{}\".",
             args.pattern

@@ -24,8 +24,8 @@ pub struct Args {
 ///
 /// Returns an error if an archive cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let multi = args.path.len() > 1;
     let files = collect_jar_paths(&args.path)?;
+    let multi = files.len() > 1;
 
     for file in &files {
         let meta = match read_metadata(file) {

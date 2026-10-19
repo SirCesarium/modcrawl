@@ -95,8 +95,12 @@ pub fn run(args: &Args) -> Result<()> {
         }
         Ok(())
     } else {
-        let single = args.path.len() == 1;
-        let entries: Vec<(String, _)> = collect_jar_paths(&args.path)?
+        let files = collect_jar_paths(&args.path)?;
+        // A directory is always rendered as a table: its caller never named the
+        // file, so the FILE column is the only thing identifying it.
+        let named_only = matches!(args.path.as_slice(), [one] if !one.is_dir());
+
+        let entries: Vec<(String, _)> = files
             .iter()
             .filter_map(|file| match identify(file) {
                 Ok(mod_type) => Some((file.display().to_string(), mod_type)),
@@ -107,8 +111,7 @@ pub fn run(args: &Args) -> Result<()> {
             })
             .collect();
 
-        match (single, entries.as_slice()) {
-            (true, []) => {}
+        match (named_only, entries.as_slice()) {
             (true, [entry]) => ui::render_type(&entry.1),
             _ => ui::render_type_multi(&entries),
         }

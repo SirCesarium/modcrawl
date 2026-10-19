@@ -71,31 +71,36 @@ pub enum Commands {
     Dupes(dupes::Args),
 }
 
-/// Collects jar paths from the given files and directories.
+/// Collect the JAR files named by `paths`.
 ///
-/// The input may mix files and directories. For a directory, only its **direct**
-/// child files with `.jar` suffix are collected. Other paths are kept as-is.
+/// An argument may be a file or a directory; a directory contributes its direct
+/// children whose extension is `jar` (case-insensitive), sorted by name. Any
+/// other argument is kept as-is, so an explicit non-JAR path still reaches the
+/// caller and gets reported by it.
 ///
 /// # Errors
 ///
-/// Return an error if a directory cannot be read.
-pub fn collect_jar_paths(paths: &Vec<PathBuf>) -> io::Result<Vec<PathBuf>> {
-    let mut ret = Vec::new();
+/// Returns an error if a directory cannot be read.
+pub(crate) fn collect_jar_paths(paths: &[PathBuf]) -> io::Result<Vec<PathBuf>> {
+    let mut jars = Vec::new();
+
     for path in paths {
         if path.is_dir() {
-            for entry in fs::read_dir(path)? {
-                let path = entry?.path();
-                if path
-                    .extension()
-                    .is_some_and(|ext| ext.eq_ignore_ascii_case("jar"))
-                {
-                    ret.push(path);
-                }
-            }
+            let mut dir_jars: Vec<PathBuf> = fs::read_dir(path)?
+                .map(|entry| entry.map(|e| e.path()))
+                .collect::<io::Result<Vec<_>>>()?
+                .into_iter()
+                .filter(|p| {
+                    p.extension()
+                        .is_some_and(|ext| ext.eq_ignore_ascii_case("jar"))
+                })
+                .collect();
+            dir_jars.sort();
+            jars.extend(dir_jars);
         } else {
-            ret.push(path.clone());
+            jars.push(path.clone());
         }
     }
 
-    Ok(ret)
+    Ok(jars)
 }
