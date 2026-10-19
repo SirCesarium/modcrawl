@@ -1,8 +1,4 @@
 //! `modcrawl metadata` — the key/value mod information table.
-//!
-//! A clean header naming the loader (colored) and the mod, then a two-column
-//! field/value table, then an optional depends table. Each loader branch
-//! extracts its own fields; the shared printer below does the rendering.
 
 use super::style::{dim, kind_label, kind_style, loader_name, loader_style, paint};
 use super::table::{Cell, cell, print_table, styled_cell};
@@ -22,9 +18,8 @@ use serde_json::Value;
 /// A single labeled field row.
 struct Field(&'static str, String);
 
-/// One row of the depends table: the dependency's name plus everything the
-/// loader tells us about it. `kind` and `side` are optional because not every
-/// loader records them (`side` only exists in `mods.toml`).
+/// One row of the depends table. `kind` and `side` are optional; only
+/// `mods.toml` records a side.
 struct DepRow {
     name: String,
     version: String,
@@ -40,11 +35,8 @@ struct Block {
     depends: Vec<DepRow>,
 }
 
-/// Render one JAR's metadata.
-///
-/// Most loaders yield a single block, but `mods.toml` and `mcmod.info` can
-/// declare several entries in one file — each becomes its own block, separated
-/// by a blank line, so nothing is dropped.
+/// Render one JAR's metadata. `mods.toml` and `mcmod.info` can declare several
+/// entries in one file; each becomes its own block.
 pub(crate) fn render(meta: &ModMetadata) {
     let blocks = match meta {
         ModMetadata::Fabric(m) => fabric(m),
@@ -91,9 +83,7 @@ fn print_block(block: &Block) {
     }
 }
 
-/// Print the depends table, adding KIND and SIDE columns only when at least
-/// one row carries that datum. Loaders that don't record a side (everything
-/// but `mods.toml`) therefore stay two columns wide.
+/// Print the depends table, adding KIND and SIDE only when some row has them.
 fn print_depends(depends: &[DepRow]) {
     let show_kind = depends.iter().any(|d| d.kind.is_some());
     let show_side = depends.iter().any(|d| d.side.is_some());
@@ -212,8 +202,7 @@ fn fabric(m: &FabricModMetadata) -> Vec<Block> {
     }]
 }
 
-/// Fabric's `depends` map rendered as rows. Fabric records no per-dependency
-/// side, so those stay `None` and the SIDE column is omitted.
+/// Fabric's `depends` map as rows.
 fn fabric_depends(m: &FabricModMetadata) -> Vec<DepRow> {
     m.depends
         .iter()
@@ -226,11 +215,8 @@ fn fabric_depends(m: &FabricModMetadata) -> Vec<DepRow> {
         .collect()
 }
 
-/// Forge/NeoForge `mods.toml`.
-///
-/// The file-level fields (loader, license, URLs) ride on the first block; each
-/// `mods[]` entry gets its own block; the merged dependency table goes on the
-/// last block so it still reads once, like the old layout.
+/// Forge/NeoForge `mods.toml`. File-level fields ride on the first block, each
+/// `mods[]` entry gets its own, and the merged dependency table goes on the last.
 fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
     let mut blocks = Vec::new();
     let mut entries = m.mods.iter();
@@ -238,9 +224,6 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
     if let Some(first) = entries.next() {
         let mut fields = Vec::new();
 
-        // `modLoader` is the format identifier (`javafml`) and is identical
-        // across every Forge/NeoForge mod, so it carries no signal. Show the
-        // detected loader itself, which the filename detection already knows.
         push_field(&mut fields, "Loader", loader_name(&kind).to_owned());
         push_field(&mut fields, "Loader Version", loader_version(m, &kind));
         push_field(
@@ -281,7 +264,7 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
     if let Some(last) = blocks.last_mut() {
         last.depends = depends;
     } else {
-        // No `mods[]` entries — still surface the loader and dependencies.
+        // No `mods[]` entries.
         let mut fields = Vec::new();
 
         push_field(&mut fields, "Loader", loader_name(&kind).to_owned());
@@ -308,14 +291,8 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
     blocks
 }
 
-/// The loader's own version, as a bare number.
-///
-/// `loaderVersion` is FML's range, and `NeoForge` mods set it to `[0,)` — Create
-/// even says so in a comment right above it: "the loader version doesn't
-/// matter". The figure a reader actually wants lives in the dependency on the
-/// loader itself, `neoforge` or `forge`, so take its lower bound. Falls back to
-/// `loaderVersion` verbatim when a mod declares no such dependency, so the
-/// field is never dropped.
+/// The loader's own version as a bare number: the lower bound of the `forge` or
+/// `neoforge` dependency, falling back to `loaderVersion` verbatim.
 fn loader_version(m: &ModsTomlMetadata, kind: &ModType) -> String {
     let loader_id = match kind {
         ModType::NeoForge => "neoforge",
@@ -359,9 +336,8 @@ fn mod_title(entry: &ModsTomlMod) -> String {
         .unwrap_or_else(|| entry.mod_id.clone())
 }
 
-/// Forge/NeoForge `dependencies` map rendered as rows. This loader is the one
-/// that records a per-dependency `side` (CLIENT/SERVER/BOTH), so the SIDE
-/// column gets populated here and omitted everywhere else.
+/// Forge/NeoForge `dependencies` map as rows. The only loader that records a
+/// per-dependency side.
 fn forge_modern_depends(m: &ModsTomlMetadata) -> Vec<DepRow> {
     m.dependencies
         .values()
@@ -376,8 +352,7 @@ fn forge_modern_depends(m: &ModsTomlMetadata) -> Vec<DepRow> {
         .collect()
 }
 
-/// Legacy Forge `mcmod.info`. The file is an array, so every entry becomes
-/// its own block (the old renderer separated them with `---`).
+/// Legacy Forge `mcmod.info`. The file is an array, so every entry is a block.
 fn forge_legacy(entries: &[ForgeLegacyModEntry]) -> Vec<Block> {
     entries
         .iter()
@@ -423,8 +398,8 @@ fn forge_legacy(entries: &[ForgeLegacyModEntry]) -> Vec<Block> {
         .collect()
 }
 
-/// A legacy entry's `dependencies` list rendered as rows. This format records
-/// neither version nor side, so only the name and KIND are filled in.
+/// A legacy entry's `dependencies` list as rows. Records neither version nor
+/// side.
 fn legacy_depends(entry: &ForgeLegacyModEntry) -> Vec<DepRow> {
     entry
         .dependencies
@@ -517,8 +492,7 @@ fn paper(m: &PaperPluginMetadata) -> Vec<Block> {
     }]
 }
 
-/// A plugin's hard, soft, and load-before dependencies as rows. Bukkit records
-/// no side, so only the KIND column is filled in.
+/// A plugin's hard, soft, and load-before dependencies as rows.
 fn plugin_depends(m: &BukkitPluginMetadata) -> Vec<DepRow> {
     let mut rows: Vec<DepRow> = Vec::new();
 
@@ -551,8 +525,6 @@ fn plugin_depends(m: &BukkitPluginMetadata) -> Vec<DepRow> {
 mod tests {
     use super::*;
 
-    /// `NeoForge`'s `loaderVersion` is always `[0,)`, so the real figure has to
-    /// come from the `neoforge` dependency's lower bound.
     #[test]
     fn loader_version_prefers_the_loader_dependency() {
         let m: ModsTomlMetadata = toml::from_str(
@@ -573,7 +545,6 @@ versionRange = "[21.1.219,)"
         assert_eq!(v, "21.1.219");
     }
 
-    /// Forge's loader dependency is `forge`, not `neoforge`.
     #[test]
     fn loader_version_uses_the_forge_dependency_for_forge() {
         let m: ModsTomlMetadata = toml::from_str(
@@ -596,8 +567,6 @@ versionRange = "[47,)"
         );
     }
 
-    /// A mod declaring no loader dependency keeps `loaderVersion` verbatim, so
-    /// the field is never emptied out.
     #[test]
     fn loader_version_falls_back_to_loader_version_field() {
         let m: ModsTomlMetadata = toml::from_str(

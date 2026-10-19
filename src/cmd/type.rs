@@ -91,20 +91,23 @@ pub fn run(args: &Args) -> Result<()> {
         }
         Ok(())
     } else {
-        if args.file.len() == 1 {
-            let mod_type = identify(&args.file[0])?;
-            ui::render_type(&mod_type);
-        } else {
-            let mut entries = Vec::new();
-
-            for file in &args.file {
-                match identify(file) {
-                    Ok(mod_type) => entries.push((file.display().to_string(), mod_type)),
-                    Err(e) => ui::file_error(&file.display().to_string(), &e),
+        let single = args.file.len() == 1;
+        let entries: Vec<(String, _)> = args
+            .file
+            .iter()
+            .filter_map(|file| match identify(file) {
+                Ok(mod_type) => Some((file.display().to_string(), mod_type)),
+                Err(e) => {
+                    ui::file_error(&file.display().to_string(), &e);
+                    None
                 }
-            }
+            })
+            .collect();
 
-            ui::render_type_multi(&entries);
+        match (single, entries.as_slice()) {
+            (true, []) => {}
+            (true, [entry]) => ui::render_type(&entry.1),
+            _ => ui::render_type_multi(&entries),
         }
 
         Ok(())

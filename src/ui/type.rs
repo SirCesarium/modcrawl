@@ -11,8 +11,7 @@ pub(crate) fn render(kind: &ModType) {
     println!("{}", paint(loader_style(kind), loader_name(kind)));
 }
 
-/// Render one detected type from a concatenated stream, prefixed with its
-/// position in the stream so a multi-ZIP blob stays readable.
+/// One detected type from a concatenated stream, tagged with its position.
 pub(crate) fn render_tagged(index: usize, kind: &ModType) {
     println!("[{index}] {}", paint(loader_style(kind), loader_name(kind)));
 }

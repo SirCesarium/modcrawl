@@ -1,8 +1,4 @@
 //! `modcrawl dupes` — the duplicate-class tables.
-//!
-//! Two shapes, one file: `--by-class` lists each duplicated class with the
-//! JARs it appears in; the default groups duplicates into classpath conflicts
-//! (pairs of JARs that share classes).
 
 use std::collections::BTreeMap;
 

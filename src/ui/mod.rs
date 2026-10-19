@@ -1,9 +1,5 @@
-//! The terminal presentation layer for the CLI subcommands.
-//!
-//! Every human-readable output path renders through here so the whole tool
-//! reads as one coherent design: borderless tables, a shared color palette,
-//! and explicit "no results" notes. `--json` paths bypass this module and
-//! serialize the core types directly.
+//! Terminal presentation layer for the CLI subcommands. `--json` paths bypass
+//! it and serialize the core types directly.
 
 pub(crate) mod classes;
 pub(crate) mod deps;

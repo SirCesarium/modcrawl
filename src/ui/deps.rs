@@ -1,8 +1,4 @@
 //! `modcrawl dep` — the dependency report.
-//!
-//! One borderless table per JAR: each dependency on its own row with a spelled
-//! out kind label (colored) instead of the old cryptic marker legend, plus a
-//! second table for any embedded jars.
 
 use anstream::println;
 

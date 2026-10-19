@@ -1,3 +1,4 @@
+use std::error::Error as StdError;
 use std::io;
 use std::result;
 
@@ -8,13 +9,31 @@ use toml::de;
 
 pub type Result<T> = result::Result<T, Error>;
 
+/// Deepest cause in a `zipcrawl` error's source chain.
+///
+/// `IoError` wraps an `io::Error`, so the leaf (`No such file or directory`)
+/// carries the reason and the wrapper only carries the path.
+fn zipcrawl_reason(err: &zipcrawl::ZipCrawlError) -> String {
+    let mut cause: &dyn StdError = err;
+    while let Some(source) = cause.source() {
+        cause = source;
+    }
+
+    let reason = cause.to_string();
+    if reason.is_empty() {
+        err.to_string()
+    } else {
+        reason
+    }
+}
+
 #[derive(Error, Diagnostic, Debug)]
 pub enum Error {
     #[error("I/O error: {0}")]
     #[diagnostic(code(modcrawl::io))]
     Io(#[from] io::Error),
 
-    #[error("ZipCrawl error")]
+    #[error("{}", zipcrawl_reason(.0))]
     #[diagnostic(code(modcrawl::zipcrawl))]
     ZipCrawl(#[from] zipcrawl::ZipCrawlError),
 

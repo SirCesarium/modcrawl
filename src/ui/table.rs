@@ -1,16 +1,11 @@
-//! The borderless table: the one primitive every listing renders through.
-//!
-//! No box, no vertical rules — a dimmed header, a dashed rule beneath it, and
-//! two-space-gapped columns that line up. That is what makes the whole CLI
-//! legible at a glance.
+//! The borderless table primitive every listing renders through.
 
 use anstream::println;
 use anstyle::Style;
 
 use super::style::{dim, paint};
 
-/// One styled cell. It remembers its *visible* width (the text length without
-/// ANSI escapes) so padding still aligns after styling is applied.
+/// One styled cell, remembering its visible width so padding still aligns.
 pub(crate) struct Cell {
     width: usize,
     rendered: String,
@@ -29,15 +24,13 @@ pub(crate) fn styled_cell(style: Style, text: &str) -> Cell {
     }
 }
 
-/// Print a borderless table: a dimmed uppercase header row, a rule spanning
-/// the full table width, then one aligned row per entry. Columns are padded to
-/// the widest cell they contain.
+/// Print a borderless table: dimmed uppercase header, a rule, then one row per
+/// entry.
 pub(crate) fn print_table(headers: &[&str], rows: &[Vec<Cell>]) {
     if rows.is_empty() {
         return;
     }
 
-    // Widest visible cell per column, starting from the header widths.
     let mut widths: Vec<usize> = headers.iter().map(|h| h.chars().count()).collect();
 
     for row in rows {
@@ -74,10 +67,8 @@ pub(crate) fn print_table(headers: &[&str], rows: &[Vec<Cell>]) {
     }
 }
 
-/// Draw the rule under a header row: one `╌` per visible column, plus the
-/// two-space gaps, so it spans exactly as wide as the table. Dashed rather
-/// than solid so it can't be mistaken for the solid rule `file_header` prints
-/// between one JAR's block and the next.
+/// Dashed rule spanning the table's exact width. Dashed so it can't be confused
+/// with the solid rule `file_header` prints between JARs.
 fn print_rule(widths: &[usize]) {
     let total = widths.iter().sum::<usize>() + widths.len().saturating_sub(1) * 2;
 

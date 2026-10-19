@@ -1,7 +1,4 @@
-//! The terminal's color vocabulary: one place that decides what hue a loader,
-//! a dependency kind, and a muted label get. Every renderer asks this module
-//! for a style instead of hard-coding ANSI values, so the whole CLI reads as
-//! one coherent palette.
+//! Color palette for the terminal output.
 
 use anstyle::{AnsiColor, Color, Style};
 
@@ -22,17 +19,13 @@ pub(crate) fn loader_color(t: &ModType) -> Color {
     }
 }
 
-/// Style for a loader name: bold and in the loader's color.
+/// Bold loader name in the loader's color.
 pub(crate) fn loader_style(t: &ModType) -> Style {
     Style::new().bold().fg_color(Some(loader_color(t)))
 }
 
-/// The loader name as a label, stripped of the `Display` detail.
-///
-/// `ModType`'s `Display` writes `Forge (mods.toml)` and `Plugin (Bukkit/Spigot)`
-/// for the FFI; tables want `Forge` and `Bukkit/Spigot`. Only the legacy
-/// `mcmod.info` form carries a suffix, because it is the one case where the
-/// file format is worth spelling out — the modern one is just Forge.
+/// Loader name for display. Unlike `ModType`'s `Display`, this drops the
+/// format suffix, keeping it only for legacy `mcmod.info`.
 pub(crate) fn loader_name(t: &ModType) -> &'static str {
     match t {
         ModType::Fabric => "Fabric",
@@ -64,7 +57,7 @@ pub(crate) fn kind_style(kind: DepKind) -> Style {
     Style::new().fg_color(Some(kind_color(kind)))
 }
 
-/// Human label for a dependency kind — replaces the old cryptic `*`/`-` legend.
+/// Human label for a dependency kind.
 pub(crate) fn kind_label(kind: DepKind) -> &'static str {
     match kind {
         DepKind::Required => "required",
@@ -82,9 +75,8 @@ pub(crate) fn dim() -> Style {
     Style::new().dimmed()
 }
 
-/// Wrap `text` in `style`. A default (empty) style emits nothing, so callers
-/// never branch on "should I color this?" — `anstream` strips whatever is
-/// left when the output is piped.
+/// Wrap `text` in `style`. A plain style emits nothing, so `anstream` stripping
+/// on piped output needs no branch here.
 pub(crate) fn paint(style: Style, text: &str) -> String {
     if style.is_plain() {
         text.to_string()
