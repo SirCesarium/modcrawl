@@ -1,7 +1,7 @@
 pub mod types;
 
 use std::collections::HashMap;
-use std::io::Read;
+use std::io::{Read, Seek};
 use std::path::Path;
 
 use zipcrawl::ZipManager;
@@ -38,7 +38,7 @@ pub fn analyze_reader<R: Read>(reader: &mut R, include_jij: bool) -> Result<DepR
     analyze_impl(&mut mng, include_jij)
 }
 
-fn analyze_impl(mng: &mut ZipManager, include_jij: bool) -> Result<DepReport> {
+fn analyze_impl<R: Read + Seek>(mng: &mut ZipManager<R>, include_jij: bool) -> Result<DepReport> {
     let entries = mng.entries()?;
     let mod_type = REGISTRY.detect(&entries);
 

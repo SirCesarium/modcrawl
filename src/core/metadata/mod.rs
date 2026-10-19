@@ -1,5 +1,5 @@
 use std::fmt;
-use std::io::Read;
+use std::io::{Read, Seek};
 use std::path::Path;
 
 use zipcrawl::ZipManager;
@@ -75,7 +75,7 @@ pub fn read_metadata_reader<R: Read>(reader: &mut R) -> Result<ModMetadata> {
     read_metadata_impl(&mut mng)
 }
 
-fn read_metadata_impl(mng: &mut ZipManager) -> Result<ModMetadata> {
+fn read_metadata_impl<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<ModMetadata> {
     let entries = mng.entries()?;
     let mod_type = REGISTRY.detect(&entries);
 
