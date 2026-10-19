@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::io::{Read, Seek};
 use std::path::Path;
 
-use zipcrawl::ZipManager;
+use zipcrawl::{ZipEntry, ZipManager};
 
 pub use types::{DepEntry, DepReport, JarInJar};
 
@@ -85,7 +85,7 @@ fn dedup_deps(raw: Vec<DepEntry>) -> Vec<DepEntry> {
     out
 }
 
-fn find_embedded_jars(entries: &[zipcrawl::ZipEntry]) -> Vec<JarInJar> {
+fn find_embedded_jars(entries: &[ZipEntry]) -> Vec<JarInJar> {
     entries
         .iter()
         .filter(|e| {
@@ -231,8 +231,8 @@ mod tests {
 
     // ── find_embedded_jars ─────────────────────────────────────────────────
 
-    fn zip_entry(name: &str, is_dir: bool) -> zipcrawl::ZipEntry {
-        zipcrawl::ZipEntry {
+    fn zip_entry(name: &str, is_dir: bool) -> ZipEntry {
+        ZipEntry {
             name: name.to_owned(),
             is_dir,
             size: 0,

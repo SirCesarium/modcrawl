@@ -1,13 +1,15 @@
 use std::io::{self, BufRead, Read};
 use std::path::PathBuf;
 
+use clap::Args as ClapArgs;
+
 use crate::core::identify::{identify, identify_reader};
 use crate::error::Result;
 use crate::ui;
 
 const EOCD_MAGIC: &[u8] = b"PK\x05\x06";
 
-#[derive(clap::Args)]
+#[derive(ClapArgs)]
 pub struct Args {
     pub file: Vec<PathBuf>,
 }

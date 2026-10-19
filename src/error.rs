@@ -3,7 +3,10 @@ use std::io;
 use std::result;
 
 use miette::Diagnostic;
+use serde_json::Error as JsonError;
+use serde_saphyr::Error as YamlError;
 use thiserror::Error;
+use zipcrawl::ZipCrawlError;
 
 use toml::de;
 
@@ -13,7 +16,7 @@ pub type Result<T> = result::Result<T, Error>;
 ///
 /// `IoError` wraps an `io::Error`, so the leaf (`No such file or directory`)
 /// carries the reason and the wrapper only carries the path.
-fn zipcrawl_reason(err: &zipcrawl::ZipCrawlError) -> String {
+fn zipcrawl_reason(err: &ZipCrawlError) -> String {
     let mut cause: &dyn StdError = err;
     while let Some(source) = cause.source() {
         cause = source;
@@ -35,11 +38,11 @@ pub enum Error {
 
     #[error("{}", zipcrawl_reason(.0))]
     #[diagnostic(code(modcrawl::zipcrawl))]
-    ZipCrawl(#[from] zipcrawl::ZipCrawlError),
+    ZipCrawl(#[from] ZipCrawlError),
 
     #[error("JSON error: {0}")]
     #[diagnostic(code(modcrawl::json))]
-    Json(#[from] serde_json::Error),
+    Json(#[from] JsonError),
 
     #[error("TOML error: {0}")]
     #[diagnostic(code(modcrawl::toml))]
@@ -47,7 +50,7 @@ pub enum Error {
 
     #[error("YAML error: {0}")]
     #[diagnostic(code(modcrawl::yaml))]
-    Yaml(#[from] serde_saphyr::Error),
+    Yaml(#[from] YamlError),
 
     #[error("Unsupported metadata format for {0}")]
     #[diagnostic(code(modcrawl::unsupported_metadata))]

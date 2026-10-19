@@ -2,11 +2,14 @@ use std::collections::BTreeSet;
 use std::path::Path;
 use std::path::PathBuf;
 
+use clap::Args as ClapArgs;
+use serde_json::{json, to_string_pretty};
+
 use crate::core::classfile;
 use crate::error::Result;
 use crate::ui;
 
-#[derive(clap::Args)]
+#[derive(ClapArgs)]
 pub struct Args {
     /// One or more JAR files to compare for duplicate classes.
     pub file: Vec<PathBuf>,
@@ -50,7 +53,7 @@ pub fn run(args: &Args) -> Result<()> {
             .len();
         println!(
             "{}",
-            serde_json::json!({
+            json!({
                 "total_duplicate_classes": entries.len(),
                 "total_files_with_dupes": total_files,
             })
@@ -59,7 +62,7 @@ pub fn run(args: &Args) -> Result<()> {
     }
 
     if args.json {
-        println!("{}", serde_json::to_string_pretty(&entries)?);
+        println!("{}", to_string_pretty(&entries)?);
         return Ok(());
     }
 

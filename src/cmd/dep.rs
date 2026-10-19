@@ -1,10 +1,13 @@
 use std::path::PathBuf;
 
+use clap::Args as ClapArgs;
+use serde_json::to_string_pretty;
+
 use crate::core::dep;
 use crate::error::Result;
 use crate::ui;
 
-#[derive(clap::Args)]
+#[derive(ClapArgs)]
 pub struct Args {
     pub file: Vec<PathBuf>,
 
@@ -41,7 +44,7 @@ pub fn run(args: &Args) -> Result<()> {
         };
 
         if args.json {
-            println!("{}", serde_json::to_string_pretty(&report)?);
+            println!("{}", to_string_pretty(&report)?);
             continue;
         }
 

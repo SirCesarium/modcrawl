@@ -1,10 +1,13 @@
 use std::path::PathBuf;
 
+use clap::Args as ClapArgs;
+use serde_json::to_string;
+
 use crate::core::metadata::read_metadata;
 use crate::error::Result;
 use crate::ui;
 
-#[derive(clap::Args)]
+#[derive(ClapArgs)]
 pub struct Args {
     /// Output compact JSON (one line) instead of pretty-printed
     #[arg(short, long)]
@@ -32,7 +35,7 @@ pub fn run(args: &Args) -> Result<()> {
         };
 
         if args.json {
-            println!("{}", serde_json::to_string(&meta)?);
+            println!("{}", to_string(&meta)?);
             continue;
         }
 

@@ -3,11 +3,12 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use toml::from_str;
 
 use crate::error::Result;
 
 pub fn parse(input: &str) -> Result<ModsTomlMetadata> {
-    Ok(toml::from_str(input)?)
+    Ok(from_str(input)?)
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

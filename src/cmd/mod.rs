@@ -14,7 +14,7 @@ pub mod mixins;
 #[cfg(feature = "classfile")]
 pub mod dupes;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(name = "modcrawl", version, about)]
@@ -23,7 +23,7 @@ pub struct Cli {
     pub command: Commands,
 }
 
-#[derive(clap::Subcommand)]
+#[derive(Subcommand)]
 pub enum Commands {
     /// Analyze & crawl `Minecraft` mod dependencies.
     ///

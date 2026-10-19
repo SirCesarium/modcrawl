@@ -524,10 +524,11 @@ fn plugin_depends(m: &BukkitPluginMetadata) -> Vec<DepRow> {
 #[allow(clippy::expect_used)]
 mod tests {
     use super::*;
+    use toml::from_str;
 
     #[test]
     fn loader_version_prefers_the_loader_dependency() {
-        let m: ModsTomlMetadata = toml::from_str(
+        let m: ModsTomlMetadata = from_str(
             r#"
 loaderVersion = "[0,)"
 
@@ -547,7 +548,7 @@ versionRange = "[21.1.219,)"
 
     #[test]
     fn loader_version_uses_the_forge_dependency_for_forge() {
-        let m: ModsTomlMetadata = toml::from_str(
+        let m: ModsTomlMetadata = from_str(
             r#"
 loaderVersion = "[47,)"
 
@@ -569,7 +570,7 @@ versionRange = "[47,)"
 
     #[test]
     fn loader_version_falls_back_to_loader_version_field() {
-        let m: ModsTomlMetadata = toml::from_str(
+        let m: ModsTomlMetadata = from_str(
             r#"
 loaderVersion = "[4,)"
 

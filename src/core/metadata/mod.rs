@@ -2,6 +2,7 @@ use std::fmt;
 use std::io::{Read, Seek};
 use std::path::Path;
 
+use serde::Serialize;
 use zipcrawl::ZipManager;
 
 use crate::error::{Error, Result};
@@ -10,7 +11,7 @@ use super::REGISTRY;
 use super::loaders::{bukkit, fabric, forge_legacy, forge_modern, paper};
 
 /// Parsed mod/plugin metadata from a JAR file.
-#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub enum ModMetadata {
     Fabric(Box<fabric::metadata::FabricModMetadata>),
     ForgeLegacy(forge_legacy::metadata::ForgeLegacyMetadata),

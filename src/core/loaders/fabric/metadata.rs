@@ -2,12 +2,12 @@ use std::collections::HashMap;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, from_str};
 
 use crate::error::Result;
 
 pub fn parse(input: &str) -> Result<FabricModMetadata> {
-    Ok(serde_json::from_str(input)?)
+    Ok(from_str(input)?)
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

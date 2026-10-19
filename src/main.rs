@@ -1,9 +1,9 @@
 use clap::Parser;
-use miette::IntoDiagnostic;
+use miette::{IntoDiagnostic, Result};
 
 use modcrawl::cmd::{self, Commands};
 
-fn main() -> miette::Result<()> {
+fn main() -> Result<()> {
     let cli = cmd::Cli::parse();
     let result = match &cli.command {
         Commands::Dep(args) => cmd::dep::run(args),
