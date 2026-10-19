@@ -38,6 +38,7 @@ impl fmt::Display for PluginType {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModType {
     Fabric,
+    Quilt,
     Forge(ForgeModFormat),
     NeoForge,
     Plugin(PluginType),
@@ -48,6 +49,7 @@ impl fmt::Display for ModType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Fabric => write!(f, "Fabric"),
+            Self::Quilt => write!(f, "Quilt"),
             Self::NeoForge => write!(f, "NeoForge"),
             Self::Unknown => write!(f, "Unknown"),
             Self::Forge(fmt) => write!(f, "Forge ({fmt})"),
@@ -77,6 +79,11 @@ mod tests {
     #[test]
     fn mod_type_fabric() {
         assert_eq!(ModType::Fabric.to_string(), "Fabric");
+    }
+
+    #[test]
+    fn mod_type_quilt() {
+        assert_eq!(ModType::Quilt.to_string(), "Quilt");
     }
 
     #[test]

@@ -9,6 +9,7 @@ use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
 pub(crate) fn loader_color(t: &ModType) -> Color {
     match t {
         ModType::Fabric => Color::Ansi(AnsiColor::Cyan),
+        ModType::Quilt => Color::Ansi(AnsiColor::BrightBlue),
         ModType::Forge(_) => Color::Ansi(AnsiColor::Yellow),
         ModType::NeoForge => Color::Ansi(AnsiColor::Red),
         ModType::Plugin(PluginType::Bukkit) => Color::Ansi(AnsiColor::Green),
@@ -29,6 +30,7 @@ pub(crate) fn loader_style(t: &ModType) -> Style {
 pub(crate) fn loader_name(t: &ModType) -> &'static str {
     match t {
         ModType::Fabric => "Fabric",
+        ModType::Quilt => "Quilt",
         ModType::Forge(ForgeModFormat::ModsToml) => "Forge",
         ModType::Forge(ForgeModFormat::McmodInfo) => "Forge (legacy format)",
         ModType::NeoForge => "NeoForge",

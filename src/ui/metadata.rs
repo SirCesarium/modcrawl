@@ -13,6 +13,7 @@ use crate::core::loaders::{
     forge_legacy::metadata::ForgeLegacyModEntry,
     forge_modern::metadata::{ModsTomlMetadata, ModsTomlMod},
     paper::metadata::PaperPluginMetadata,
+    quilt::metadata::QuiltModMetadata,
     velocity::metadata::VelocityPluginMetadata,
 };
 use crate::core::metadata::ModMetadata;
@@ -43,6 +44,7 @@ struct Block {
 pub(crate) fn render(meta: &ModMetadata) {
     let blocks = match meta {
         ModMetadata::Fabric(m) => fabric(m),
+        ModMetadata::Quilt(m) => quilt(m),
         ModMetadata::ForgeLegacy(entries) => forge_legacy(entries),
         ModMetadata::ForgeModern(m) => forge_modern(m, ModType::Forge(ForgeModFormat::ModsToml)),
         ModMetadata::NeoForge(m) => forge_modern(m, ModType::NeoForge),
@@ -217,6 +219,75 @@ fn fabric_depends(m: &FabricModMetadata) -> Vec<DepRow> {
             side: None,
         })
         .collect()
+}
+
+/// Quilt's `quilt.mod.json`.
+fn quilt(m: &QuiltModMetadata) -> Vec<Block> {
+    let loader = &m.quilt_loader;
+    let meta = &loader.metadata;
+    let mut fields = Vec::new();
+
+    push_field(&mut fields, "ID", loader.id.clone());
+    push_field(&mut fields, "Name", meta.name.clone().unwrap_or_default());
+    push_field(
+        &mut fields,
+        "Version",
+        loader.version.clone().unwrap_or_default(),
+    );
+    push_field(
+        &mut fields,
+        "Description",
+        meta.description.clone().unwrap_or_default(),
+    );
+    push_field(
+        &mut fields,
+        "License",
+        meta.license.as_ref().map_or_else(String::new, |l| l.join()),
+    );
+
+    let contributors: Vec<String> = meta
+        .contributors
+        .iter()
+        .map(|(name, role)| {
+            if role.is_empty() {
+                name.clone()
+            } else {
+                format!("{name} ({role})")
+            }
+        })
+        .collect();
+    push_field(&mut fields, "Contributors", contributors.join(", "));
+
+    if let Some(contact) = &meta.contact {
+        push_field(
+            &mut fields,
+            "Sources",
+            contact.sources.clone().unwrap_or_default(),
+        );
+        push_field(
+            &mut fields,
+            "Homepage",
+            contact.homepage.clone().unwrap_or_default(),
+        );
+    }
+
+    let depends = loader
+        .depends
+        .iter()
+        .map(|d| DepRow {
+            name: d.id().to_owned(),
+            version: d.versions().map_or_else(String::new, |v| v.join()),
+            kind: Some(DepKind::Required),
+            side: None,
+        })
+        .collect();
+
+    vec![Block {
+        kind: ModType::Quilt,
+        title: meta.name.clone().unwrap_or_else(|| loader.id.clone()),
+        fields,
+        depends,
+    }]
 }
 
 /// Forge/NeoForge `mods.toml`. File-level fields ride on the first block, each

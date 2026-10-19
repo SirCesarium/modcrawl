@@ -4,6 +4,7 @@ pub(crate) mod forge_legacy;
 pub(crate) mod forge_modern;
 pub(crate) mod neoforge;
 pub(crate) mod paper;
+pub(crate) mod quilt;
 pub(crate) mod velocity;
 
 use crate::core::registry::Registry;
@@ -11,7 +12,8 @@ use crate::core::registry::Registry;
 /// Register all known mod/plugin handlers in priority order.
 ///
 /// Order matters: the first matching detection rule wins
-/// (Paper > Bukkit, `NeoForge` > Forge).
+/// (Paper > Bukkit, `NeoForge` > Forge, Fabric > Quilt for jars that ship
+/// both `fabric.mod.json` and `quilt.mod.json`).
 pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(paper::PaperHandler));
     registry.register(Box::new(bukkit::BukkitHandler));
@@ -19,6 +21,7 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(forge_modern::ForgeModernHandler));
     registry.register(Box::new(forge_legacy::ForgeLegacyHandler));
     registry.register(Box::new(fabric::FabricHandler));
+    registry.register(Box::new(quilt::QuiltHandler));
     registry.register(Box::new(velocity::VelocityHandler));
 }
 
@@ -34,6 +37,7 @@ mod tests {
 
         let handler = registry.handler_by_file(match mod_type {
             "Fabric" => "fabric.mod.json",
+            "Quilt" => "quilt.mod.json",
             "Forge (mods.toml)" => "META-INF/mods.toml",
             "NeoForge" => "META-INF/neoforge.mods.toml",
             "Forge (mcmod.info)" => "mcmod.info",
@@ -49,6 +53,37 @@ mod tests {
     #[test]
     fn test_fabric_handler() {
         test_handler("Fabric");
+    }
+
+    #[test]
+    fn test_quilt_handler() {
+        test_handler("Quilt");
+    }
+
+    #[test]
+    fn registry_detect_dual_fabric_quilt() {
+        use zipcrawl::ZipEntry;
+
+        use crate::core::detect_mod_type::ModType;
+
+        let mut registry = Registry::new();
+        register_all(&mut registry);
+
+        let entries = vec![
+            ZipEntry {
+                name: "fabric.mod.json".to_owned(),
+                is_dir: false,
+                size: 0,
+                crc: 0,
+            },
+            ZipEntry {
+                name: "quilt.mod.json".to_owned(),
+                is_dir: false,
+                size: 0,
+                crc: 0,
+            },
+        ];
+        assert_eq!(registry.detect(&entries), ModType::Fabric);
     }
 
     #[test]
