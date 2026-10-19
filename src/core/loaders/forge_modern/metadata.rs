@@ -124,7 +124,6 @@ impl fmt::Display for ModsTomlMetadata {
                     1 => match sides.iter().next().and_then(|s| *s) {
                         Some("CLIENT") => " (Client)",
                         Some("SERVER") => " (Server)",
-                        Some("BOTH") => " (Both)",
                         _ => "",
                     },
                     _ => "",
