@@ -104,3 +104,89 @@ pub(crate) fn collect_jar_paths(paths: &[PathBuf]) -> io::Result<Vec<PathBuf>> {
 
     Ok(jars)
 }
+
+#[cfg(test)]
+#[allow(clippy::expect_used)]
+mod tests {
+    use std::env;
+    use std::fs;
+    use std::path::Path;
+    use std::slice;
+
+    use super::*;
+
+    /// A scratch directory that removes itself when the test ends.
+    struct TestDir(PathBuf);
+
+    impl TestDir {
+        fn new(name: &str) -> Self {
+            let dir = env::temp_dir().join(format!("modcrawl-cmd-{name}"));
+            let _ = fs::remove_dir_all(&dir);
+            fs::create_dir_all(&dir).expect("temp dir is created");
+            Self(dir)
+        }
+    }
+
+    impl Drop for TestDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn file_names(jars: &[PathBuf]) -> Vec<&str> {
+        jars.iter()
+            .filter_map(|p| p.file_name())
+            .filter_map(|n| n.to_str())
+            .collect()
+    }
+
+    #[test]
+    fn keeps_explicit_files_in_the_given_order() {
+        let dir = TestDir::new("order");
+        let b = dir.0.join("b.jar");
+        let a = dir.0.join("a.jar");
+        fs::write(&b, b"").expect("file is written");
+        fs::write(&a, b"").expect("file is written");
+
+        let wanted = [b, a];
+        let out = collect_jar_paths(&wanted).expect("no directory to read");
+        assert_eq!(out, wanted);
+    }
+
+    #[test]
+    fn expands_a_directory_sorted_and_case_insensitive() {
+        let dir = TestDir::new("expand");
+        for name in ["c.JAR", "a.jar", "b.jar", "notes.txt", "Main.class"] {
+            fs::write(dir.0.join(name), b"").expect("file is written");
+        }
+
+        let out = collect_jar_paths(slice::from_ref(&dir.0)).expect("dir is readable");
+        assert_eq!(file_names(&out), ["a.jar", "b.jar", "c.JAR"]);
+    }
+
+    #[test]
+    fn does_not_recurse_into_subdirectories() {
+        let dir = TestDir::new("recurse");
+        let nested = dir.0.join("sub");
+        fs::create_dir_all(&nested).expect("subdir is created");
+        fs::write(nested.join("inner.jar"), b"").expect("file is written");
+        fs::write(dir.0.join("outer.jar"), b"").expect("file is written");
+
+        let out = collect_jar_paths(slice::from_ref(&dir.0)).expect("dir is readable");
+        assert_eq!(out, [dir.0.join("outer.jar")]);
+    }
+
+    #[test]
+    fn an_empty_directory_yields_nothing() {
+        let dir = TestDir::new("empty");
+        let out = collect_jar_paths(slice::from_ref(&dir.0)).expect("dir is readable");
+        assert_eq!(out, [] as [PathBuf; 0]);
+    }
+
+    #[test]
+    fn a_missing_path_is_passed_through() {
+        let missing = Path::new("/nonexistent/modcrawl-nope.jar").to_path_buf();
+        let out = collect_jar_paths(slice::from_ref(&missing)).expect("no directory to read");
+        assert_eq!(out, [missing]);
+    }
+}
