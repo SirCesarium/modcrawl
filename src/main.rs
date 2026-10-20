@@ -1,7 +1,10 @@
+use std::process;
+
 use clap::Parser;
-use miette::{IntoDiagnostic, Result};
+use miette::Result;
 
 use modcrawl::cmd::{self, Commands};
+use modcrawl::error::Error;
 
 fn main() -> Result<()> {
     let cli = cmd::Cli::parse();
@@ -18,6 +21,13 @@ fn main() -> Result<()> {
         #[cfg(feature = "classfile")]
         Commands::Dupes(args) => cmd::dupes::run(args),
     };
-    result.into_diagnostic()?;
-    Ok(())
+
+    match result {
+        Ok(()) => Ok(()),
+        Err(Error::Usage(msg)) => {
+            eprintln!("error: {msg}");
+            process::exit(2);
+        }
+        Err(e) => Err(e.into()),
+    }
 }

@@ -1,9 +1,10 @@
+use std::io::Cursor;
 use std::path::PathBuf;
 
 use clap::Args as ClapArgs;
 use serde_json::to_string_pretty;
 
-use crate::cmd::collect_jar_paths;
+use crate::cmd::{Source, collect_sources};
 use crate::core::classfile;
 use crate::error::Result;
 use crate::ui;
@@ -27,14 +28,20 @@ pub struct Args {
 ///
 /// Returns an error if a JAR cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let files = collect_jar_paths(&args.path)?;
-    let multi = files.len() > 1;
+    let sources = collect_sources(&args.path)?;
+    let multi = sources.len() > 1;
 
-    for file in &files {
-        let entries = match classfile::list_classes(file) {
+    for source in &sources {
+        let entries = match source {
+            Source::Path(path) => classfile::list_classes(path),
+            Source::Archive(data) => {
+                classfile::list_classes_reader(&mut Cursor::new(data.as_slice()))
+            }
+        };
+        let entries = match entries {
             Ok(e) => e,
             Err(e) => {
-                ui::file_error(&file.display().to_string(), &e);
+                ui::file_error(&source.label(), &e);
                 continue;
             }
         };
@@ -45,7 +52,7 @@ pub fn run(args: &Args) -> Result<()> {
         }
 
         if multi {
-            ui::file_header(&file.display().to_string());
+            ui::file_header(&source.label());
         }
 
         ui::render_classes(&entries);

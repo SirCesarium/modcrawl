@@ -56,6 +56,10 @@ pub enum Error {
     #[diagnostic(code(modcrawl::unsupported_metadata))]
     UnsupportedMetadata(String),
 
+    #[error("{0}")]
+    #[diagnostic(code(modcrawl::usage))]
+    Usage(String),
+
     #[cfg(feature = "classfile")]
     #[error("Class file error: {0}")]
     #[diagnostic(code(modcrawl::classfile))]
@@ -92,6 +96,19 @@ mod tests {
         let io_err = io::Error::new(io::ErrorKind::PermissionDenied, "denied");
         let e: Error = io_err.into();
         assert!(matches!(e, Error::Io(_)));
+    }
+
+    #[test]
+    fn error_usage_shows_only_its_message() {
+        let e = Error::Usage(String::from("no input: pass a JAR path"));
+        assert_eq!(e.to_string(), "no input: pass a JAR path");
+    }
+
+    #[test]
+    fn error_usage_code() {
+        use miette::Diagnostic;
+        let e = Error::Usage(String::from("no input"));
+        assert_eq!(e.code().unwrap().to_string(), "modcrawl::usage");
     }
 
     #[test]

@@ -85,7 +85,6 @@ pub fn read_metadata(path: &Path) -> Result<ModMetadata> {
 ///
 /// Returns an error if the data cannot be read, is not a valid ZIP archive,
 /// the metadata file is missing, or the metadata cannot be parsed.
-#[allow(dead_code)]
 pub fn read_metadata_reader<R: Read>(reader: &mut R) -> Result<ModMetadata> {
     let mut mng = ZipManager::from_reader(reader)?;
     read_metadata_impl(&mut mng)

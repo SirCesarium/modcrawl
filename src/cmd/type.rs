@@ -1,9 +1,9 @@
-use std::io::{self, BufRead, Read};
+use std::io;
 use std::path::PathBuf;
 
 use clap::Args as ClapArgs;
 
-use crate::cmd::collect_jar_paths;
+use crate::cmd::{Stdin, collect_jar_paths, is_stdin_request, read_stdin};
 use crate::core::identify::{identify, identify_reader};
 use crate::error::Result;
 use crate::ui;
@@ -56,66 +56,45 @@ fn process_zip_chunks(data: &[u8]) {
     }
 }
 
+/// Render the type of each JAR, or a single file on its own when its caller
+/// named exactly that file.
+fn render(files: &[PathBuf], named_only: bool) {
+    let entries: Vec<(String, _)> = files
+        .iter()
+        .filter_map(|file| match identify(file) {
+            Ok(mod_type) => Some((file.display().to_string(), mod_type)),
+            Err(e) => {
+                ui::file_error(&file.display().to_string(), &e);
+                None
+            }
+        })
+        .collect();
+
+    match (named_only, entries.as_slice()) {
+        (true, [entry]) => ui::render_type(&entry.1),
+        _ => ui::render_type_multi(&entries),
+    }
+}
+
 /// Run the `type` command: detect mod/plugin type(s) from JAR files.
 ///
 /// # Errors
 ///
 /// Returns an error if I/O fails or a ZIP archive cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    if args.path.is_empty() || (args.path.len() == 1 && args.path[0].to_string_lossy() == "-") {
-        let mut handle = io::stdin().lock();
-        let buf = handle.fill_buf()?;
-        if buf.starts_with(b"PK\x03\x04") {
-            let mut data = Vec::new();
-            handle.read_to_end(&mut data)?;
-            process_zip_chunks(&data);
-        } else {
-            let mut entries = Vec::new();
-            let mut line_buf = String::new();
-
-            loop {
-                line_buf.clear();
-                if handle.read_line(&mut line_buf)? == 0 {
-                    break;
-                }
-
-                let line = line_buf.trim().to_owned();
-                if line.is_empty() {
-                    continue;
-                }
-
-                let path = PathBuf::from(line);
-                match identify(&path) {
-                    Ok(mod_type) => entries.push((path.display().to_string(), mod_type)),
-                    Err(e) => ui::file_error(&path.display().to_string(), &e),
-                }
-            }
-
-            ui::render_type_multi(&entries);
+    if is_stdin_request(&args.path) {
+        match read_stdin()? {
+            Stdin::Archive(data) => process_zip_chunks(&data),
+            Stdin::Paths(list) => render(&collect_jar_paths(&list)?, false),
         }
-        Ok(())
-    } else {
-        let files = collect_jar_paths(&args.path)?;
-        // A directory is always rendered as a table: its caller never named the
-        // file, so the FILE column is the only thing identifying it.
-        let named_only = matches!(args.path.as_slice(), [one] if !one.is_dir());
-
-        let entries: Vec<(String, _)> = files
-            .iter()
-            .filter_map(|file| match identify(file) {
-                Ok(mod_type) => Some((file.display().to_string(), mod_type)),
-                Err(e) => {
-                    ui::file_error(&file.display().to_string(), &e);
-                    None
-                }
-            })
-            .collect();
-
-        match (named_only, entries.as_slice()) {
-            (true, [entry]) => ui::render_type(&entry.1),
-            _ => ui::render_type_multi(&entries),
-        }
-
-        Ok(())
+        return Ok(());
     }
+
+    // A directory is always rendered as a table: its caller never named the
+    // file, so the FILE column is the only thing identifying it.
+    let named_only = matches!(args.path.as_slice(), [one] if !one.is_dir());
+
+    render(&collect_jar_paths(&args.path)?, named_only);
+
+    Ok(())
 }

@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::io::Read;
+use std::io::{Read, Seek};
 use std::path::Path;
 
 use java_class_rs::{
@@ -44,6 +44,20 @@ pub struct DupEntry {
 /// Returns an error if the JAR cannot be read.
 pub fn list_classes(path: &Path) -> Result<Vec<ClassEntry>> {
     let mut manager = ZipManager::new(path)?;
+    list_classes_impl(&mut manager)
+}
+
+/// List all `.class` files in a JAR supplied by a `Read` source.
+///
+/// # Errors
+///
+/// Returns an error if the JAR cannot be read.
+pub fn list_classes_reader<R: Read>(reader: &mut R) -> Result<Vec<ClassEntry>> {
+    let mut manager = ZipManager::from_reader(reader)?;
+    list_classes_impl(&mut manager)
+}
+
+fn list_classes_impl<R: Read + Seek>(manager: &mut ZipManager<R>) -> Result<Vec<ClassEntry>> {
     let entries = manager.entries()?;
     let mut classes = Vec::new();
 
@@ -52,7 +66,7 @@ pub fn list_classes(path: &Path) -> Result<Vec<ClassEntry>> {
             continue;
         }
 
-        let Ok(Some(cf)) = parse_class_in_jar(&mut manager, &entry.name) else {
+        let Ok(Some(cf)) = parse_class_in_jar(manager, &entry.name) else {
             continue;
         };
 
@@ -76,6 +90,21 @@ pub fn list_classes(path: &Path) -> Result<Vec<ClassEntry>> {
 /// Returns an error if the JAR cannot be read.
 pub fn grep(path: &Path, pattern: &str) -> Result<Vec<GrepMatch>> {
     let mut manager = ZipManager::new(path)?;
+    grep_impl(&mut manager, pattern)
+}
+
+/// Search the constant pool of all `.class` files in a JAR supplied by a
+/// `Read` source.
+///
+/// # Errors
+///
+/// Returns an error if the JAR cannot be read.
+pub fn grep_reader<R: Read>(reader: &mut R, pattern: &str) -> Result<Vec<GrepMatch>> {
+    let mut manager = ZipManager::from_reader(reader)?;
+    grep_impl(&mut manager, pattern)
+}
+
+fn grep_impl<R: Read + Seek>(manager: &mut ZipManager<R>, pattern: &str) -> Result<Vec<GrepMatch>> {
     let entries = manager.entries()?;
     let mut matches = Vec::new();
 
@@ -84,7 +113,7 @@ pub fn grep(path: &Path, pattern: &str) -> Result<Vec<GrepMatch>> {
             continue;
         }
 
-        let Ok(Some(cf)) = parse_class_in_jar(&mut manager, &entry.name) else {
+        let Ok(Some(cf)) = parse_class_in_jar(manager, &entry.name) else {
             continue;
         };
 
@@ -104,6 +133,22 @@ pub fn grep(path: &Path, pattern: &str) -> Result<Vec<GrepMatch>> {
 /// Returns an error if the JAR cannot be read.
 pub fn mixins(path: &Path) -> Result<Vec<MixinEntry>> {
     let mut manager = ZipManager::new(path)?;
+    mixins_impl(&mut manager)
+}
+
+/// Extract mixin targets from a JAR supplied by a `Read` source.
+///
+/// Looks for `@Mixin` (`SpongePowered`) annotations at the class level.
+///
+/// # Errors
+///
+/// Returns an error if the JAR cannot be read.
+pub fn mixins_reader<R: Read>(reader: &mut R) -> Result<Vec<MixinEntry>> {
+    let mut manager = ZipManager::from_reader(reader)?;
+    mixins_impl(&mut manager)
+}
+
+fn mixins_impl<R: Read + Seek>(manager: &mut ZipManager<R>) -> Result<Vec<MixinEntry>> {
     let entries = manager.entries()?;
     let mut results = Vec::new();
 
@@ -112,7 +157,7 @@ pub fn mixins(path: &Path) -> Result<Vec<MixinEntry>> {
             continue;
         }
 
-        let Ok(Some(cf)) = parse_class_in_jar(&mut manager, &entry.name) else {
+        let Ok(Some(cf)) = parse_class_in_jar(manager, &entry.name) else {
             continue;
         };
 
@@ -260,7 +305,10 @@ fn is_class_entry(name: &str) -> bool {
         .is_some_and(|ext| ext.eq_ignore_ascii_case("class"))
 }
 
-fn parse_class_in_jar(manager: &mut ZipManager, name: &str) -> Result<Option<ClassFile>> {
+fn parse_class_in_jar<R: Read + Seek>(
+    manager: &mut ZipManager<R>,
+    name: &str,
+) -> Result<Option<ClassFile>> {
     let mut file = manager.open_file(name)?;
     let mut bytes = Vec::new();
     file.read_to_end(&mut bytes).map_err(Error::Io)?;

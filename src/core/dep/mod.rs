@@ -32,7 +32,6 @@ pub fn analyze(path: &Path, include_jij: bool) -> Result<DepReport> {
 /// # Errors
 ///
 /// Returns an error if the data cannot be read or is not a valid ZIP archive.
-#[allow(dead_code)]
 pub fn analyze_reader<R: Read>(reader: &mut R, include_jij: bool) -> Result<DepReport> {
     let mut mng = ZipManager::from_reader(reader)?;
     analyze_impl(&mut mng, include_jij)

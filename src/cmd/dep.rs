@@ -1,9 +1,10 @@
+use std::io::Cursor;
 use std::path::PathBuf;
 
 use clap::Args as ClapArgs;
 use serde_json::to_string_pretty;
 
-use crate::cmd::collect_jar_paths;
+use crate::cmd::{Source, collect_sources};
 use crate::core::dep;
 use crate::error::Result;
 use crate::ui;
@@ -34,14 +35,20 @@ pub struct Args {
 ///
 /// Returns an error if an archive cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let files = collect_jar_paths(&args.path)?;
-    let multi = files.len() > 1;
+    let sources = collect_sources(&args.path)?;
+    let multi = sources.len() > 1;
 
-    for file in &files {
-        let report = match dep::analyze(file, args.include_jar_in_jar) {
+    for source in &sources {
+        let report = match source {
+            Source::Path(path) => dep::analyze(path, args.include_jar_in_jar),
+            Source::Archive(data) => {
+                dep::analyze_reader(&mut Cursor::new(data.as_slice()), args.include_jar_in_jar)
+            }
+        };
+        let report = match report {
             Ok(r) => r,
             Err(e) => {
-                ui::file_error(&file.display().to_string(), &e);
+                ui::file_error(&source.label(), &e);
                 continue;
             }
         };
@@ -52,7 +59,7 @@ pub fn run(args: &Args) -> Result<()> {
         }
 
         if multi {
-            ui::file_header(&file.display().to_string());
+            ui::file_header(&source.label());
         }
 
         ui::render_deps(&report, args.include_jar_in_jar);

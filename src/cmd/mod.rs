@@ -14,9 +14,13 @@ pub mod mixins;
 #[cfg(feature = "classfile")]
 pub mod dupes;
 
-use std::{fs, io, path::PathBuf};
+use std::fs;
+use std::io::{self, IsTerminal, Read};
+use std::path::{Path, PathBuf};
 
 use clap::{Parser, Subcommand};
+
+use crate::error::{Error, Result};
 
 #[derive(Parser)]
 #[command(name = "modcrawl", version, about)]
@@ -103,6 +107,102 @@ pub(crate) fn collect_jar_paths(paths: &[PathBuf]) -> io::Result<Vec<PathBuf>> {
     }
 
     Ok(jars)
+}
+
+/// A JAR to process: named on the command line, or piped on stdin.
+pub(crate) enum Source {
+    Path(PathBuf),
+    Archive(Vec<u8>),
+}
+
+impl Source {
+    /// Name shown in headers and error messages.
+    pub(crate) fn label(&self) -> String {
+        match self {
+            Self::Path(path) => path.display().to_string(),
+            Self::Archive(_) => String::from("<stdin>"),
+        }
+    }
+
+    /// The archive's path, if it was named rather than piped.
+    fn as_path(&self) -> Option<&Path> {
+        match self {
+            Self::Path(path) => Some(path),
+            Self::Archive(_) => None,
+        }
+    }
+}
+
+/// What piped stdin carried.
+pub(crate) enum Stdin {
+    /// A JAR archive, identified by its leading `PK\x03\x04`.
+    Archive(Vec<u8>),
+    /// Newline-separated paths.
+    Paths(Vec<PathBuf>),
+}
+
+/// Whether `paths` asks for stdin: nothing at all, or a lone `-`.
+pub(crate) fn is_stdin_request(paths: &[PathBuf]) -> bool {
+    paths.is_empty() || (paths.len() == 1 && paths[0] == Path::new("-"))
+}
+
+/// Read stdin, failing when it is a terminal so an invocation without
+/// arguments reports usage instead of blocking.
+///
+/// # Errors
+///
+/// Returns an error if stdin cannot be read, or if it is a terminal.
+pub(crate) fn read_stdin() -> Result<Stdin> {
+    if io::stdin().is_terminal() {
+        return Err(Error::Usage(String::from(
+            "no input: pass a JAR path or pipe one on stdin",
+        )));
+    }
+
+    let mut data = Vec::new();
+    io::stdin().lock().read_to_end(&mut data)?;
+
+    if data.starts_with(b"PK\x03\x04") {
+        return Ok(Stdin::Archive(data));
+    }
+
+    let list =
+        String::from_utf8(data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+    Ok(Stdin::Paths(
+        list.lines()
+            .map(str::trim)
+            .filter(|line| !line.is_empty())
+            .map(PathBuf::from)
+            .collect(),
+    ))
+}
+
+/// Collect the JARs a command must process.
+///
+/// A path argument may be a file or a directory, as before. With no argument
+/// (or a lone `-`) stdin takes its place: a streamed archive becomes one
+/// source, a streamed list of paths is expanded like arguments.
+///
+/// # Errors
+///
+/// Returns an error if a directory or the piped path list cannot be read, or
+/// if stdin is a terminal.
+pub(crate) fn collect_sources(paths: &[PathBuf]) -> Result<Vec<Source>> {
+    if !is_stdin_request(paths) {
+        return Ok(collect_jar_paths(paths)?
+            .into_iter()
+            .map(Source::Path)
+            .collect());
+    }
+
+    Ok(match read_stdin()? {
+        Stdin::Archive(data) => vec![Source::Archive(data)],
+        Stdin::Paths(list) => collect_jar_paths(&list)?
+            .into_iter()
+            .map(Source::Path)
+            .collect(),
+    })
 }
 
 #[cfg(test)]

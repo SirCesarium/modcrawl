@@ -1,10 +1,11 @@
 use std::collections::BTreeSet;
+use std::io::Cursor;
 use std::path::PathBuf;
 
 use clap::Args as ClapArgs;
 use serde_json::to_string_pretty;
 
-use crate::cmd::collect_jar_paths;
+use crate::cmd::{Source, collect_sources};
 use crate::core::classfile;
 use crate::error::Result;
 use crate::ui;
@@ -37,15 +38,21 @@ pub struct Args {
 ///
 /// Returns an error if a JAR cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let files = collect_jar_paths(&args.path)?;
-    let multi = files.len() > 1;
+    let sources = collect_sources(&args.path)?;
+    let multi = sources.len() > 1;
     let mut total_matches = 0usize;
 
-    for file in &files {
-        let matches = match classfile::grep(file, &args.pattern) {
+    for source in &sources {
+        let matches = match source {
+            Source::Path(path) => classfile::grep(path, &args.pattern),
+            Source::Archive(data) => {
+                classfile::grep_reader(&mut Cursor::new(data.as_slice()), &args.pattern)
+            }
+        };
+        let matches = match matches {
             Ok(m) => m,
             Err(e) => {
-                ui::file_error(&file.display().to_string(), &e);
+                ui::file_error(&source.label(), &e);
                 continue;
             }
         };
@@ -62,7 +69,7 @@ pub fn run(args: &Args) -> Result<()> {
         total_matches += matches.len();
 
         if multi {
-            ui::file_header(&file.display().to_string());
+            ui::file_header(&source.label());
         }
 
         if args.quiet {
@@ -79,7 +86,7 @@ pub fn run(args: &Args) -> Result<()> {
         }
     }
 
-    if total_matches == 0 && !files.is_empty() && !args.json {
+    if total_matches == 0 && !sources.is_empty() && !args.json {
         ui::no_results(&format!(
             "No matches found for pattern \"{}\".",
             args.pattern

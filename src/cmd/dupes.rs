@@ -1,13 +1,12 @@
 use std::collections::BTreeSet;
-use std::path::Path;
 use std::path::PathBuf;
 
 use clap::Args as ClapArgs;
 use serde_json::{json, to_string_pretty};
 
-use crate::cmd::collect_jar_paths;
+use crate::cmd::collect_sources;
 use crate::core::classfile;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::ui;
 
 #[derive(ClapArgs)]
@@ -43,8 +42,22 @@ pub struct Args {
 ///
 /// Returns an error if any JAR cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let paths = collect_jar_paths(&args.path)?;
-    let paths: Vec<&Path> = paths.iter().map(PathBuf::as_path).collect();
+    let sources = collect_sources(&args.path)?;
+
+    // A single streamed JAR cannot duplicate against itself, so `dupes` takes
+    // paths only — a piped list of them works, a piped archive does not.
+    let mut paths = Vec::with_capacity(sources.len());
+    for source in &sources {
+        match source.as_path() {
+            Some(path) => paths.push(path),
+            None => {
+                return Err(Error::Usage(String::from(
+                    "dupes compares several JARs: pass their paths, or pipe a list of paths",
+                )));
+            }
+        }
+    }
+
     let entries = classfile::find_duplicates(&paths)?;
 
     if args.json && args.count {
