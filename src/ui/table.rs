@@ -19,7 +19,11 @@ pub(crate) fn cell(text: &str) -> Cell {
 /// A cell painted with `style`.
 pub(crate) fn styled_cell(style: Style, text: &str) -> Cell {
     Cell {
-        width: text.chars().count(),
+        width: text
+            .lines()
+            .map(|line| line.chars().count())
+            .max()
+            .unwrap_or(0),
         rendered: paint(style, text),
     }
 }
@@ -51,7 +55,7 @@ pub(crate) fn print_table(headers: &[&str], rows: &[Vec<Cell>]) {
         .collect();
 
     println!("{}", header_line.join("  "));
-    print_rule(&widths);
+    print_rule(headers, &widths);
 
     for row in rows {
         let line: Vec<String> = row
@@ -67,10 +71,16 @@ pub(crate) fn print_table(headers: &[&str], rows: &[Vec<Cell>]) {
     }
 }
 
-/// Dashed rule spanning the table's exact width. Dashed so it can't be confused
-/// with the solid rule `file_header` prints between JARs.
-fn print_rule(widths: &[usize]) {
-    let total = widths.iter().sum::<usize>() + widths.len().saturating_sub(1) * 2;
+/// Dashed rule under the header, stopping where the header text stops: the
+/// padding after the last column is not counted. Dashed so it can't be
+/// confused with the solid rule `file_header` prints between JARs.
+fn print_rule(headers: &[&str], widths: &[usize]) {
+    let columns = widths
+        .iter()
+        .take(widths.len().saturating_sub(1))
+        .map(|w| w + 2);
+    let tail = headers.last().map_or(0, |h| h.chars().count());
+    let total = columns.sum::<usize>() + tail;
 
     println!("{}", paint(dim(), &"╌".repeat(total)));
 }
