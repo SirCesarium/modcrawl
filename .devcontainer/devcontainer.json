@@ -1,22 +1,26 @@
 // For config options see https://aka.ms/devcontainer.json
 {
-	"name": "modcrawl",
-	"build": {
-		"dockerfile": "Dockerfile",
-		"args": {
-			"VARIANT": "trixie"
-		}
-	},
-	"postCreateCommand": "cargo fetch",
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"rust-lang.rust-analyzer",
-				"tamasfe.even-better-toml",
-				"serayuzgur.crates",
-				"eamodio.gitlens"
-			]
-		}
-	}
-	// "remoteUser": "root"
+  "name": "modcrawl",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "VARIANT": "trixie"
+    }
+  },
+  "postCreateCommand": "cargo fetch",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "serayuzgur.crates",
+
+        "svelte.svelte-vscode",
+        "bradlc.vscode-tailwindcss",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+  // "remoteUser": "root"
 }
