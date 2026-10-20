@@ -21,6 +21,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --all-features
 
+  # The wasm bindings are the base of the web build, so the wasm32 tree must
+  # keep compiling: no C codecs, no getrandom without a JS shim, no miette.
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - run: cargo check --target wasm32-unknown-unknown --no-default-features --features classfile,wasm
+
   # The C ABI is part of the public interface, so it is checked like one:
   # the header must match the exported symbols and must compile as C and as
   # C++ with warnings treated as errors.
