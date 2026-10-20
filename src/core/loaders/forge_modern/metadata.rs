@@ -1,14 +1,51 @@
 use std::collections::BTreeMap;
 use std::fmt;
+use std::result::Result as StdResult;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
-use toml::from_str;
+use toml::{Value as TomlValue, from_str};
 
 use crate::error::Result;
 
 pub fn parse(input: &str) -> Result<ModsTomlMetadata> {
     Ok(from_str(input)?)
+}
+
+/// Read `dependencies` without letting one malformed key sink the whole entry.
+///
+/// TOML bare keys cannot contain `.`, so `[[dependencies.1.21-1.10]]` nests
+/// instead of naming its key: the dependency arrays are still there, just
+/// deeper. Collect them from wherever they landed and skip anything that is
+/// not made of dependencies.
+fn lenient_deps<'de, D>(
+    deserializer: D,
+) -> StdResult<BTreeMap<String, Vec<ModsTomlDependency>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let raw = TomlValue::deserialize(deserializer)?;
+    let Some(table) = raw.as_table() else {
+        return Ok(BTreeMap::new());
+    };
+
+    Ok(table
+        .iter()
+        .map(|(key, value)| (key.clone(), deps_in(value)))
+        .filter(|(_, deps)| !deps.is_empty())
+        .collect())
+}
+
+/// Gather every dependency array below `value`, however deeply it is nested.
+fn deps_in(value: &TomlValue) -> Vec<ModsTomlDependency> {
+    match value {
+        TomlValue::Array(items) => items
+            .iter()
+            .filter_map(|item| ModsTomlDependency::deserialize(item.clone()).ok())
+            .collect(),
+        TomlValue::Table(table) => table.values().flat_map(deps_in).collect(),
+        _ => Vec::new(),
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -22,7 +59,7 @@ pub struct ModsTomlMetadata {
     pub license: Option<String>,
     #[serde(default)]
     pub mods: Vec<ModsTomlMod>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "lenient_deps")]
     pub dependencies: BTreeMap<String, Vec<ModsTomlDependency>>,
     #[serde(rename = "displayURL")]
     pub display_url: Option<String>,
@@ -181,6 +218,76 @@ mandatory = true
         assert_eq!(meta.license.as_deref(), Some("MIT"));
         assert_eq!(meta.mods.len(), 1);
         assert_eq!(meta.mods[0].display_name.as_deref(), Some("Test Mod"));
+
+        let ids: Vec<&str> = meta
+            .dependencies
+            .values()
+            .flatten()
+            .map(|dep| dep.mod_id.as_str())
+            .collect();
+        assert_eq!(ids, ["minecraft"]);
+    }
+
+    #[test]
+    fn a_dotted_dependency_key_still_yields_the_mod_and_its_deps() {
+        // A bare TOML key cannot hold `.`, so this nests instead of naming a key.
+        let toml = r#"
+modLoader = "javafml"
+license = "GLP3"
+
+[[mods]]
+modId = "modelfix"
+version = "1.21-1.10"
+displayName = "Model Gap Fix"
+
+[[dependencies.1.21-1.10]]
+modId = "neoforge"
+mandatory = true
+versionRange = "[4,)"
+side = "CLIENT"
+
+[[dependencies.1.21-1.10]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.21,1.22)"
+side = "CLIENT"
+"#;
+        let meta = parse(toml).unwrap();
+
+        assert_eq!(meta.mods.len(), 1);
+        assert_eq!(meta.mods[0].mod_id, "modelfix");
+        assert_eq!(meta.mods[0].display_name.as_deref(), Some("Model Gap Fix"));
+
+        let ids: Vec<&str> = meta
+            .dependencies
+            .values()
+            .flatten()
+            .map(|dep| dep.mod_id.as_str())
+            .collect();
+        assert_eq!(ids, ["neoforge", "minecraft"]);
+    }
+
+    #[test]
+    fn part_of_a_dependency_section_that_is_not_a_dependency_is_skipped() {
+        let toml = r#"
+[[mods]]
+modId = "testmod"
+
+[[dependencies.testmod]]
+modId = "minecraft"
+
+[[dependencies.testmod]]
+mandatory = true
+versionRange = "[1.21,1.22)"
+"#;
+        let meta = parse(toml).unwrap();
+        let ids: Vec<&str> = meta
+            .dependencies
+            .values()
+            .flatten()
+            .map(|dep| dep.mod_id.as_str())
+            .collect();
+        assert_eq!(ids, ["minecraft"]);
     }
 
     #[test]
