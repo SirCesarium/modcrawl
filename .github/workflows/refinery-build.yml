@@ -724,6 +724,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -747,3 +748,22 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          # never use caching in release builds
+          package-manager-cache: false
+      - name: Publish to npm
+        run: |
+          # npm 11.5.1+ is required for OIDC trusted publishing
+          npm i -g npm@latest
+          tar -xzf ./artifacts/modcrawl-wasm-web.tar.gz
+          version=$(node -p "require('./pkg/package.json').version")
+          if npm view "modcrawl@$version" version >/dev/null 2>&1; then
+            echo "modcrawl@$version is already on npm, skipping"
+          else
+            npm publish ./pkg
+          fi
+        shell: bash
