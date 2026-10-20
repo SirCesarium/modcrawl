@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::io::{Read, Seek};
 use std::path::Path;
 
@@ -10,6 +9,10 @@ use serde::Serialize;
 use zipcrawl::ZipManager;
 
 use crate::error::{Error, Result};
+
+mod dupes;
+
+pub use dupes::{DupEntry, find_duplicates, find_duplicates_buffers};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ClassEntry {
@@ -29,12 +32,6 @@ pub struct GrepMatch {
 pub struct MixinEntry {
     pub mixin_class: String,
     pub target: String,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct DupEntry {
-    pub class_name: String,
-    pub files: Vec<String>,
 }
 
 /// List all `.class` files in a JAR with basic metadata.
@@ -166,39 +163,6 @@ fn mixins_impl<R: Read + Seek>(manager: &mut ZipManager<R>) -> Result<Vec<MixinE
     }
 
     Ok(results)
-}
-
-/// Find duplicate class entries across multiple JARs.
-///
-/// # Errors
-///
-/// Returns an error if any JAR cannot be read.
-pub fn find_duplicates(paths: &[&Path]) -> Result<Vec<DupEntry>> {
-    let mut class_to_files: BTreeMap<String, Vec<String>> = BTreeMap::new();
-
-    for &path in paths {
-        let mut manager = ZipManager::new(path)?;
-        let entries = manager.entries()?;
-        let file_name = path.file_name().map_or_else(
-            || path.to_string_lossy().to_string(),
-            |n| n.to_string_lossy().to_string(),
-        );
-
-        for entry in &entries {
-            if is_class_entry(&entry.name) && !entry.is_dir {
-                class_to_files
-                    .entry(entry.name.clone())
-                    .or_default()
-                    .push(file_name.clone());
-            }
-        }
-    }
-
-    Ok(class_to_files
-        .into_iter()
-        .filter(|(_, files)| files.len() > 1)
-        .map(|(class_name, files)| DupEntry { class_name, files })
-        .collect())
 }
 
 fn extract_mixin_targets(cf: &ClassFile, class_name: &str) -> Vec<MixinEntry> {
