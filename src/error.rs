@@ -2,6 +2,7 @@ use std::error::Error as StdError;
 use std::io;
 use std::result;
 
+#[cfg(feature = "cli")]
 use miette::Diagnostic;
 use serde_json::Error as JsonError;
 use serde_saphyr::Error as YamlError;
@@ -30,44 +31,45 @@ fn zipcrawl_reason(err: &ZipCrawlError) -> String {
     }
 }
 
-#[derive(Error, Diagnostic, Debug)]
+#[derive(Error, Debug)]
+#[cfg_attr(feature = "cli", derive(Diagnostic))]
 pub enum Error {
     #[error("I/O error: {0}")]
-    #[diagnostic(code(modcrawl::io))]
+    #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::io)))]
     Io(#[from] io::Error),
 
     #[error("{}", zipcrawl_reason(.0))]
-    #[diagnostic(code(modcrawl::zipcrawl))]
+    #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::zipcrawl)))]
     ZipCrawl(#[from] ZipCrawlError),
 
     #[error("JSON error: {0}")]
-    #[diagnostic(code(modcrawl::json))]
+    #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::json)))]
     Json(#[from] JsonError),
 
     #[error("TOML error: {0}")]
-    #[diagnostic(code(modcrawl::toml))]
+    #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::toml)))]
     Toml(#[from] de::Error),
 
     #[error("YAML error: {0}")]
-    #[diagnostic(code(modcrawl::yaml))]
+    #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::yaml)))]
     Yaml(#[from] YamlError),
 
     #[error("Unsupported metadata format for {0}")]
-    #[diagnostic(code(modcrawl::unsupported_metadata))]
+    #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::unsupported_metadata)))]
     UnsupportedMetadata(String),
 
     #[error("{0}")]
-    #[diagnostic(code(modcrawl::usage))]
+    #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::usage)))]
     Usage(String),
 
     #[cfg(feature = "classfile")]
     #[error("Class file error: {0}")]
-    #[diagnostic(code(modcrawl::classfile))]
+    #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::classfile)))]
     ClassFile(String),
 
     #[cfg(feature = "classfile")]
     #[error("Parse error: {0}")]
-    #[diagnostic(code(modcrawl::parse))]
+    #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::parse)))]
     Parse(String),
 }
 
@@ -104,6 +106,7 @@ mod tests {
         assert_eq!(e.to_string(), "no input: pass a JAR path");
     }
 
+    #[cfg(feature = "cli")]
     #[test]
     fn error_usage_code() {
         use miette::Diagnostic;
@@ -111,6 +114,7 @@ mod tests {
         assert_eq!(e.code().unwrap().to_string(), "modcrawl::usage");
     }
 
+    #[cfg(feature = "cli")]
     #[test]
     fn error_unsupported_metadata_code() {
         use miette::Diagnostic;
