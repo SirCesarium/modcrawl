@@ -688,11 +688,38 @@ jobs:
         with:
           name: headers-artifacts
           path: "*.h"
+  wasm:
+    name: Build WebAssembly
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - uses: actions-rust-lang/setup-rust-toolchain@v2
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+      - name: Install wasm-pack
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-pack
+      - name: Build pkg
+        run: wasm-pack build --release --target web --no-default-features --features classfile,wasm
+      - name: Package pkg
+        run: tar -czf modcrawl-wasm-web.tar.gz pkg
+        shell: bash
+      - name: Upload wasm package
+        uses: actions/upload-artifact@v7
+        with:
+          name: wasm-artifacts
+          path: modcrawl-wasm-web.tar.gz
   release:
     name: Release Artifacts
     needs:
       - build
       - generate_headers
+      - wasm
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
