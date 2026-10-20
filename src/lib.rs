@@ -5,6 +5,8 @@ pub mod error;
 pub mod ffi;
 #[cfg(feature = "cli")]
 pub(crate) mod ui;
+#[cfg(all(feature = "wasm", target_arch = "wasm32"))]
+pub mod wasm;
 
 // ── Re-exports ──────────────────────────────────────────────────────────────
 
