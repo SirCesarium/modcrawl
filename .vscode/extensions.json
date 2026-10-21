@@ -1,5 +1,9 @@
 {
 	"recommendations": [
+		"rust-lang.rust-analyzer",
+		"tamasfe.even-better-toml",
+		"serayuzgur.crates",
+		"eamodio.gitlens",
 		"svelte.svelte-vscode",
 		"bradlc.vscode-tailwindcss",
 		"dbaeumer.vscode-eslint",
