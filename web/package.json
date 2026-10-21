@@ -43,5 +43,8 @@
 	"imports": {
 		"#lib": "./src/lib/index.js",
 		"#lib/*": "./src/lib/*"
+	},
+	"dependencies": {
+		"modcrawl": "^0.10.1"
 	}
 }
