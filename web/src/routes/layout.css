@@ -1,1 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap');
+
 @import 'tailwindcss';
+
+@layer base {
+	body {
+		@apply bg-neutral-950 text-neutral-100 antialiased;
+
+		font-family: 'JetBrains Mono', monospace;
+	}
+}
+
+.font-pixel {
+	font-family: 'Silkscreen', sans-serif;
+}
