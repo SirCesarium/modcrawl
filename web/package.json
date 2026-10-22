@@ -45,6 +45,7 @@
 		"#lib/*": "./src/lib/*"
 	},
 	"dependencies": {
-		"modcrawl": "^0.10.1"
+		"modcrawl": "^0.10.1",
+		"tailwind-merge": "^3.7.0"
 	}
 }
