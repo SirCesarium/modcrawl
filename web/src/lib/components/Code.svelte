@@ -7,7 +7,7 @@
 
 	interface Props {
 		code: string;
-		language?: 'java' | 'json' | 'bash' | string;
+		language?: 'java' | 'json' | 'bash';
 		class?: string;
 	}
 
