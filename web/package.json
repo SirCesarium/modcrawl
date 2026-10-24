@@ -44,7 +44,8 @@
 	},
 	"imports": {
 		"#lib": "./src/lib/index.js",
-		"#lib/*": "./src/lib/*"
+		"#lib/*": "./src/lib/*",
+		"#core/*": "./src/lib/core/*"
 	},
 	"dependencies": {
 		"modcrawl": "^0.10.1",
