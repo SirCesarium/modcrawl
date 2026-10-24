@@ -9,6 +9,7 @@ use zipcrawl::{ZipEntry, ZipManager};
 pub use types::{DepEntry, DepReport, JarInJar};
 
 use crate::core::REGISTRY;
+use crate::core::embedded;
 use crate::error::Result;
 
 /// Analyze dependencies of a mod/plugin JAR.
@@ -46,7 +47,7 @@ fn analyze_impl<R: Read + Seek>(mng: &mut ZipManager<R>, include_jij: bool) -> R
             let raw = mng.read_to_string(file)?;
             dedup_deps(REGISTRY.extract_deps(&mod_type, &raw)?)
         }
-        None => Vec::new(),
+        None => embedded_deps(mng)?,
     };
 
     let jar_in_jar = find_embedded_jars(&entries);
@@ -58,6 +59,15 @@ fn analyze_impl<R: Read + Seek>(mng: &mut ZipManager<R>, include_jij: bool) -> R
         dependencies,
         jar_in_jar: if include_jij { jar_in_jar } else { Vec::new() },
     })
+}
+
+/// Dependencies of a shell jar, whose real mod sits inside an embedded one.
+fn embedded_deps<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<Vec<DepEntry>> {
+    let Some((mod_type, raw)) = embedded::read_raw(mng)? else {
+        return Ok(Vec::new());
+    };
+
+    Ok(dedup_deps(REGISTRY.extract_deps(&mod_type, &raw)?))
 }
 
 /// Merge duplicate `DepEntry` values by name.
@@ -84,7 +94,7 @@ fn dedup_deps(raw: Vec<DepEntry>) -> Vec<DepEntry> {
     out
 }
 
-fn find_embedded_jars(entries: &[ZipEntry]) -> Vec<JarInJar> {
+pub(crate) fn find_embedded_jars(entries: &[ZipEntry]) -> Vec<JarInJar> {
     entries
         .iter()
         .filter(|e| {

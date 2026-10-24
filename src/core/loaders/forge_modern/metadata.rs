@@ -4,12 +4,55 @@ use std::result::Result as StdResult;
 
 use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::Value;
-use toml::{Value as TomlValue, from_str};
+use toml::{Table, Value as TomlValue, from_str};
 
 use crate::error::Result;
 
+const DEP_KEY: &str = "dependencies";
+const DEP_KEY_PREFIX: &str = "dependencies.";
+
 pub fn parse(input: &str) -> Result<ModsTomlMetadata> {
-    Ok(from_str(input)?)
+    let mut doc = from_str::<TomlValue>(input)?;
+    fold_dotted_dep_keys(&mut doc);
+
+    Ok(ModsTomlMetadata::deserialize(doc)?)
+}
+
+/// Re-home literal dotted root keys under `dependencies`.
+///
+/// TOML allows dots inside quoted keys, so `[["dependencies.modid"]]` becomes a
+/// single root key named `dependencies.modid` rather than a nested table. With
+/// no `dependencies` key in the document the field falls back to its default
+/// and the whole section is dropped without an error.
+fn fold_dotted_dep_keys(doc: &mut TomlValue) {
+    let TomlValue::Table(table) = doc else {
+        return;
+    };
+
+    let dotted: Vec<String> = table
+        .keys()
+        .filter(|key| key.starts_with(DEP_KEY_PREFIX))
+        .cloned()
+        .collect();
+
+    let moved: Vec<(String, TomlValue)> = dotted
+        .iter()
+        .filter_map(|key| {
+            let suffix = key.strip_prefix(DEP_KEY_PREFIX)?;
+            table.remove(key).map(|value| (suffix.to_owned(), value))
+        })
+        .collect();
+
+    if moved.is_empty() {
+        return;
+    }
+
+    if let TomlValue::Table(nested) = table
+        .entry(DEP_KEY.to_owned())
+        .or_insert_with(|| TomlValue::Table(Table::new()))
+    {
+        nested.extend(moved);
+    }
 }
 
 /// Read `dependencies` without letting one malformed key sink the whole entry.
@@ -265,6 +308,67 @@ side = "CLIENT"
             .map(|dep| dep.mod_id.as_str())
             .collect();
         assert_eq!(ids, ["neoforge", "minecraft"]);
+    }
+
+    #[test]
+    fn a_quoted_dependency_key_with_a_dot_still_yields_the_deps() {
+        // A quoted key may hold `.`, so this stays one literal root key.
+        let toml = r#"
+modLoader = "javafml"
+license = "LGPL-3.0-or-later"
+
+[[mods]]
+modId = "yacl"
+version = "3.8.2"
+
+[["dependencies.yacl"]]
+modId = "neoforge"
+mandatory = true
+versionRange = "[1,)"
+
+[["dependencies.yacl"]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.21,1.21.1]"
+"#;
+        let meta = parse(toml).unwrap();
+
+        assert_eq!(meta.mods.len(), 1);
+        assert_eq!(meta.mods[0].mod_id, "yacl");
+
+        let ids: Vec<&str> = meta
+            .dependencies
+            .values()
+            .flatten()
+            .map(|dep| dep.mod_id.as_str())
+            .collect();
+        assert_eq!(ids, ["neoforge", "minecraft"]);
+    }
+
+    #[test]
+    fn a_quoted_dotted_key_unrelated_to_dependencies_is_left_alone() {
+        let toml = r#"
+modLoader = "javafml"
+
+[[mods]]
+modId = "testmod"
+
+[["accessTransformers"]]
+file = "META-INF/accesstransformer.cfg"
+
+[["dependencies.testmod"]]
+modId = "minecraft"
+"#;
+        let meta = parse(toml).unwrap();
+
+        assert_eq!(meta.dependencies.len(), 1);
+        let ids: Vec<&str> = meta
+            .dependencies
+            .values()
+            .flatten()
+            .map(|dep| dep.mod_id.as_str())
+            .collect();
+        assert_eq!(ids, ["minecraft"]);
     }
 
     #[test]

@@ -8,6 +8,7 @@ use zipcrawl::ZipManager;
 use crate::error::{Error, Result};
 
 use super::REGISTRY;
+use super::embedded;
 use super::loaders::{bukkit, bungee, fabric, forge_legacy, forge_modern, paper, quilt, velocity};
 
 /// Parsed mod/plugin metadata from a JAR file.
@@ -95,9 +96,18 @@ fn read_metadata_impl<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<ModMeta
     let mod_type = REGISTRY.detect(&entries);
 
     let Some(file) = REGISTRY.metadata_file_path(&mod_type) else {
-        return Err(Error::UnsupportedMetadata(mng.path_name.clone()));
+        return read_embedded(mng);
     };
 
     let raw = mng.read_to_string(file)?;
+    REGISTRY.read_metadata(&mod_type, &raw)
+}
+
+/// Metadata of a shell jar, whose real mod sits inside an embedded one.
+fn read_embedded<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<ModMetadata> {
+    let Some((mod_type, raw)) = embedded::read_raw(mng)? else {
+        return Err(Error::UnsupportedMetadata(mng.path_name.clone()));
+    };
+
     REGISTRY.read_metadata(&mod_type, &raw)
 }

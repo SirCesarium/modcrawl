@@ -98,8 +98,7 @@ mod tests {
         let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
 
         for (name, contents) in entries {
-            zip.start_file(*name, SimpleFileOptions::default())
-                .unwrap();
+            zip.start_file(*name, SimpleFileOptions::default()).unwrap();
             zip.write_all(contents).unwrap();
         }
 
@@ -125,7 +124,11 @@ mod tests {
     fn buffers_single_jar_yields_no_dupes() {
         let a = jar(&[("com/example/Only.class", FAKE_CLASS)]);
 
-        assert!(find_duplicates_buffers(&[("a.jar", &a)]).unwrap().is_empty());
+        assert!(
+            find_duplicates_buffers(&[("a.jar", &a)])
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]

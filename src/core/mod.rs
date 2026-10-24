@@ -10,6 +10,7 @@ pub static REGISTRY: LazyLock<Registry> = LazyLock::new(|| {
 
 pub mod dep;
 pub mod detect_mod_type;
+mod embedded;
 pub mod identify;
 pub mod loaders;
 pub mod metadata;
