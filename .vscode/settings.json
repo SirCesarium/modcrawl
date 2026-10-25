@@ -1,5 +1,10 @@
 {
-	"files.associations": {
-		"*.css": "tailwindcss"
-	}
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "tailwindCSS.experimental.classRegex": [
+    ["twMerge\\(([^)]*)\\)", "'([^']*)'"],
+    ["twMerge\\(([^)]*)\\)", "\"([^\"]*)\""],
+    ["twMerge\\(([^)]*)\\)", "`([^`]*)`"]
+  ]
 }
