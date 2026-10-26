@@ -5,7 +5,7 @@
 
 <header class="fixed top-0 right-0 left-0 z-50 flex justify-between px-10 py-4 backdrop-blur-lg">
 	<Typography variant="h4" component="span" pixel uppercase
-		><span class="text-pink-300">mod</span>crawl</Typography
+		><span class="text-purple-300">mod</span>crawl</Typography
 	>
 
 	<!-- TODO: create a Button component for this -->
