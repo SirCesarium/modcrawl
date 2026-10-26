@@ -5,10 +5,9 @@ import {
 	BEAM_OPACITY,
 	BEAM_SPREAD,
 	BLOCK_SIZE,
+	FRAME_BLOCK,
 	FRAME_DEPTH,
 	FRAME_HEIGHT,
-	FRAME_HOLE_HEIGHT,
-	FRAME_HOLE_WIDTH,
 	FRAME_WIDTH,
 	GLOW_COLOR,
 	PORTAL_COLUMNS,
@@ -38,36 +37,40 @@ export interface PortalLogoParts {
 	group: THREE.Group;
 	portal: THREE.Group;
 	portalMaterial: THREE.MeshBasicMaterial;
+	frameMaterial: THREE.MeshStandardMaterial;
 	glow: Glow;
 	light: THREE.PointLight;
 }
 
-const createFrame = (): THREE.Mesh => {
+const createFrame = (): { group: THREE.Group; material: THREE.MeshStandardMaterial } => {
+	const material = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0, roughness: 1 });
+	const geometry = new THREE.BoxGeometry(FRAME_BLOCK, FRAME_BLOCK, FRAME_DEPTH);
+	const group = new THREE.Group();
 	const halfWidth = FRAME_WIDTH / 2;
 	const halfHeight = FRAME_HEIGHT / 2;
-	const shape = new THREE.Shape();
+	const pillarX = halfWidth - FRAME_BLOCK / 2;
+	const beamY = halfHeight - FRAME_BLOCK / 2;
 
-	shape.moveTo(-halfWidth, -halfHeight);
-	shape.lineTo(halfWidth, -halfHeight);
-	shape.lineTo(halfWidth, halfHeight);
-	shape.lineTo(-halfWidth, halfHeight);
-	shape.closePath();
+	const addBlock = (x: number, y: number): void => {
+		const block = new THREE.Mesh(geometry, material);
 
-	const hole = new THREE.Path();
+		block.position.set(x, y, 0);
+		group.add(block);
+	};
 
-	hole.moveTo(-FRAME_HOLE_WIDTH / 2, -FRAME_HOLE_HEIGHT / 2);
-	hole.lineTo(FRAME_HOLE_WIDTH / 2, -FRAME_HOLE_HEIGHT / 2);
-	hole.lineTo(FRAME_HOLE_WIDTH / 2, FRAME_HOLE_HEIGHT / 2);
-	hole.lineTo(-FRAME_HOLE_WIDTH / 2, FRAME_HOLE_HEIGHT / 2);
-	hole.closePath();
-	shape.holes.push(hole);
+	for (const side of [-1, 1]) {
+		for (let row = 0; row < 5; row++) {
+			addBlock(side * pillarX, -halfHeight + FRAME_BLOCK / 2 + row * FRAME_BLOCK);
+		}
+	}
 
-	const geometry = new THREE.ExtrudeGeometry(shape, { depth: FRAME_DEPTH, bevelEnabled: false });
-	geometry.center();
+	for (const side of [-1, 1]) {
+		for (let column = 0; column < 2; column++) {
+			addBlock(-FRAME_BLOCK / 2 + column * FRAME_BLOCK, side * beamY);
+		}
+	}
 
-	const material = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0, roughness: 1 });
-
-	return new THREE.Mesh(geometry, material);
+	return { group, material };
 };
 
 const createPortal = (): { group: THREE.Group; material: THREE.MeshBasicMaterial } => {
@@ -154,17 +157,25 @@ export const createPortalLogoParts = (
 ): PortalLogoParts => {
 	const group = new THREE.Group();
 	const portal = createPortal();
+	const frame = createFrame();
 	const glow = createGlow(boxTexture, streakTexture);
 	const light = new THREE.PointLight(GLOW_COLOR, 0, 1.2, 2);
 
 	light.position.set(0, 0, 0.12);
 
-	group.add(createFrame());
+	group.add(frame.group);
 	group.add(portal.group);
 	group.add(glow.group);
 	group.add(light);
 
-	return { group, portal: portal.group, portalMaterial: portal.material, glow, light };
+	return {
+		group,
+		portal: portal.group,
+		portalMaterial: portal.material,
+		frameMaterial: frame.material,
+		glow,
+		light
+	};
 };
 
 export const createGrassBlock = (

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import './layout.css';
+	import PageBackdrop from '#lib/app/widgets/PageBackdrop.svelte';
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
@@ -9,4 +10,8 @@
 	<link rel="icon" href="/favicon.ico" />
 </svelte:head>
 
-{@render children()}
+<PageBackdrop />
+
+<div class="relative z-10">
+	{@render children()}
+</div>
