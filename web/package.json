@@ -48,8 +48,10 @@
 		"#core/*": "./src/lib/core/*"
 	},
 	"dependencies": {
+		"@types/three": "^0.186.0",
 		"modcrawl": "^0.10.1",
 		"prismjs": "^1.30.0",
-		"tailwind-merge": "^3.7.0"
+		"tailwind-merge": "^3.7.0",
+		"three": "^0.186.1"
 	}
 }

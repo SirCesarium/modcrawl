@@ -2,6 +2,19 @@
 
 @import 'tailwindcss';
 
+@theme {
+	--animate-code-line: code-line-in 600ms cubic-bezier(0.16, 1, 0.3, 1);
+
+	@keyframes code-line-in {
+		from {
+			transform: translateX(-24px);
+		}
+		to {
+			transform: translateX(0);
+		}
+	}
+}
+
 @layer base {
 	body {
 		@apply bg-neutral-950 text-neutral-100 antialiased;
