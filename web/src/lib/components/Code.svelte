@@ -27,8 +27,8 @@
 	<div class="absolute top-2 right-3 font-mono text-xs tracking-wider uppercase opacity-50">
 		{language}
 	</div>
-	<pre class="overflow-x-auto p-4 font-mono text-sm leading-relaxed">
-        <!-- eslint-disable-next-line svelte/no-at-html-tags -- Safe internal Prism.js highlighted output -->
-        <code class="language-{language}">{@html highlighted}</code>
-    </pre>
+	<!-- eslint-disable svelte/no-at-html-tags -- Safe internal Prism.js highlighted output -->
+	<pre class="overflow-x-auto p-4 font-mono text-sm leading-relaxed"><code
+			class="language-{language}">{@html highlighted}</code
+		></pre>
 </div>
