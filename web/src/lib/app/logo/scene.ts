@@ -33,6 +33,7 @@ import {
 	PORTAL_DAMP,
 	PORTAL_FADE_DELAY,
 	PORTAL_FRAME_MS,
+	PORTAL_ROWS,
 	RAY_SPIN,
 	ROTATION_DAMP
 } from './config';
@@ -257,7 +258,7 @@ export const createPortalLogo = ({
 
 		if (portalReady) {
 			const frame = Math.floor((animationTime * 1000) / PORTAL_FRAME_MS) % portalFrames;
-			portalTexture.offset.y = 1 - (frame + 1) / portalFrames;
+			portalTexture.offset.y = 1 - (frame + PORTAL_ROWS) / portalFrames;
 		}
 
 		const rotating =

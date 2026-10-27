@@ -1,11 +1,13 @@
 import * as THREE from 'three';
-import { PORTAL_TEXTURE } from './config';
+import { PORTAL_COLUMNS, PORTAL_ROWS, PORTAL_TEXTURE } from './config';
 
 const configurePixelTexture = <T extends THREE.Texture>(texture: T): T => {
 	texture.colorSpace = THREE.SRGBColorSpace;
 	texture.magFilter = THREE.NearestFilter;
 	texture.minFilter = THREE.NearestFilter;
 	texture.generateMipmaps = false;
+	texture.wrapS = THREE.RepeatWrapping;
+	texture.wrapT = THREE.RepeatWrapping;
 
 	return texture;
 };
@@ -109,7 +111,9 @@ export const loadPortalTexture = (onReady: (frames: number) => void): THREE.Text
 			const image = loaded.image as HTMLImageElement;
 			const frames = Math.max(1, Math.round(image.height / image.width));
 
-			loaded.repeat.set(1, 1 / frames);
+			loaded.wrapS = THREE.RepeatWrapping;
+			loaded.wrapT = THREE.RepeatWrapping;
+			loaded.repeat.set(PORTAL_COLUMNS, PORTAL_ROWS / frames);
 			onReady(frames);
 		},
 		undefined,
