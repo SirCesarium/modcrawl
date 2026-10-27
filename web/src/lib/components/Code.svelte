@@ -23,14 +23,15 @@
 	});
 </script>
 
-<div class="relative my-4 overflow-hidden rounded-xl shadow-lg {className}">
+<div class="relative my-4 overflow-hidden rounded-xl bg-[#1d2021] shadow-lg {className}">
 	<div
 		class="absolute top-2 right-3 hidden font-mono text-xs tracking-wider uppercase opacity-50 sm:block"
 	>
 		{language}
 	</div>
 	<!-- eslint-disable svelte/no-at-html-tags -- Safe internal Prism.js highlighted output -->
-	<pre class="overflow-x-auto p-3 font-mono text-[10px] leading-relaxed sm:p-4 sm:text-sm"><code
+	<pre
+		class="language-{language} overflow-x-auto p-3 font-mono text-[10px] leading-relaxed sm:p-4 sm:text-sm"><code
 			class="language-{language}">{@html highlighted}</code
 		></pre>
 </div>
