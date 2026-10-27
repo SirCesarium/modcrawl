@@ -43,6 +43,8 @@ import { createGrassBlock, createPortalLogoParts } from './objects';
 export interface PortalLogoOptions {
 	canvas: HTMLCanvasElement;
 	container: HTMLElement;
+	/** Called once the first frame has rendered. */
+	onReady?: () => void;
 	/** Called once the grass block has crossed into the portal. */
 	onAbsorb?: () => void;
 	/** Called when the pointer leaves and the sequence is rewound. */
@@ -76,6 +78,7 @@ const disposeObject = (root: THREE.Object3D): void => {
 export const createPortalLogo = ({
 	canvas,
 	container,
+	onReady,
 	onAbsorb,
 	onReset
 }: PortalLogoOptions): PortalLogo => {
@@ -172,6 +175,8 @@ export const createPortalLogo = ({
 		fit(width / height);
 		forceRender = true;
 	};
+
+	let hasRendered = false;
 
 	const animate = (): void => {
 		const delta = Math.min(clock.getDelta(), 0.05);
@@ -273,6 +278,11 @@ export const createPortalLogo = ({
 
 		forceRender = false;
 		renderer.render(scene, camera);
+
+		if (!hasRendered) {
+			hasRendered = true;
+			onReady?.();
+		}
 	};
 
 	function startLoop(): void {

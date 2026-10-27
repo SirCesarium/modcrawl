@@ -51,11 +51,17 @@ export function createStarfield(canvas: HTMLCanvasElement): { destroy: () => voi
 		});
 	};
 
+	let entranceAlpha = 0;
+
 	const draw = (delta: number) => {
+		if (entranceAlpha < 1) {
+			entranceAlpha = Math.min(1, entranceAlpha + delta * 0.018);
+		}
+
 		context.clearRect(0, 0, width, height);
 
 		for (const star of stars) {
-			const alpha = star.alpha * (0.7 + 0.3 * Math.sin(star.phase));
+			const alpha = star.alpha * (0.7 + 0.3 * Math.sin(star.phase)) * entranceAlpha;
 
 			context.fillStyle = `rgba(${star.color}, ${alpha})`;
 			context.fillRect(Math.round(star.x), Math.round(star.y), star.size, star.size);

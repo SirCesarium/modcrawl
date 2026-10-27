@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { createPortalLogo } from '../logo/scene';
 
 	interface Props {
 		class?: string;
@@ -16,34 +17,29 @@
 	let container: HTMLDivElement;
 	let canvas: HTMLCanvasElement;
 	let converted = $state(false);
+	let ready = $state(false);
 
 	onMount(() => {
-		let destroy: (() => void) | undefined;
-		let cancelled = false;
+		const portal = createPortalLogo({
+			canvas,
+			container,
+			onReady: () => (ready = true),
+			onAbsorb: () => (converted = true),
+			onReset: () => (converted = false)
+		});
 
-		import('../logo/scene')
-			.then(({ createPortalLogo }) => {
-				if (cancelled) return;
-
-				destroy = createPortalLogo({
-					canvas,
-					container,
-					onAbsorb: () => (converted = true),
-					onReset: () => (converted = false)
-				}).destroy;
-			})
-			.catch((error) => console.error('Failed to load the portal logo', error));
-
-		return () => {
-			cancelled = true;
-			destroy?.();
-		};
+		return portal.destroy;
 	});
 </script>
 
 <div class="relative isolate h-24 w-24 sm:h-32 sm:w-32 {className}" aria-hidden="true">
 	<div bind:this={container} class="h-full w-full">
-		<canvas bind:this={canvas} class="block h-full w-full"></canvas>
+		<canvas
+			bind:this={canvas}
+			class="block h-full w-full transition-opacity duration-700 ease-out {ready
+				? 'opacity-100'
+				: 'opacity-0'}"
+		></canvas>
 	</div>
 
 	<div class="pointer-events-none absolute inset-0 -z-10">
