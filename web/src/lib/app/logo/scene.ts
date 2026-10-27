@@ -218,7 +218,7 @@ export const createPortalLogo = ({
 		const traveling = travelProgress >= 0 && travelProgress < 1;
 
 		if (traveling) {
-			const eased = Math.pow(travelProgress, 1.4);
+			const eased = THREE.MathUtils.smoothstep(travelProgress, 0, 1);
 			const fadeIn = THREE.MathUtils.smoothstep(travelProgress, 0, BLOCK_FADE_IN_END);
 			const fadeOut = THREE.MathUtils.smoothstep(travelProgress, BLOCK_FADE_START, BLOCK_ABSORB_AT);
 			const opacity = fadeIn * (1 - fadeOut);
@@ -229,11 +229,7 @@ export const createPortalLogo = ({
 				THREE.MathUtils.lerp(BLOCK_START_Y, BLOCK_END_Y, eased),
 				THREE.MathUtils.lerp(BLOCK_START_Z, BLOCK_END_Z, eased)
 			);
-			grass.mesh.rotation.set(
-				0.18 * travelProgress,
-				-0.5 + 2.2 * travelProgress,
-				Math.sin(travelProgress * Math.PI) * 0.16
-			);
+			grass.mesh.rotation.set(0, -0.5 + 2.2 * travelProgress, 0);
 			grass.materials.forEach((material) => (material.opacity = opacity));
 		} else {
 			grass.mesh.visible = false;

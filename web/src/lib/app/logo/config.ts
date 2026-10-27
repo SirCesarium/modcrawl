@@ -21,19 +21,20 @@ export const PORTAL_FRAME_MS = 100;
 export const FRAME_FADE_DURATION = 0.35;
 export const PORTAL_FADE_DELAY = 0.55;
 
-/** Grass block that falls into the portal. */
+/** Grass block that slides horizontally into the portal. */
 export const BLOCK_SIZE = FRAME_BLOCK;
 export const BLOCK_DELAY = 1.1;
 export const BLOCK_TRAVEL_DURATION = 1.65;
 export const BLOCK_ABSORB_AT = 0.9;
 export const BLOCK_FADE_IN_END = 0.35;
 export const BLOCK_FADE_START = 0.72;
-export const BLOCK_START_X = 0;
-export const BLOCK_END_X = 0;
-export const BLOCK_START_Y = 0.55;
+export const BLOCK_START_X = -0.65;
+/** Slight offset keeps the block centered in the rotated logo at the end. */
+export const BLOCK_END_X = 0.1;
+export const BLOCK_START_Y = 0;
 export const BLOCK_END_Y = 0;
 export const BLOCK_START_Z = 0.2;
-export const BLOCK_END_Z = 0;
+export const BLOCK_END_Z = 0.2;
 
 /** Portal glow. */
 export const GLOW_COLOR = 0xb35cff;

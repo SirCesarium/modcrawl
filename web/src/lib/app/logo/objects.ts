@@ -150,7 +150,7 @@ const createGlow = (boxTexture: THREE.Texture, streakTexture: THREE.Texture): Gl
 	return { group, beams, rays };
 };
 
-/** Builds the full portal logo, minus the falling grass block. */
+/** Builds the full portal logo, minus the grass block. */
 export const createPortalLogoParts = (
 	boxTexture: THREE.Texture,
 	streakTexture: THREE.Texture
