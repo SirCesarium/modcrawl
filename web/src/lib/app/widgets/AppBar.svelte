@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Button from '#lib/components/Button.svelte';
 	import Icon from '#lib/components/Icon.svelte';
 	import Typography from '#lib/components/Typography.svelte';
 
@@ -26,9 +27,17 @@
 		</Typography>
 	</div>
 
-	<!-- TODO: create a Button component for this -->
-	<div class="flex shrink-0 items-center gap-2 sm:gap-4">
-		<Icon name="github" size={24} class="translate-y-px" />
-		<Typography variant="h6" bold component="span" pixel uppercase>source</Typography>
-	</div>
+	<Button
+		href="https://github.com/SirCesarium/modcrawl"
+		target="_blank"
+		variant="ghost"
+		size="md"
+		pixel
+		uppercase
+		icon="github"
+		iconSize={24}
+		class="shrink-0 text-neutral-100 md:text-lg"
+	>
+		source
+	</Button>
 </header>

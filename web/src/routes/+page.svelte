@@ -5,6 +5,7 @@
 	import ScrollHint from '#lib/app/widgets/ScrollHint.svelte';
 	import Code from '#lib/components/Code.svelte';
 	import Typography from '#lib/components/Typography.svelte';
+	import Button from '#lib/components/Button.svelte';
 
 	let heroBrand: HTMLDivElement;
 	let heroBrandVisible = $state(true);
@@ -71,6 +72,9 @@ public class HelloWorld {
     }
 }`}
 			/>
+			<Button pixel variant="outline" class="mt-4 w-full">
+				Analyze
+			</Button>
 		</div>
 
 		<ScrollHint />
