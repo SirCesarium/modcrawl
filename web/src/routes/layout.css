@@ -40,9 +40,12 @@
 }
 
 @layer base {
+	html,
 	body {
-		@apply overflow-x-hidden bg-neutral-950 text-neutral-100 antialiased;
+		@apply bg-neutral-950 text-neutral-100 antialiased;
 
+		max-width: 100%;
+		overflow-x: clip;
 		font-family: 'JetBrains Mono', monospace;
 	}
 }

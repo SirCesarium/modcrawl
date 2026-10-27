@@ -12,6 +12,6 @@
 
 <PageBackdrop />
 
-<div class="relative z-10">
+<div class="relative z-10 w-full overflow-x-clip">
 	{@render children()}
 </div>
