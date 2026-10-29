@@ -75,7 +75,7 @@
 		info: 'bg-cyan-50 ring-cyan-700'
 	};
 
-	const arcadeShadowClasses: Record<Color, string> = {
+	const offsetShadowClasses: Record<Color, string> = {
 		primary: 'shadow-[3px_3px_0_0_var(--color-purple-700)]',
 		neutral: 'shadow-[3px_3px_0_0_var(--color-neutral-700)]',
 		success: 'shadow-[3px_3px_0_0_var(--color-emerald-700)]',
@@ -84,7 +84,7 @@
 		info: 'shadow-[3px_3px_0_0_var(--color-cyan-700)]'
 	};
 
-	const arcadeHoverShadowClasses: Record<Color, string> = {
+	const offsetHoverShadowClasses: Record<Color, string> = {
 		primary: 'hover:shadow-[5px_5px_0_0_var(--color-purple-700)]',
 		neutral: 'hover:shadow-[5px_5px_0_0_var(--color-neutral-700)]',
 		success: 'hover:shadow-[5px_5px_0_0_var(--color-emerald-700)]',
@@ -155,11 +155,11 @@
 
 		const animation = node.animate(
 			[
-				{ top: '-2px', offset: 0 },
-				{ top: '-5px', offset: 0.35 },
-				{ top: '-1px', offset: 0.6 },
-				{ top: '-3px', offset: 0.8 },
-				{ top: '-2px', offset: 1 }
+				{ translate: '0 -2px', offset: 0 },
+				{ translate: '0 -5px', offset: 0.35 },
+				{ translate: '0 -1px', offset: 0.6 },
+				{ translate: '0 -3px', offset: 0.8 },
+				{ translate: '0 -2px', offset: 1 }
 			],
 			{
 				duration: 480,
@@ -365,9 +365,9 @@
 			focusOutlineClasses[color],
 			sizeClasses[size],
 			toneClasses[color][variant],
-			variant !== 'ghost' && variant !== 'link' && arcadeShadowClasses[color],
+			variant !== 'ghost' && variant !== 'link' && offsetShadowClasses[color],
 			variant !== 'link' && 'hover:-top-0.5',
-			variant !== 'ghost' && variant !== 'link' && arcadeHoverShadowClasses[color],
+			variant !== 'ghost' && variant !== 'link' && offsetHoverShadowClasses[color],
 			variant !== 'link' &&
 				'active:translate-x-0.75 active:translate-y-0.75 active:scale-[0.98] active:shadow-none',
 			variant === 'link' && 'h-auto px-0 py-0 underline-offset-4 hover:underline',

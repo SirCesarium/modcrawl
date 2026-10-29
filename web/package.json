@@ -45,6 +45,7 @@
 	"imports": {
 		"#lib": "./src/lib/index.js",
 		"#lib/*": "./src/lib/*",
+		"#app/*": "./src/lib/app/*",
 		"#core/*": "./src/lib/core/*"
 	},
 	"dependencies": {
