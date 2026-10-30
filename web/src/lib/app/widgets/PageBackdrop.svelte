@@ -16,7 +16,7 @@
 <div class="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
 	<canvas
 		bind:this={canvas}
-		class="block h-full w-full [image-rendering:pixelated] transition-opacity duration-1000 ease-out {ready
+		class="block h-full w-full transition-opacity duration-1000 ease-out [image-rendering:pixelated] {ready
 			? 'opacity-100'
 			: 'opacity-0'}"
 	></canvas>
