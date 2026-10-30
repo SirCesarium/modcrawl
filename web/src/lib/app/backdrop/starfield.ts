@@ -7,15 +7,15 @@ interface Star {
 	alpha: number;
 	phase: number;
 	twinkle: number;
-	color: string;
+	fill: string;
 }
 
 const COLORS = ['179, 92, 255', '235, 219, 178', '200, 200, 210', '255, 255, 255'];
-const MAX_PIXELS = 2_400_000;
+const MAX_PIXELS = 1_600_000;
 const TARGET_FPS = 24;
 
 export function createStarfield(canvas: HTMLCanvasElement): { destroy: () => void } {
-	const context = canvas.getContext('2d');
+	const context = canvas.getContext('2d', { desynchronized: true });
 
 	if (!context) return { destroy: () => {} };
 
@@ -36,17 +36,18 @@ export function createStarfield(canvas: HTMLCanvasElement): { destroy: () => voi
 		stars = Array.from({ length: count }, () => {
 			const roll = Math.random();
 			const size = roll > 0.9 ? 3 : roll > 0.65 ? 2 : 1;
+			const color = COLORS[Math.floor(Math.random() * COLORS.length)];
 
 			return {
 				x: Math.round(Math.random() * width),
 				y: Math.round(Math.random() * height),
 				size,
-				vx: random(-0.04, 0.04),
-				vy: random(0.02, 0.07),
+				vx: random(-0.1, 0.1),
+				vy: random(0.05, 0.18),
 				alpha: random(0.4, 0.9),
 				phase: random(0, Math.PI * 2),
 				twinkle: random(0.004, 0.012),
-				color: COLORS[Math.floor(Math.random() * COLORS.length)]
+				fill: `rgb(${color})`
 			};
 		});
 	};
@@ -63,7 +64,8 @@ export function createStarfield(canvas: HTMLCanvasElement): { destroy: () => voi
 		for (const star of stars) {
 			const alpha = star.alpha * (0.7 + 0.3 * Math.sin(star.phase)) * entranceAlpha;
 
-			context.fillStyle = `rgba(${star.color}, ${alpha})`;
+			context.globalAlpha = alpha;
+			context.fillStyle = star.fill;
 			context.fillRect(Math.round(star.x), Math.round(star.y), star.size, star.size);
 
 			star.x += star.vx * delta;
