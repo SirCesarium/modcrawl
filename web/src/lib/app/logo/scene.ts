@@ -37,7 +37,7 @@ import {
 	RAY_SPIN,
 	ROTATION_DAMP
 } from './config';
-import { isCoarsePointer } from './device';
+import { isCoarsePointer } from '../utils/device';
 import { createGrassBlock, createPortalLogoParts } from './objects';
 
 export interface PortalLogoOptions {
