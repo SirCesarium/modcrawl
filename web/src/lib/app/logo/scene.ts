@@ -25,6 +25,7 @@ import {
 	FRAME_WIDTH,
 	GRASS_SIDE_TEXTURE,
 	GRASS_TOP_TEXTURE,
+	INTRO_DURATION,
 	LIGHT_MAX,
 	MAX_PITCH,
 	MAX_YAW,
@@ -34,6 +35,7 @@ import {
 	PORTAL_FADE_DELAY,
 	PORTAL_FRAME_MS,
 	PORTAL_ROWS,
+	POINTER_ZONE,
 	RAY_SPIN,
 	ROTATION_DAMP
 } from './config';
@@ -177,6 +179,18 @@ export const createPortalLogo = ({
 	};
 
 	let hasRendered = false;
+	let introTimer: ReturnType<typeof setTimeout> | undefined;
+
+	const playIntro = (): void => {
+		onEnter();
+
+		introTimer = setTimeout(() => {
+			introTimer = undefined;
+
+			// Leave the sequence running when the pointer already holds it open.
+			if (!container.matches(':hover')) onLeave();
+		}, INTRO_DURATION * 1000);
+	};
 
 	const animate = (): void => {
 		const delta = Math.min(clock.getDelta(), 0.05);
@@ -281,6 +295,7 @@ export const createPortalLogo = ({
 
 		if (!hasRendered) {
 			hasRendered = true;
+			playIntro();
 			onReady?.();
 		}
 	};
@@ -302,6 +317,14 @@ export const createPortalLogo = ({
 
 	const onPointerMove = (event: PointerEvent): void => {
 		if (coarsePointer || event.pointerType === 'touch') return;
+
+		// Outside the logo's side of the viewport the logo drifts back to its base angle.
+		if (event.clientX > window.innerWidth * POINTER_ZONE) {
+			pointer.yaw = 0;
+			pointer.pitch = 0;
+			startLoop();
+			return;
+		}
 
 		pointer.yaw = ((event.clientX / window.innerWidth) * 2 - 1) * MAX_YAW;
 		pointer.pitch = ((event.clientY / window.innerHeight) * 2 - 1) * MAX_PITCH;
@@ -364,6 +387,7 @@ export const createPortalLogo = ({
 			container.removeEventListener('pointerenter', onEnter);
 			container.removeEventListener('pointerleave', onLeave);
 			container.removeEventListener('pointerdown', onPress);
+			clearTimeout(introTimer);
 			observer.disconnect();
 			stopLoop();
 			disposeObject(scene);

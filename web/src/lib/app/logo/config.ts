@@ -21,6 +21,9 @@ export const PORTAL_FRAME_MS = 100;
 export const FRAME_FADE_DURATION = 0.35;
 export const PORTAL_FADE_DELAY = 0.55;
 
+/** Intro run played once on load before handing control back to hover, in seconds. */
+export const INTRO_DURATION = 10;
+
 /** Grass block that slides horizontally into the portal. */
 export const BLOCK_SIZE = FRAME_BLOCK;
 export const BLOCK_DELAY = 1.1;
@@ -51,6 +54,8 @@ export const BASE_YAW = THREE.MathUtils.degToRad(-25);
 export const MOBILE_BASE_YAW = THREE.MathUtils.degToRad(-35);
 export const MAX_YAW = THREE.MathUtils.degToRad(20);
 export const MAX_PITCH = THREE.MathUtils.degToRad(15);
+/** Left fraction of the viewport where pointer movement rotates the logo. */
+export const POINTER_ZONE = 0.35;
 export const ROTATION_DAMP = 5;
 export const PORTAL_DAMP = 6;
 export const FIT_MARGIN = 1.5;
