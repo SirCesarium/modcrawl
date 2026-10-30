@@ -151,6 +151,7 @@ export const createPortalLogo = ({
 	const clock = new THREE.Clock();
 	let animationTime = 0;
 	let loopRunning = false;
+	let visible = true;
 
 	const fit = (aspect: number): void => {
 		const halfHeight = Math.max(size.y / 2, size.x / 2 / aspect) * FIT_MARGIN;
@@ -301,7 +302,7 @@ export const createPortalLogo = ({
 	};
 
 	function startLoop(): void {
-		if (loopRunning) return;
+		if (!visible || loopRunning) return;
 
 		loopRunning = true;
 		clock.start();
@@ -376,7 +377,15 @@ export const createPortalLogo = ({
 		startLoop();
 	});
 
+	const visibility = new IntersectionObserver(([entry]) => {
+		visible = entry.isIntersecting;
+
+		if (visible) startLoop();
+		else stopLoop();
+	});
+
 	observer.observe(container);
+	visibility.observe(container);
 	resize();
 	startLoop();
 
@@ -389,6 +398,7 @@ export const createPortalLogo = ({
 			container.removeEventListener('pointerdown', onPress);
 			clearTimeout(introTimer);
 			observer.disconnect();
+			visibility.disconnect();
 			stopLoop();
 			disposeObject(scene);
 			obsidianTexture.dispose();
