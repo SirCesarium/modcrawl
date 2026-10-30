@@ -12,13 +12,13 @@
 
 <header
 	class="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b px-4 transition-colors duration-300 sm:h-16 sm:px-8 md:px-10 {showLogo
-		? 'border-white/5 bg-neutral-950/80 backdrop-blur-md'
+		? 'border-white/5 bg-neutral-950/95'
 		: 'border-transparent bg-transparent'}"
 >
 	<div
 		class="{showLogo
 			? 'translate-x-0 opacity-100'
-			: 'pointer-events-none -translate-x-1 opacity-0'} flex min-w-0 shrink items-center gap-1.5 transition-all duration-300 ease-out sm:gap-2"
+			: 'pointer-events-none -translate-x-1 opacity-0'} flex min-w-0 shrink items-center gap-1.5 transition duration-300 ease-out sm:gap-2"
 		aria-hidden={!showLogo}
 	>
 		<Icon name="modcrawl" size={20} alt="" aria-hidden="true" class="translate-y-0.5 sm:size-6" />

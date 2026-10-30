@@ -45,9 +45,15 @@
 		</div>
 
 		<div class="flex w-full max-w-xl flex-col items-center gap-4 lg:w-auto">
-			<div class="flex flex-col items-center gap-2 sm:flex-row sm:gap-4" bind:this={heroBrand}>
-				<Logo />
-				<Typography variant="h1" component="span" pixel uppercase class="relative z-10">
+			<div class="flex flex-col items-center gap-2 sm:flex-row sm:gap-0" bind:this={heroBrand}>
+				<Logo class="sm:-mr-3" />
+				<Typography
+					variant="h1"
+					component="span"
+					pixel
+					uppercase
+					class="relative z-10 [text-shadow:-2px_-2px_0_#3b0764,2px_-2px_0_#3b0764,-2px_2px_0_#3b0764,2px_2px_0_#3b0764]"
+				>
 					<span class="text-purple-300">mod</span>crawl
 				</Typography>
 			</div>
@@ -79,14 +85,4 @@ public class HelloWorld {
 
 		<ScrollHint />
 	</section>
-
-	<div
-		class="mx-auto flex max-w-3xl flex-col gap-8 px-5 pt-12 pb-24 text-sm leading-relaxed text-pretty text-neutral-300 sm:px-8 sm:text-base"
-	>
-		<section>
-			Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolorum unde reiciendis quam, quos
-			soluta similique, molestias animi nihil hic aut autem iste omnis non repudiandae architecto
-			doloribus? Nobis, veritatis iure.
-		</section>
-	</div>
 </main>
