@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '#lib/components/Icon.svelte';
+	import Icon from '#app/components/Icon.svelte';
 
 	const delays = [0, 200];
 </script>

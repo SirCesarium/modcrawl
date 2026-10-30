@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import AppBar from '#lib/app/widgets/AppBar.svelte';
-	import Logo from '#lib/app/widgets/Logo.svelte';
-	import ScrollHint from '#lib/app/widgets/ScrollHint.svelte';
-	import Code from '#lib/components/Code.svelte';
-	import Typography from '#lib/components/Typography.svelte';
-	import Button from '#lib/components/Button.svelte';
+	import AppBar from '#app/widgets/AppBar.svelte';
+	import Logo from '#app/widgets/Logo.svelte';
+	import ScrollHint from '#app/widgets/ScrollHint.svelte';
+	import Code from '#app/components/Code.svelte';
+	import Typography from '#app/components/Typography.svelte';
+	import Button from '#app/components/Button.svelte';
 
 	let heroBrand: HTMLDivElement;
 	let heroBrandVisible = $state(true);

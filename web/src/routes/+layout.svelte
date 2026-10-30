@@ -1,6 +1,6 @@
 <script lang="ts">
 	import './layout.css';
-	import PageBackdrop from '#lib/app/widgets/PageBackdrop.svelte';
+	import PageBackdrop from '#app/widgets/PageBackdrop.svelte';
 	import type { LayoutProps } from './$types';
 	import { onMount } from 'svelte';
 

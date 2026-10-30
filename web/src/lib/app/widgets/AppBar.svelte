@@ -1,7 +1,7 @@
 <script lang="ts">
-	import Button from '#lib/components/Button.svelte';
-	import Icon from '#lib/components/Icon.svelte';
-	import Typography from '#lib/components/Typography.svelte';
+	import Button from '#app/components/Button.svelte';
+	import Icon from '#app/components/Icon.svelte';
+	import Typography from '#app/components/Typography.svelte';
 
 	interface Props {
 		showLogo?: boolean;
