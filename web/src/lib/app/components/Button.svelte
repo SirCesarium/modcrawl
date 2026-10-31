@@ -76,21 +76,37 @@
 	};
 
 	const offsetShadowClasses: Record<Color, string> = {
-		primary: 'shadow-[3px_3px_0_0_var(--color-purple-700)]',
-		neutral: 'shadow-[3px_3px_0_0_var(--color-neutral-700)]',
-		success: 'shadow-[3px_3px_0_0_var(--color-emerald-700)]',
-		warning: 'shadow-[3px_3px_0_0_var(--color-amber-700)]',
-		danger: 'shadow-[3px_3px_0_0_var(--color-red-700)]',
-		info: 'shadow-[3px_3px_0_0_var(--color-cyan-700)]'
+		primary: 'shadow-[3px_3px_0_0_color-mix(in_srgb,var(--color-purple-700)_70%,transparent)]',
+		neutral: 'shadow-[3px_3px_0_0_color-mix(in_srgb,var(--color-neutral-700)_70%,transparent)]',
+		success: 'shadow-[3px_3px_0_0_color-mix(in_srgb,var(--color-emerald-700)_70%,transparent)]',
+		warning: 'shadow-[3px_3px_0_0_color-mix(in_srgb,var(--color-amber-700)_70%,transparent)]',
+		danger: 'shadow-[3px_3px_0_0_color-mix(in_srgb,var(--color-red-700)_70%,transparent)]',
+		info: 'shadow-[3px_3px_0_0_color-mix(in_srgb,var(--color-cyan-700)_70%,transparent)]'
 	};
 
 	const offsetHoverShadowClasses: Record<Color, string> = {
-		primary: 'hover:shadow-[5px_5px_0_0_var(--color-purple-700)]',
-		neutral: 'hover:shadow-[5px_5px_0_0_var(--color-neutral-700)]',
-		success: 'hover:shadow-[5px_5px_0_0_var(--color-emerald-700)]',
-		warning: 'hover:shadow-[5px_5px_0_0_var(--color-amber-700)]',
-		danger: 'hover:shadow-[5px_5px_0_0_var(--color-red-700)]',
-		info: 'hover:shadow-[5px_5px_0_0_var(--color-cyan-700)]'
+		primary:
+			'hover:shadow-[5px_5px_0_0_color-mix(in_srgb,var(--color-purple-700)_70%,transparent)]',
+		neutral:
+			'hover:shadow-[5px_5px_0_0_color-mix(in_srgb,var(--color-neutral-700)_70%,transparent)]',
+		success:
+			'hover:shadow-[5px_5px_0_0_color-mix(in_srgb,var(--color-emerald-700)_70%,transparent)]',
+		warning: 'hover:shadow-[5px_5px_0_0_color-mix(in_srgb,var(--color-amber-700)_70%,transparent)]',
+		danger: 'hover:shadow-[5px_5px_0_0_color-mix(in_srgb,var(--color-red-700)_70%,transparent)]',
+		info: 'hover:shadow-[5px_5px_0_0_color-mix(in_srgb,var(--color-cyan-700)_70%,transparent)]'
+	};
+
+	const pressShadowClasses: Record<Color, string> = {
+		primary:
+			'active:shadow-[2px_2px_0_0_color-mix(in_srgb,var(--color-purple-700)_70%,transparent)]',
+		neutral:
+			'active:shadow-[2px_2px_0_0_color-mix(in_srgb,var(--color-neutral-700)_70%,transparent)]',
+		success:
+			'active:shadow-[2px_2px_0_0_color-mix(in_srgb,var(--color-emerald-700)_70%,transparent)]',
+		warning:
+			'active:shadow-[2px_2px_0_0_color-mix(in_srgb,var(--color-amber-700)_70%,transparent)]',
+		danger: 'active:shadow-[2px_2px_0_0_color-mix(in_srgb,var(--color-red-700)_70%,transparent)]',
+		info: 'active:shadow-[2px_2px_0_0_color-mix(in_srgb,var(--color-cyan-700)_70%,transparent)]'
 	};
 
 	const cornerClasses: Record<Color, string> = {
@@ -119,10 +135,10 @@
 		typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 	const playBounce = (node: HTMLElement) => {
-		const isLink = variant === 'link';
-		const start = isLink ? '0 0' : '3px 3px';
-		const overshoot = isLink ? '0 0' : '-1px -1px';
-		const settle = isLink ? '0 0' : '1px 1px';
+		const isFlat = variant === 'link' || variant === 'outline';
+		const start = isFlat ? '0 0' : '3px 3px';
+		const overshoot = isFlat ? '0 0' : '-1px -1px';
+		const settle = isFlat ? '0 0' : '1px 1px';
 
 		cancelHover();
 		cancelBounce();
@@ -158,8 +174,8 @@
 				{ translate: '0 -2px', offset: 0 },
 				{ translate: '0 -5px', offset: 0.35 },
 				{ translate: '0 -1px', offset: 0.6 },
-				{ translate: '0 -3px', offset: 0.8 },
-				{ translate: '0 -2px', offset: 1 }
+				{ translate: '0 -2px', offset: 0.8 },
+				{ translate: '0 0', offset: 1 }
 			],
 			{
 				duration: 480,
@@ -276,7 +292,7 @@
 		primary: {
 			solid:
 				'border-purple-300 bg-purple-300 text-neutral-950 hover:border-purple-200 hover:bg-purple-200 active:border-purple-400 active:bg-purple-400',
-			soft: 'border-purple-300/25 bg-purple-300/10 text-purple-100 hover:border-purple-300/50 hover:bg-purple-300/20 active:bg-purple-300/25',
+			soft: 'border-transparent bg-purple-500/25 text-purple-50 hover:bg-purple-500/35 active:bg-purple-500/40',
 			outline:
 				'border-purple-300/40 bg-transparent text-purple-100 hover:border-purple-300/70 hover:bg-purple-300/10 active:bg-purple-300/15',
 			ghost:
@@ -286,7 +302,7 @@
 		neutral: {
 			solid:
 				'border-neutral-200 bg-neutral-200 text-neutral-950 hover:border-neutral-100 hover:bg-neutral-100 active:border-neutral-300 active:bg-neutral-300',
-			soft: 'border-neutral-300/25 bg-neutral-300/10 text-neutral-100 hover:border-neutral-300/50 hover:bg-neutral-300/20 active:bg-neutral-300/25',
+			soft: 'border-transparent bg-neutral-500/25 text-neutral-50 hover:bg-neutral-500/35 active:bg-neutral-500/40',
 			outline:
 				'border-neutral-300/30 bg-transparent text-neutral-100 hover:border-neutral-300/60 hover:bg-white/5 active:bg-white/10',
 			ghost:
@@ -296,7 +312,7 @@
 		success: {
 			solid:
 				'border-emerald-300 bg-emerald-300 text-neutral-950 hover:border-emerald-200 hover:bg-emerald-200 active:border-emerald-400 active:bg-emerald-400',
-			soft: 'border-emerald-300/25 bg-emerald-300/10 text-emerald-100 hover:border-emerald-300/50 hover:bg-emerald-300/20 active:bg-emerald-300/25',
+			soft: 'border-transparent bg-emerald-500/25 text-emerald-50 hover:bg-emerald-500/35 active:bg-emerald-500/40',
 			outline:
 				'border-emerald-300/40 bg-transparent text-emerald-100 hover:border-emerald-300/70 hover:bg-emerald-300/10 active:bg-emerald-300/15',
 			ghost:
@@ -306,7 +322,7 @@
 		warning: {
 			solid:
 				'border-amber-300 bg-amber-300 text-neutral-950 hover:border-amber-200 hover:bg-amber-200 active:border-amber-400 active:bg-amber-400',
-			soft: 'border-amber-300/25 bg-amber-300/10 text-amber-100 hover:border-amber-300/50 hover:bg-amber-300/20 active:bg-amber-300/25',
+			soft: 'border-transparent bg-amber-500/25 text-amber-50 hover:bg-amber-500/35 active:bg-amber-500/40',
 			outline:
 				'border-amber-300/40 bg-transparent text-amber-100 hover:border-amber-300/70 hover:bg-amber-300/10 active:bg-amber-300/15',
 			ghost:
@@ -316,7 +332,7 @@
 		danger: {
 			solid:
 				'border-red-300 bg-red-300 text-neutral-950 hover:border-red-200 hover:bg-red-200 active:border-red-400 active:bg-red-400',
-			soft: 'border-red-300/25 bg-red-300/10 text-red-100 hover:border-red-300/50 hover:bg-red-300/20 active:bg-red-300/25',
+			soft: 'border-transparent bg-red-500/25 text-red-50 hover:bg-red-500/35 active:bg-red-500/40',
 			outline:
 				'border-red-300/40 bg-transparent text-red-100 hover:border-red-300/70 hover:bg-red-300/10 active:bg-red-300/15',
 			ghost:
@@ -326,7 +342,7 @@
 		info: {
 			solid:
 				'border-cyan-300 bg-cyan-300 text-neutral-950 hover:border-cyan-200 hover:bg-cyan-200 active:border-cyan-400 active:bg-cyan-400',
-			soft: 'border-cyan-300/25 bg-cyan-300/10 text-cyan-100 hover:border-cyan-300/50 hover:bg-cyan-300/20 active:bg-cyan-300/25',
+			soft: 'border-transparent bg-cyan-500/25 text-cyan-50 hover:bg-cyan-500/35 active:bg-cyan-500/40',
 			outline:
 				'border-cyan-300/40 bg-transparent text-cyan-100 hover:border-cyan-300/70 hover:bg-cyan-300/10 active:bg-cyan-300/15',
 			ghost:
@@ -359,17 +375,20 @@
 	);
 	const resolvedRel = $derived(rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined));
 
+	const hasOffsetShadow = $derived(variant === 'solid' || variant === 'soft');
+
 	const computedClass = $derived(
 		twMerge(
 			baseClasses,
 			focusOutlineClasses[color],
 			sizeClasses[size],
 			toneClasses[color][variant],
-			variant !== 'ghost' && variant !== 'link' && offsetShadowClasses[color],
-			variant !== 'link' && 'hover:-top-0.5',
-			variant !== 'ghost' && variant !== 'link' && offsetHoverShadowClasses[color],
-			variant !== 'link' &&
-				'active:translate-x-0.75 active:translate-y-0.75 active:scale-[0.98] active:shadow-none',
+			hasOffsetShadow && offsetShadowClasses[color],
+			hasOffsetShadow && 'hover:-top-0.5',
+			hasOffsetShadow && offsetHoverShadowClasses[color],
+			variant !== 'link' && 'active:translate-x-0.75 active:translate-y-0.75 active:scale-[0.98]',
+			hasOffsetShadow && 'active:shadow-none',
+			variant === 'outline' && pressShadowClasses[color],
 			variant === 'link' && 'h-auto px-0 py-0 underline-offset-4 hover:underline',
 			full && 'w-full',
 			pixel && 'font-pixel',
