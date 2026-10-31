@@ -3,12 +3,14 @@
 	import AppBar from '#app/widgets/AppBar.svelte';
 	import Logo from '#app/widgets/Logo.svelte';
 	import ScrollHint from '#app/widgets/ScrollHint.svelte';
-	import Code from '#app/components/Code.svelte';
 	import Typography from '#app/components/Typography.svelte';
 	import Button from '#app/components/Button.svelte';
+	import FileInput from '#app/components/FileInput.svelte';
 
 	let heroBrand: HTMLDivElement;
 	let heroBrandVisible = $state(true);
+	let modFiles = $state<File[]>([]);
+	let modFolderFiles = $state<File[]>([]);
 
 	onMount(() => {
 		const observer = new IntersectionObserver(
@@ -52,7 +54,7 @@
 					component="span"
 					pixel
 					uppercase
-					class="relative z-10 [text-shadow:-2px_-2px_0_#3b0764,2px_-2px_0_#3b0764,-2px_2px_0_#3b0764,2px_2px_0_#3b0764]"
+					class="relative z-10 drop-shadow-[-5px_5px_5px_rgba(0,0,0,1)]"
 				>
 					<span class="text-purple-300">mod</span>crawl
 				</Typography>
@@ -67,18 +69,27 @@
 				Analyze Minecraft mods and plugins!
 			</Typography>
 		</div>
-		<div class="w-full max-w-md">
-			<!-- TODO: replace this with drop folder/jar(s) -->
-			<Code
-				language="java"
-				code={`
-public class HelloWorld {
-    public static void main(String[] args) {
-        System.out.println("Hello, World!");
-    }
-}`}
-			/>
-			<Button pixel variant="outline" class="mt-4 w-full">Analyze</Button>
+		<div class="flex w-full max-w-lg flex-col gap-6">
+			<Typography variant="h5" component="h2" pixel uppercase class="text-base sm:text-lg">
+				Analyze your mods
+			</Typography>
+			<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+				<FileInput
+					bind:files={modFiles}
+					accept=".jar"
+					label="Mods"
+					placeholder="Drop one or more .jar mods to analyze"
+					height="h-48"
+				/>
+				<FileInput
+					bind:files={modFolderFiles}
+					folder
+					label="&quot;mods/&quot; Folder"
+					placeholder="Drop the mod folder to analyze"
+					height="h-48"
+				/>
+				<Button pixel variant="outline" class="mt-3 w-full sm:col-span-2">Analyze</Button>
+			</div>
 		</div>
 
 		<ScrollHint />

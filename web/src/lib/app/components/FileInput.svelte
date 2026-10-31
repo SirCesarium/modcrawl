@@ -10,6 +10,7 @@
 		folder?: boolean;
 		height?: string;
 		label?: string;
+		placeholder?: string;
 		hint?: string;
 		error?: string;
 		disabled?: boolean;
@@ -28,6 +29,7 @@
 		folder = false,
 		height = 'h-44',
 		label,
+		placeholder = 'Drop or click',
 		hint,
 		error,
 		disabled = false,
@@ -219,22 +221,6 @@
 		files = [];
 	};
 
-	const emptyTitle = $derived(
-		folder
-			? 'Drop your mod folder here, or click to browse'
-			: multiple
-				? 'Drop your file(s) here, or click to browse'
-				: 'Drop your file here, or click to browse'
-	);
-
-	const emptyHint = $derived(
-		folder
-			? 'Select or drag a folder'
-			: accept
-				? `Supported files: ${accept}`
-				: 'Supports .jar, .zip files'
-	);
-
 	const cornerState = $derived(
 		twMerge(
 			'transition duration-150 motion-reduce:transition-none',
@@ -395,25 +381,9 @@
 					</div>
 				</div>
 			{:else}
-				<!-- Empty Drop Placeholder -->
-				<div class="flex flex-col items-center justify-center gap-3">
-					<div
-						class="flex size-12 items-center justify-center border border-purple-300 bg-purple-300 text-neutral-950 transition-[box-shadow,background-color,border-color] duration-150 ease-out group-hover/zone:shadow-[3px_3px_0_0_var(--color-purple-700)]"
-					>
-						<Icon name={folder ? 'folder' : 'upload'} size={24} class="brightness-0" alt="" />
-					</div>
-					<div class="flex flex-col gap-1">
-						<p
-							class="text-sm font-semibold text-neutral-200 transition-colors duration-150 group-hover/zone:text-purple-200 {pixel
-								? 'font-pixel'
-								: ''} {uppercase ? 'uppercase' : ''}"
-						>
-							{emptyTitle}
-						</p>
-						<p class="font-mono text-xs text-neutral-400">
-							{emptyHint}
-						</p>
-					</div>
+				<div class="flex flex-col items-center justify-center gap-2.5">
+					<Icon name={folder ? 'folder' : 'upload'} size={28} class="opacity-70" alt="" />
+					<p class="font-mono text-xs text-neutral-400">{placeholder}</p>
 				</div>
 			{/if}
 		</div>
