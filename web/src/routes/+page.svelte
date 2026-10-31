@@ -47,8 +47,8 @@
 		</div>
 
 		<div class="flex w-full max-w-xl flex-col items-center gap-4 lg:w-auto">
-			<div class="flex flex-col items-center gap-2 sm:flex-row sm:gap-0" bind:this={heroBrand}>
-				<Logo class="sm:-mr-3" />
+			<div class="flex flex-col items-center gap-2 sm:flex-row sm:gap-4" bind:this={heroBrand}>
+				<Logo />
 				<Typography
 					variant="h1"
 					component="span"

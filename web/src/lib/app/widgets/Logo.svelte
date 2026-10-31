@@ -32,30 +32,32 @@
 	});
 </script>
 
-<div class="relative isolate h-24 w-24 sm:h-32 sm:w-32 {className}" aria-hidden="true">
-	<div bind:this={container} class="h-full w-full">
-		<canvas
-			bind:this={canvas}
-			class="block h-full w-full transition-opacity duration-700 ease-out {ready
-				? 'opacity-100'
-				: 'opacity-0'}"
-		></canvas>
-	</div>
+<div class="relative isolate aspect-[0.54] h-24 sm:h-32 {className}" aria-hidden="true">
+	<div class="absolute inset-y-0 left-1/2 aspect-square -translate-x-1/2">
+		<div bind:this={container} class="h-full w-full">
+			<canvas
+				bind:this={canvas}
+				class="block h-full w-full transition-opacity duration-700 ease-out {ready
+					? 'opacity-100'
+					: 'opacity-0'}"
+			></canvas>
+		</div>
 
-	<div class="pointer-events-none absolute inset-0 -z-10">
-		<div
-			class="absolute top-1/2 -right-6 flex -translate-y-1/2 flex-col items-end gap-1.5 sm:-right-3"
-		>
-			{#each CODE_LINES as line (line.src)}
-				<img
-					src={line.src}
-					alt=""
-					draggable="false"
-					class="block {line.width} {converted
-						? 'animate-code-line opacity-100'
-						: 'opacity-0'} drop-shadow-[0_0_10px_#b35cff59] transition-opacity duration-500 ease-out [image-rendering:pixelated] motion-reduce:animate-none motion-reduce:transition-none"
-				/>
-			{/each}
+		<div class="pointer-events-none absolute inset-0 -z-10">
+			<div
+				class="absolute top-1/2 -right-6 flex -translate-y-1/2 flex-col items-end gap-1.5 sm:-right-3"
+			>
+				{#each CODE_LINES as line (line.src)}
+					<img
+						src={line.src}
+						alt=""
+						draggable="false"
+						class="block {line.width} {converted
+							? 'animate-code-line opacity-100'
+							: 'opacity-0'} drop-shadow-[0_0_10px_#b35cff59] transition-opacity duration-500 ease-out [image-rendering:pixelated] motion-reduce:animate-none motion-reduce:transition-none"
+					/>
+				{/each}
+			</div>
 		</div>
 	</div>
 </div>
