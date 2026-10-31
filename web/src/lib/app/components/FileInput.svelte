@@ -132,8 +132,9 @@
 		return typeof item.webkitGetAsEntry === 'function' ? item.webkitGetAsEntry() : null;
 	};
 
-	const openPicker = () => {
+	const openPicker = (event?: MouseEvent) => {
 		if (disabled || files.length > 0) return;
+		if (event && event.detail > 1) return;
 		fileInputRef?.click();
 	};
 
@@ -205,6 +206,8 @@
 		if (!target.files) return;
 
 		const selected = Array.from(target.files);
+		target.value = '';
+
 		if (selected.length === 0) return;
 
 		applyFiles(selected);
@@ -293,6 +296,7 @@
 		aria-label={label ?? (folder ? 'Upload Folder' : 'Upload File')}
 		onclick={openPicker}
 		onkeydown={(e) => {
+			if (e.target !== e.currentTarget) return;
 			if (e.key === 'Enter' || e.key === ' ') {
 				e.preventDefault();
 				openPicker();
