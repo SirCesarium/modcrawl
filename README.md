@@ -1,5 +1,7 @@
 # modcrawl
 
+![Modcrawl banner](./web/static/banner.png)
+
 [![Crates.io](https://img.shields.io/crates/v/modcrawl?style=flat-square)](https://crates.io/crates/modcrawl)
 [![CI](https://img.shields.io/github/actions/workflow/status/SirCesarium/modcrawl/ci.yml?branch=main&style=flat-square)](https://github.com/SirCesarium/modcrawl/actions)
 [![License](https://img.shields.io/github/license/SirCesarium/modcrawl?style=flat-square)]()
