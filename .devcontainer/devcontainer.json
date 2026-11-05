@@ -13,7 +13,6 @@
       "extensions": [
         "rust-lang.rust-analyzer",
         "tamasfe.even-better-toml",
-        "serayuzgur.crates",
 
         "svelte.svelte-vscode",
         "bradlc.vscode-tailwindcss",
