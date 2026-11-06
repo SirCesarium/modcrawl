@@ -1,304 +1,120 @@
-# modcrawl
+<div align="center">
 
-![Modcrawl banner](./web/static/banner.png)
+<img src="./web/static/readme/banner.png" alt="Modcrawl banner" />
 
 [![Crates.io](https://img.shields.io/crates/v/modcrawl?style=flat-square)](https://crates.io/crates/modcrawl)
 [![CI](https://img.shields.io/github/actions/workflow/status/SirCesarium/modcrawl/ci.yml?branch=main&style=flat-square)](https://github.com/SirCesarium/modcrawl/actions)
-[![License](https://img.shields.io/github/license/SirCesarium/modcrawl?style=flat-square)]()
+[![License](https://img.shields.io/github/license/SirCesarium/modcrawl?style=flat-square)](https://github.com/SirCesarium/modcrawl/blob/main/LICENSE)
 
-Detect, inspect, and analyze Minecraft mods and plugins from JARs.
+</div>
+
+Analyze **Minecraft mods and plugins** to find out which loader they belong to, which dependencies they have, and even **inspect their byte code** to find out **why your modpack is crashing**.
+
+## What is `modcrawl`
+
+`modcrawl` is an all-in-one **Minecraft utility** as a **CLI**, a **Rust library**, and an **npm package** designed to **help modpackers** and **server admins** to inspect, organize, and debug modpacks without the headache.
+
+It helps you quickly answer the everyday questions that pop up while building or fixing a modpack:
+
+- **Clean up mixed mod loaders:** Easily spot and remove leftover Fabric mods in a NeoForge modpack (like when **moving away from Sinytra Connector**).
+- **Separate Client, Server, and Both:** Quickly **identify client-only mods** mixed into a **server folder** so you can purge them before launching.
+- **Find the culprit behind cryptic crashes:** When a crash log gives you an obfuscated Java method call but doesn't mention which mod broke, trace references directly back to the offending JAR.
+- **Catch conflicts before they happen:** Identify duplicate classes or overlapping mixin targets across multiple mods that might collide on startup.
+- **Inspect metadata instantly:** Check mod loaders, dependencies, versions, and internal file lists without manually unzipping every JAR.
+
+### Example of `modcrawl`'s output
+
+<div align="center">
+
+![Modcrawl analyzing Create Mod metadata](./web/static/readme/create-metadata.png)
+
+</div>
+
+
+## Quickstart
 
 ```bash
-modcrawl type MyMod.jar                           # → Fabric
-modcrawl metadata MyMod.jar                       # mod name, version, authors, license
-modcrawl metadata MyMod.jar --json                # same, as JSON
-modcrawl deps MyMod.jar                           # dependencies with version ranges
-modcrawl deps MyMod.jar --include-jar-in-jar       # include embedded JARs
-modcrawl classes MyMod.jar                        # list .class files
-modcrawl grep "func_" MyMod.jar                   # search constant pool
-modcrawl mixins MyMod.jar                         # extract @Mixin targets
-modcrawl dupes a.jar b.jar c.jar                  # find duplicate classes
+# Detect mod loader
+modcrawl type MyMod.jar
+
+# Inspect metadata and dependencies
+modcrawl deps MyMod.jar
+
+# Find duplicate classes causing conflicts
+modcrawl dupes *.jar
+
+# Search for obfuscated method references across all JARs
+modcrawl grep "net/minecraft/world" *.jar --quiet
 ```
 
-```bash
-cat *.jar | modcrawl type                         # detect many at once
-modcrawl deps *.jar                               # per-file, continues on error
-modcrawl grep "net/minecraft/world" *.jar --quiet  # which mods reference a class
-modcrawl mixins *.jar --quiet                      # which jars have mixins
-modcrawl dupes *.jar --json                        # JSON of all class dupes
-```
+## TL;DR - Shut up and let me download
 
-## How it works
+The binaries are uploaded into the [releases](https://github.com/SirCesarium/modcrawl/releases) section of the GitHub repository. You can download the latest version of `modcrawl` for your platform from there.
 
-Inspects the ZIP entries inside a JAR without extracting. Picks the first matching sentinel file (Paper > Bukkit > NeoForge > Forge mods.toml > Forge mcmod.info > Fabric), then parses the corresponding metadata file and extracts dependency declarations.
+### Quick downloads
+
+<div align="center">
+
+<!-- TODO make the download buttons actually work -->
+
+<a href="https://github.com/SirCesarium/modcrawl/releases"><img src="./web/static/readme/windows.png" alt="Modcrawl Windows binary"></a>
+<a href="https://github.com/SirCesarium/modcrawl/releases"><img src="./web/static/readme/debian.png" alt="Modcrawl Debian binary"></a>
+<a href="https://github.com/SirCesarium/modcrawl/releases"><img src="./web/static/readme/fedora.png" alt="Modcrawl Fedora binary"></a>
+<a href="https://github.com/SirCesarium/modcrawl/releases"><img src="./web/static/readme/macos.png" alt="Modcrawl Mac OS binary"></a>
+
+</div>
+
+Those quick downloads point to the most common OS architectures (eg., `Windows x86_64`, `Debian x86_64`, ...). If you have an uncommon architecture (like `Debian ARM64`) you can check the [releases](https://github.com/SirCesarium/modcrawl/releases) page.
+
+Or even check the [Installation](#installation) section.
 
 ## Supported loaders
 
-| Loader | Sentinel file | Metadata format |
-|--------|---------------|-----------------|
-| Fabric | `fabric.mod.json` | JSON |
-| Forge (mods.toml) | `META-INF/mods.toml` | TOML |
-| NeoForge | `META-INF/neoforge.mods.toml` | TOML |
-| Forge (mcmod.info) | `mcmod.info` | JSON |
-| Bukkit / Spigot | `plugin.yml` | YAML |
-| Paper | `paper-plugin.yml` | YAML |
+These are the loaders that `modcrawl` currently supports.
 
-Adding a new loader means one new module implementing `ModHandler` and a single `register()` call — no core changes.
+*Feel free to contribute to the list while opening a **Pull request**!* ❤️
 
-## Install
+| Loader | Status | Type |
+| --- | --- | --- |
+| NeoForge | ✅ | Mods |
+| Fabric | ✅ | Mods |
+| Forge | ✅ | Mods |
+| Forge (legacy `<1.12`) | ✅ | Mods |
+| Quilt | ✅ | Mods |
+| Bukkit | Metadata, not dependencies | Plugins |
+| Paper | Metadata, not dependencies | Plugins |
+| Bungee | Metadata, not dependencies | Plugins |
+| Velocity | Metadata, not dependencies | Plugins |
 
-```bash
-cargo install modcrawl
-```
+## Installation
 
-Or download a prebuilt binary from [GitHub Releases](https://github.com/SirCesarium/modcrawl/releases) — the `modcrawl.h` header is shipped as a standalone asset (not inside archives).
+Before all, **make sure** you have the **Rust Programming Language** installed on your machine, if not, [click here](https://rust-lang.org/).
 
-## Library
+### Install with cargo
 
-```bash
-cargo add modcrawl --no-default-features
-```
+- Just run `cargo install modcrawl` and you're good to go!
 
-```rust
-use modcrawl::core::identify::identify;
-use modcrawl::core::metadata::read_metadata;
-use modcrawl::core::dep::analyze;
+### Build from source
 
-let mod_type = identify("MyMod.jar".as_ref())?;
+- Clone the repository `git clone https://github.com/SirCesarium/modcrawl.git` and navigate to the `modcrawl` directory.
+- Install `modcrawl` with `cargo install --path .`.
 
-let meta = read_metadata("MyMod.jar".as_ref())?;
-println!("{meta}");                                 // human-readable
-println!("{}", serde_json::to_string(&meta)?);       // JSON
+## Web
 
-let report = analyze("MyMod.jar".as_ref(), false)?;  // exclude jar-in-jar
-for dep in &report.dependencies {
-    println!("  {} {}", dep.kind.marker(), dep.name);
-}
-```
+There's a **WIP** web version of `modcrawl` that aims to provide all of the features of `modcrawl` in a more user-friendly way and will work completely offline (thanks to `WASM`!). It's still in development (currently there's not even a MVP), so expect some bugs and missing features. Stay tuned in [GitHub Discussions](https://github.com/SirCesarium/modcrawl/discussions) for any major updates :).
+  
+> [!NOTE]
+> There will be a structured documentation when the web version reaches a stable state.
+>
+> The documentation will show a deep overreview about all of the commands and the *API Reference* of the **Rust Library** and the **NPM (TypeScript) Library**
 
-Reader variants for in-memory buffers:
+### Web setup
 
-```rust
-use std::io::Cursor;
-use modcrawl::core::identify::identify_reader;
-use modcrawl::core::metadata::read_metadata_reader;
-use modcrawl::core::dep::analyze_reader;
-
-let data = std::fs::read("MyMod.jar")?;
-let mut cursor = Cursor::new(&data[..]);
-let mod_type = identify_reader(&mut cursor)?;
-```
-
-## Dependency analysis
-
-Dependencies are deduplicated by name. When the same dependency appears with different kinds (e.g. `depends` + `recommends`), the higher-priority kind wins:
-
-Required > LoadBefore > Optional > Recommended > Suggested
-
-Jar-in-jar entries (`META-INF/jars/*.jar`) are always scanned internally. If a dependency matches a bundled JAR's filename, it's removed from the external dependency list. The `--include-jar-in-jar` flag controls whether the jar-in-jar section appears in the output.
-
-## FFI / C bindings
-
-Every core function is exposed as a C-compatible export:
-
-| Function | Returns |
-|----------|---------|
-| `modcrawl_identify(path)` | Type string |
-| `modcrawl_identify_bytes(data, len)` | Type string |
-| `modcrawl_metadata(path)` | Human-readable metadata |
-| `modcrawl_metadata_json(path)` | JSON metadata |
-| `modcrawl_metadata_bytes(data, len)` | Human-readable metadata |
-| `modcrawl_metadata_json_bytes(data, len)` | JSON metadata |
-| `modcrawl_deps(path, include_jij)` | Human-readable deps |
-| `modcrawl_deps_json(path, include_jij)` | JSON deps |
-| `modcrawl_deps_bytes(data, len, include_jij)` | Human-readable deps |
-| `modcrawl_deps_json_bytes(data, len, include_jij)` | JSON deps |
-| `modcrawl_classes_json(path)` | JSON list of .class files |
-| `modcrawl_grep_json(path, pattern)` | JSON grep matches |
-| `modcrawl_mixins_json(path)` | JSON list of mixin targets |
-| `modcrawl_dupes_json(paths)` | JSON list of duplicate classes |
-| `modcrawl_free_string(s)` | — (frees returned strings) |
-
-The classes, grep, mixins and dupes exports require the `classfile` feature,
-which every published library is built with. `modcrawl_dupes_json` takes a
-null-terminated `char *const *paths` — the canonical call passes a
-`char *paths[]` array:
-
-```c
-#include "modcrawl.h"
-
-char *type = modcrawl_identify("/path/to/MyMod.jar");
-if (type) {
-    printf("Type: %s\n", type);
-    modcrawl_free_string(type);
-}
-
-// Metadata as JSON
-char *json = modcrawl_metadata_json("/path/to/MyMod.jar");
-if (json) {
-    printf("%s\n", json);
-    modcrawl_free_string(json);
-}
-
-// Duplicate classes across JARs
-char *paths[] = {"/path/to/a.jar", "/path/to/b.jar", NULL};
-char *dupes = modcrawl_dupes_json(paths);
-if (dupes) {
-    printf("%s\n", dupes);
-    modcrawl_free_string(dupes);
-}
-```
-
-### Contract
-
-- **Ownership**: every string-returning function hands you a null-terminated C
-  string that must be freed with `modcrawl_free_string` — never with `free()`,
-  the allocation belongs to Rust's allocator. Passing `NULL` to
-  `modcrawl_free_string` is a no-op.
-- **Errors**: `NULL` means an error occurred, and the reason is printed to
-  stderr. A zero-length buffer is also an error.
-- **Interior NULs**: mod metadata can legally contain a NUL character. These
-  are replaced with U+FFFD so a crafted JAR can never turn a successful parse
-  into an error return.
-- **Paths**: `modcrawl_dupes_json` requires valid UTF-8 paths; one that is not
-  is an error, not a silently skipped JAR.
-- **Thread safety**: every function may be called concurrently from any thread.
-- **Panics**: contained. A panic inside the parser is reported on stderr and
-  surfaces as `NULL` instead of aborting your process.
-
-### Using the header
-
-The `modcrawl.h` header ships as a release asset and inside every library
-archive. It compiles as both C and C++, and is generated by
-[cbindgen](https://github.com/mozilla/cbindgen) from `cbindgen.toml`:
-
-```bash
-cbindgen --config cbindgen.toml --crate modcrawl --output modcrawl.h
-```
-
-CI verifies on every push that the header compiles as C and C++ with
-`-Wall -Wextra -Werror`, that it matches the symbols each library actually
-exports, and that a C smoke test runs end to end (`tests/ffi/smoke.c`).
-
-**The header describes a default-features build.** If you compile the crate
-yourself with `--no-default-features`, the `classfile` feature (and with it
-`modcrawl_classes_json`, `modcrawl_grep_json`, `modcrawl_mixins_json` and
-`modcrawl_dupes_json`) is compiled out — the library exports 11 symbols while
-the header declares 15. Every library we publish is built with the default
-features, so this only bites source builds; CI pins the contract so it cannot
-drift silently.
-
-One packaging note: the musl libraries ship a **static library only**
-(`libmodcrawl.a`). Rust drops the cdylib on static-by-default targets and the
-musl toolchain used in CI cannot link a shared object. Every other ABI ships
-both a static and a shared library.
-
-## CLI reference
-
-| Command | Alias | What |
-|---------|-------|------|
-| `type` | `t`, `ty` | Detect mod/plugin type |
-| `metadata` | `meta`, `md` | Read mod metadata (human or `-j` JSON) |
-| `dep` | `d`, `deps`, `dependencies` | Analyze dependencies (`-j` JSON, `--include-jar-in-jar`/`--jij`) |
-| `classes` | `c`, `cls` | List `.class` files with Java version and access flags |
-| `grep` | `g`, `search` | Search constant pool strings across all `.class` files |
-| `mixins` | `m`, `mixin` | Extract `@Mixin` targets from class-level annotations |
-| `dupes` | `dp`, `duplicate` | Find duplicate `.class` entries across multiple JARs |
-
-### `type`
-
-Reads from stdin when given no file arguments. Stdin can be raw ZIP bytes (detects EOCD boundaries for `cat *.jar`) or newline-separated file paths.
-
-### `metadata`
-
-Takes one or more JAR paths. Multi-file output prefixes each result with the filename. `--json` / `-j` for compact JSON (one line per file).
-
-### `dep` / `deps`
-
-Takes one or more JAR paths. `--json` / `-j` for pretty-printed JSON. `--include-jar-in-jar` / `--jij` to show embedded JARs. Bundled dependencies are always filtered out of the external dependency list regardless of this flag.
-
-### `classes` (requires `classfile` feature)
-
-Lists every `.class` file inside a JAR with its Java version and access flags.
-
-```
-$ modcrawl classes MyMod.jar
-  mezz/jei/JustEnoughItems.class    Java 8   public
-  mezz/jei/color/ColorGetter.class  Java 8   public final
-```
-
-`--json` / `-j` for machine-readable output.
-
-### `grep` (requires `classfile` feature)
-
-Searches the **constant pool** of every `.class` file inside a JAR — no decompilation needed. Finds class references, method calls, field accesses, annotations, and raw UTF-8 strings.
-
-```
-$ modcrawl grep "func_186724_a" MyMod.jar
-  mezz/jei/color/ColorGetter.class:
-    Utf8: "(Lnet/minecraft/world/IBlockAccess;...)I"
-    MethodRef: "net/minecraft/client/renderer/color/BlockColors.func_186724_a:..."
-
-$ modcrawl grep "net/minecraft/world" *.jar --quiet
-  jei_1.12.2-4.16.1.1013.jar:
-    mezz/jei/color/ColorGetter.class
-    mezz/jei/plugins/vanilla/anvil/AnvilRecipeMaker.class
-```
-
-Useful for crash investigation: find which mod references an obfuscated function or class without opening a single JAR.
-
-Flags: `--quiet` / `-q` (only show class file names), `--json` / `-j` (JSON output).
-
-### `mixins` (requires `classfile` feature)
-
-Extracts `@Mixin` targets from SpongePowered mixin annotations at the class level. Parses `RuntimeVisibleAnnotations` / `RuntimeInvisibleAnnotations` attributes and resolves both `value` (Class ref) and `targets` (String ref) element pairs — no decompilation needed.
-
-```
-$ modcrawl mixins MyMod.jar
-  some/mod/mixin/ExampleMixin.class ->
-    net/minecraft/world/entity/player/Player
-  another/mod/mixin/TitleScreenMixin.class ->
-    net/minecraft/client/gui/screens/TitleScreen
-```
-
-`--quiet` / `-q` (only show mixin class names), `--json` / `-j` (JSON output).
-
-### `dupes` (requires `classfile` feature)
-
-Finds `.class` files that appear in more than one JAR — useful for detecting classpath conflicts between mods. Uses zip entry listing only, no classfile parsing needed.
-
-By default, output is grouped by conflict pair (two JARs that share classes):
-
-```
-$ modcrawl dupes a.jar b.jar c.jar
-── Classpath Conflicts ──
-
-  a.jar
-  b.jar
-  ── 3 shared classes ──
-    com/example/SomeClass.class
-    com/example/OtherClass.class
-    com/example/ThirdClass.class
-```
-
-`--by-class` / `-b` groups by class instead (legacy format), showing how many JARs each class appears in:
-
-```
-$ modcrawl dupes a.jar b.jar c.jar --by-class
-  com/example/SomeClass.class  (in 2 JARs)
-    a.jar
-    b.jar
-```
-
-`--count` / `-c` shows only a summary:
-
-```
-$ modcrawl dupes *.jar --count
-Found 42 duplicate classes across 15 JAR files.
-```
-
-`--json` / `-j` for machine-readable output. Combine with `--count` for a compact JSON summary.
+- Clone the repository `git clone https://github.com/SirCesarium/modcrawl.git` and navigate to the `modcrawl/web` directory.
+- Make sure you have **Bun Runtime** installed on your machine, if not, click [here](https://bun.sh/) to install it.
+- Run `bun install --frozen-lockfile` to install the dependencies.
+- Run `bun run dev` and navigate to `http://127.0.0.1:5173` in your browser.
 
 ## License
 
-MIT
+This project is licensed under the terms of the MIT license. See [LICENSE](./LICENSE) for details.
