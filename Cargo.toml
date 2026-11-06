@@ -4,6 +4,7 @@ version = "0.11.0"
 edition = "2024"
 description = "Detect, inspect, and analyze Minecraft mods and plugins from JAR files"
 license = "MIT"
+authors = ["Cesarium <239650612+SirCesarium@users.noreply.github.com>"]
 readme = "README.md"
 repository = "https://github.com/SirCesarium/modcrawl"
 homepage = "https://github.com/SirCesarium/modcrawl"
@@ -51,3 +52,21 @@ absolute_paths = "deny"
 
 [dev-dependencies]
 zip = "9"
+
+[package.metadata.deb]
+maintainer = "Cesarium <239650612+SirCesarium@users.noreply.github.com>"
+copyright = "2026, Cesarium"
+license-file = ["LICENSE", "0"]
+section = "utility"
+depends = "$auto"
+extended-description = "Detect, inspect, and analyze Minecraft mods and plugins from JAR files."
+assets = [
+  ["target/release/modcrawl", "usr/bin/", "755"],
+  ["README.md", "usr/share/doc/modcrawl/README.md", "644"],
+]
+
+[package.metadata.generate-rpm]
+assets = [
+  { source = "target/release/modcrawl", dest = "/usr/bin/modcrawl", mode = "755" },
+  { source = "LICENSE", dest = "/usr/share/licenses/modcrawl/LICENSE", mode = "644" },
+]
