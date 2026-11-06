@@ -1,3 +1,5 @@
+//! Bukkit and Spigot plugin support.
+
 pub mod dep;
 pub mod metadata;
 
@@ -7,6 +9,7 @@ use crate::core::metadata::ModMetadata;
 use crate::core::registry::ModHandler;
 use crate::error::Result;
 
+/// Handles Bukkit and Spigot plugins detected through `plugin.yml`.
 pub struct BukkitHandler;
 
 impl ModHandler for BukkitHandler {

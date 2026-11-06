@@ -1,3 +1,5 @@
+//! Legacy Forge mod support (`mcmod.info`).
+
 pub mod dep;
 pub mod metadata;
 
@@ -7,6 +9,7 @@ use crate::core::metadata::ModMetadata;
 use crate::core::registry::ModHandler;
 use crate::error::Result;
 
+/// Handles legacy Forge mods detected through `mcmod.info`.
 pub struct ForgeLegacyHandler;
 
 impl ModHandler for ForgeLegacyHandler {

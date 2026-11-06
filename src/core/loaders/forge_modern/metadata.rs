@@ -1,3 +1,5 @@
+//! Metadata types for `mods.toml`.
+
 use std::collections::BTreeMap;
 use std::fmt;
 use std::result::Result as StdResult;
@@ -11,6 +13,11 @@ use crate::error::Result;
 const DEP_KEY: &str = "dependencies";
 const DEP_KEY_PREFIX: &str = "dependencies.";
 
+/// Parses a Forge or `NeoForge` `mods.toml` document.
+///
+/// # Errors
+///
+/// Returns an error when the TOML is malformed or does not match the schema.
 pub fn parse(input: &str) -> Result<ModsTomlMetadata> {
     let mut doc = from_str::<TomlValue>(input)?;
     fold_dotted_dep_keys(&mut doc);
@@ -91,6 +98,7 @@ fn deps_in(value: &TomlValue) -> Vec<ModsTomlDependency> {
     }
 }
 
+/// Top-level metadata declared in a Forge or `NeoForge` `mods.toml`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModsTomlMetadata {
     #[serde(rename = "modLoader")]
@@ -122,6 +130,7 @@ pub struct ModsTomlMetadata {
     pub enum_extensions: Option<String>,
 }
 
+/// One `[[mods]]` entry inside a `mods.toml`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModsTomlMod {
     #[serde(rename = "modId")]
@@ -143,6 +152,7 @@ pub struct ModsTomlMod {
     pub display_test: Option<String>,
 }
 
+/// One dependency declaration inside a `[[dependencies.<mod>]]` table.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModsTomlDependency {
     #[serde(rename = "modId")]
@@ -156,6 +166,7 @@ pub struct ModsTomlDependency {
     pub side: Option<String>,
 }
 
+/// A mixin configuration declared in a `mods.toml`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ModsTomlMixin {
     pub config: String,
@@ -273,7 +284,6 @@ mandatory = true
 
     #[test]
     fn a_dotted_dependency_key_still_yields_the_mod_and_its_deps() {
-        // A bare TOML key cannot hold `.`, so this nests instead of naming a key.
         let toml = r#"
 modLoader = "javafml"
 license = "GLP3"
@@ -312,7 +322,6 @@ side = "CLIENT"
 
     #[test]
     fn a_quoted_dependency_key_with_a_dot_still_yields_the_deps() {
-        // A quoted key may hold `.`, so this stays one literal root key.
         let toml = r#"
 modLoader = "javafml"
 license = "LGPL-3.0-or-later"

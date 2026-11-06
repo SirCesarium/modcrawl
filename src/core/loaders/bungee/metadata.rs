@@ -1,3 +1,5 @@
+//! Metadata types for `bungee.yml`.
+
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
@@ -5,10 +7,16 @@ use serde_saphyr::from_str;
 
 use crate::error::Result;
 
+/// Parses a `BungeeCord` `bungee.yml` document.
+///
+/// # Errors
+///
+/// Returns an error when the YAML is malformed or does not match the schema.
 pub fn parse(input: &str) -> Result<BungeePluginMetadata> {
     Ok(from_str(input)?)
 }
 
+/// Metadata declared by a `BungeeCord` plugin in `bungee.yml`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BungeePluginMetadata {
     pub name: String,

@@ -1,3 +1,5 @@
+//! Dependency extraction from `fabric.mod.json`.
+
 use serde_json::{Value, from_str};
 
 use super::super::super::dep::types::{DepEntry, DepKind, VersionRange};
@@ -12,6 +14,11 @@ fn ver(value: Value) -> Option<String> {
     }
 }
 
+/// Extracts dependencies from a `fabric.mod.json` document.
+///
+/// # Errors
+///
+/// Returns an error when the JSON is malformed or does not match the schema.
 pub fn extract(raw: &str) -> Result<Vec<DepEntry>> {
     let meta = from_str::<FabricModMetadata>(raw)?;
     let mut deps = Vec::new();

@@ -138,7 +138,6 @@
 		fileInputRef?.click();
 	};
 
-	// The shared button's hover bounce reads as a jitter at this compact size.
 	const keepRaised = (event: PointerEvent & { currentTarget: HTMLElement }) => {
 		event.currentTarget
 			.getAnimations()
@@ -275,7 +274,6 @@
 {/snippet}
 
 <div class="relative flex w-full flex-col gap-1.5 {className}">
-	<!-- Label -->
 	{#if label}
 		<span
 			class="flex items-center gap-1.5 text-xs font-semibold text-neutral-300 select-none {pixel
@@ -289,7 +287,6 @@
 		</span>
 	{/if}
 
-	<!-- Drop Zone -->
 	<div
 		role="button"
 		tabindex={disabled || files.length > 0 ? -1 : 0}
@@ -310,7 +307,6 @@
 	>
 		{@render cornerMarks()}
 
-		<!-- Hidden native input -->
 		<input
 			bind:this={fileInputRef}
 			type="file"
@@ -323,7 +319,6 @@
 		/>
 
 		{#if isDragOver && !isInvalidDrop}
-			<!-- Marquee "DROP IT" ticker when dragging -->
 			<div
 				class="pointer-events-none absolute inset-0 z-20 flex items-center justify-center overflow-hidden"
 			>
@@ -343,7 +338,6 @@
 				: ''}"
 		>
 			{#if files.length > 0}
-				<!-- Display Selected Files -->
 				<div class="flex size-full flex-col justify-between gap-2">
 					<div
 						class="flex shrink-0 items-center justify-between text-xs font-medium text-purple-300 uppercase"
@@ -393,7 +387,6 @@
 		</div>
 	</div>
 
-	<!-- Hint -->
 	{#if error}
 		<p
 			class="animate-[code-line-in_150ms_ease-out] font-mono text-xs text-red-400 transition duration-150"

@@ -1,3 +1,5 @@
+//! The `grep` command.
+
 use std::collections::BTreeSet;
 use std::io::Cursor;
 use std::path::PathBuf;
@@ -10,6 +12,7 @@ use crate::core::classfile;
 use crate::error::Result;
 use crate::ui;
 
+/// Arguments for the `grep` command.
 #[derive(ClapArgs)]
 pub struct Args {
     pub pattern: String,

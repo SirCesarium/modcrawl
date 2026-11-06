@@ -1,3 +1,5 @@
+//! Velocity proxy plugin support (`velocity-plugin.json`).
+
 pub mod metadata;
 
 use crate::core::detect_mod_type::{ModType, PluginType};

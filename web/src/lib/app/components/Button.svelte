@@ -194,7 +194,6 @@
 
 	const spawnParticles = (node: HTMLElement, event: MouseEvent) => {
 		const rect = node.getBoundingClientRect();
-		// Clients without pointer precision (keyboard, assistive tech) burst from the center.
 		const isKeyboardClick = event.detail === 0;
 		const x = isKeyboardClick ? rect.width / 2 : event.clientX - rect.left;
 		const y = isKeyboardClick ? rect.height / 2 : event.clientY - rect.top;

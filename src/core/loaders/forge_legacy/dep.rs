@@ -1,9 +1,16 @@
+//! Dependency extraction from `mcmod.info`.
+
 use serde_json::from_str;
 
 use super::super::super::dep::types::{DepEntry, DepKind, VersionRange};
 use super::metadata::ForgeLegacyModEntry;
 use crate::error::Result;
 
+/// Extracts dependencies from a legacy `mcmod.info` document.
+///
+/// # Errors
+///
+/// Returns an error when the JSON is malformed or does not match the schema.
 pub fn extract(raw: &str) -> Result<Vec<DepEntry>> {
     let entries = from_str::<Vec<ForgeLegacyModEntry>>(raw)?;
     let mut deps = Vec::new();

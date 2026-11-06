@@ -1,8 +1,13 @@
+//! Mod and plugin type enums.
+
 use std::fmt;
 
+/// Metadata format used by a Forge mod.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ForgeModFormat {
+    /// Modern Forge metadata stored in `META-INF/mods.toml`.
     ModsToml,
+    /// Legacy Forge metadata stored in `mcmod.info`.
     McmodInfo,
 }
 
@@ -15,11 +20,16 @@ impl fmt::Display for ForgeModFormat {
     }
 }
 
+/// Server plugin platform detected from plugin metadata.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PluginType {
+    /// Bukkit or Spigot plugin (`plugin.yml`).
     Bukkit,
+    /// Paper plugin (`paper-plugin.yml`).
     Paper,
+    /// `BungeeCord` proxy plugin (`bungee.yml`).
     Bungee,
+    /// Velocity proxy plugin (`velocity-plugin.json`).
     Velocity,
 }
 
@@ -34,13 +44,20 @@ impl fmt::Display for PluginType {
     }
 }
 
+/// Kind of mod or plugin detected inside an archive.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModType {
+    /// Fabric mod (`fabric.mod.json`).
     Fabric,
+    /// Quilt mod (`quilt.mod.json`).
     Quilt,
+    /// Forge mod, including the metadata format that was detected.
     Forge(ForgeModFormat),
+    /// `NeoForge` mod (`META-INF/neoforge.mods.toml`).
     NeoForge,
+    /// Server plugin for the wrapped platform.
     Plugin(PluginType),
+    /// No known loader metadata was found.
     Unknown,
 }
 

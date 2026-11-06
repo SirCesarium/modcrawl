@@ -16,22 +16,26 @@ import {
 	RAY_SIZE
 } from './config';
 
+/** A glow layer and the opacity it animates from. */
 export interface GlowLayer {
 	material: THREE.MeshBasicMaterial;
 	baseOpacity: number;
 }
 
+/** A rotating glow ray with its own angular speed. */
 export interface GlowRay extends GlowLayer {
 	mesh: THREE.Mesh;
 	speed: number;
 }
 
+/** Glow meshes attached to the portal logo. */
 export interface Glow {
 	group: THREE.Group;
 	beams: GlowLayer[];
 	rays: GlowRay[];
 }
 
+/** Scene objects that make up the portal logo, minus the grass block. */
 export interface PortalLogoParts {
 	group: THREE.Group;
 	portal: THREE.Group;
@@ -78,8 +82,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		indices.push(baseIndex, baseIndex + 1, baseIndex + 2, baseIndex, baseIndex + 2, baseIndex + 3);
 	};
 
-	// 1. FRONT FACE (+Z, norm = [0, 0, 1])
-	// Left pillar: x0..x1, y0..y3 (1 x 5 blocks)
 	addQuad(
 		[x0, y0, zf],
 		[x1, y0, zf],
@@ -91,7 +93,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, 5],
 		[0, 0, 1]
 	);
-	// Right pillar: x2..x3, y0..y3 (1 x 5 blocks)
 	addQuad(
 		[x2, y0, zf],
 		[x3, y0, zf],
@@ -103,7 +104,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, 5],
 		[0, 0, 1]
 	);
-	// Top beam: x1..x2, y2..y3 (2 x 1 blocks)
 	addQuad(
 		[x1, y2, zf],
 		[x2, y2, zf],
@@ -115,7 +115,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, 1],
 		[0, 0, 1]
 	);
-	// Bottom beam: x1..x2, y0..y1 (2 x 1 blocks)
 	addQuad(
 		[x1, y0, zf],
 		[x2, y0, zf],
@@ -128,8 +127,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, 0, 1]
 	);
 
-	// 2. BACK FACE (-Z, norm = [0, 0, -1])
-	// Left pillar: x1..x0, y0..y3 (viewed from back, CCW order)
 	addQuad(
 		[x1, y0, zb],
 		[x0, y0, zb],
@@ -141,7 +138,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, 5],
 		[0, 0, -1]
 	);
-	// Right pillar: x3..x2, y0..y3
 	addQuad(
 		[x3, y0, zb],
 		[x2, y0, zb],
@@ -153,7 +149,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, 5],
 		[0, 0, -1]
 	);
-	// Top beam: x2..x1, y2..y3
 	addQuad(
 		[x2, y2, zb],
 		[x1, y2, zb],
@@ -165,7 +160,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, 1],
 		[0, 0, -1]
 	);
-	// Bottom beam: x2..x1, y0..y1
 	addQuad(
 		[x2, y0, zb],
 		[x1, y0, zb],
@@ -178,8 +172,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, 0, -1]
 	);
 
-	// 3. OUTER WALLS (4 quads)
-	// Outer Left (-X, norm = [-1, 0, 0]): y0..y3, zb..zf (1 x 5 blocks)
 	addQuad(
 		[x0, y0, zb],
 		[x0, y0, zf],
@@ -191,7 +183,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, 5],
 		[-1, 0, 0]
 	);
-	// Outer Right (+X, norm = [1, 0, 0]): y0..y3, zf..zb (1 x 5 blocks)
 	addQuad(
 		[x3, y0, zf],
 		[x3, y0, zb],
@@ -203,7 +194,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, 5],
 		[1, 0, 0]
 	);
-	// Outer Top (+Y, norm = [0, 1, 0]): x0..x3, zf..zb (4 x 1 blocks)
 	addQuad(
 		[x0, y3, zf],
 		[x3, y3, zf],
@@ -215,7 +205,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, 1],
 		[0, 1, 0]
 	);
-	// Outer Bottom (-Y, norm = [0, -1, 0]): x0..x3, zb..zf (4 x 1 blocks)
 	addQuad(
 		[x0, y0, zb],
 		[x3, y0, zb],
@@ -228,8 +217,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, -1, 0]
 	);
 
-	// 4. INNER HOLE WALLS (4 quads)
-	// Inner Left wall (facing +X into the hole, norm = [1, 0, 0]): y1..y2, zf..zb (1 x 3 blocks)
 	addQuad(
 		[x1, y1, zf],
 		[x1, y1, zb],
@@ -241,7 +228,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, 3],
 		[1, 0, 0]
 	);
-	// Inner Right wall (facing -X into the hole, norm = [-1, 0, 0]): y1..y2, zb..zf (1 x 3 blocks)
 	addQuad(
 		[x2, y1, zb],
 		[x2, y1, zf],
@@ -253,7 +239,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, 3],
 		[-1, 0, 0]
 	);
-	// Inner Top wall (ceiling of hole, facing -Y, norm = [0, -1, 0]): x1..x2, zb..zf (2 x 1 blocks)
 	addQuad(
 		[x1, y2, zb],
 		[x2, y2, zb],
@@ -265,7 +250,6 @@ const createFrameGeometry = (): THREE.BufferGeometry => {
 		[0, 1],
 		[0, -1, 0]
 	);
-	// Inner Bottom wall (floor of hole, facing +Y, norm = [0, 1, 0]): x1..x2, zf..zb (2 x 1 blocks)
 	addQuad(
 		[x1, y1, zf],
 		[x2, y1, zf],
@@ -395,6 +379,13 @@ export const createPortalLogoParts = (
 	};
 };
 
+/**
+ * Builds the grass block that slides into the portal.
+ *
+ * @param topTexture - Texture for the top face.
+ * @param sideTexture - Texture for the remaining faces.
+ * @returns The block mesh and the materials that can fade it out.
+ */
 export const createGrassBlock = (
 	topTexture: THREE.Texture,
 	sideTexture: THREE.Texture
@@ -412,7 +403,6 @@ export const createGrassBlock = (
 		depthWrite: false
 	});
 
-	// BoxGeometry face order: +x, -x, +y, -y, +z, -z.
 	const materials = [side, side, top, top, side, side];
 	const geometry = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
 	const mesh = new THREE.Mesh(geometry, materials);

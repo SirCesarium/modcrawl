@@ -1,3 +1,5 @@
+//! Metadata types for `mcmod.info`.
+
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
@@ -5,12 +7,19 @@ use serde_json::{Value, from_str};
 
 use crate::error::Result;
 
+/// Parses a legacy `mcmod.info` document.
+///
+/// # Errors
+///
+/// Returns an error when the JSON is malformed or does not match the schema.
 pub fn parse(input: &str) -> Result<ForgeLegacyMetadata> {
     Ok(from_str(input)?)
 }
 
+/// Every mod entry declared by an `mcmod.info` file.
 pub type ForgeLegacyMetadata = Vec<ForgeLegacyModEntry>;
 
+/// One mod entry inside a legacy `mcmod.info` file.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ForgeLegacyModEntry {
     pub modid: String,
@@ -36,6 +45,7 @@ pub struct ForgeLegacyModEntry {
     pub authors: Vec<String>,
 }
 
+/// Formats every legacy mod entry separated by `---` rules.
 pub struct ForgeLegacyDisplay<'a>(pub &'a [ForgeLegacyModEntry]);
 
 impl fmt::Display for ForgeLegacyModEntry {

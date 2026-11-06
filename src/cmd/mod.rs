@@ -1,3 +1,5 @@
+//! Command-line interface and per-command argument handling.
+
 pub mod dep;
 pub mod metadata;
 pub mod r#type;
@@ -22,6 +24,7 @@ use clap::{Parser, Subcommand};
 
 use crate::error::{Error, Result};
 
+/// Top-level command-line interface.
 #[derive(Parser)]
 #[command(name = "modcrawl", version, about)]
 pub struct Cli {
@@ -29,6 +32,7 @@ pub struct Cli {
     pub command: Commands,
 }
 
+/// Subcommands exposed by the CLI.
 #[derive(Subcommand)]
 pub enum Commands {
     /// Analyze & crawl `Minecraft` mod dependencies.

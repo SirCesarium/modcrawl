@@ -1,3 +1,5 @@
+//! The `metadata` command.
+
 use std::io::Cursor;
 use std::path::PathBuf;
 
@@ -9,6 +11,7 @@ use crate::core::metadata::{read_metadata, read_metadata_reader};
 use crate::error::Result;
 use crate::ui;
 
+/// Arguments for the `metadata` command.
 #[derive(ClapArgs)]
 pub struct Args {
     /// Output compact JSON (one line) instead of pretty-printed

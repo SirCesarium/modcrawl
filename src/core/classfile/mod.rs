@@ -1,3 +1,6 @@
+//! Class-file inspection: class listings, constant-pool search, mixin targets,
+//! and duplicate-class detection.
+
 use std::io::{Read, Seek};
 use std::path::Path;
 
@@ -14,23 +17,34 @@ mod dupes;
 
 pub use dupes::{DupEntry, find_duplicates, find_duplicates_buffers};
 
+/// A class file found inside a JAR, with its Java version and access flags.
 #[derive(Debug, Clone, Serialize)]
 pub struct ClassEntry {
+    /// Archive-relative path of the `.class` entry.
     pub name: String,
+    /// Java class-file version rendered for display.
     pub java_version: String,
+    /// Human-readable class access flags.
     pub access_flags: Vec<String>,
 }
 
+/// A constant-pool value that matched a `grep` pattern.
 #[derive(Debug, Clone, Serialize)]
 pub struct GrepMatch {
+    /// Class file that contains the matching constant.
     pub class_file: String,
+    /// Constant-pool tag of the matching entry.
     pub pool_tag: String,
+    /// Decoded constant value.
     pub value: String,
 }
 
+/// A class-level `@Mixin` annotation and the class it targets.
 #[derive(Debug, Clone, Serialize)]
 pub struct MixinEntry {
+    /// Class that declares the `@Mixin` annotation.
     pub mixin_class: String,
+    /// Internal name of the class being mixed into.
     pub target: String,
 }
 
@@ -202,7 +216,6 @@ fn extract_mixin_targets(cf: &ClassFile, class_name: &str) -> Vec<MixinEntry> {
                                 if let Some(target) =
                                     resolve_utf8(&cf.constant_pool, *const_value_index)
                                 {
-                                    // string targets use raw internal names (e.g. "net/minecraft/...")
                                     results.push(MixinEntry {
                                         mixin_class: class_name.to_string(),
                                         target,
@@ -255,7 +268,6 @@ fn is_mixin_annotation(descriptor: &str) -> bool {
 
 fn resolve_class_descriptor(cp: &[ConstantPoolEntry], index: u16) -> Option<String> {
     let desc = resolve_utf8(cp, index)?;
-    // strip leading 'L' and trailing ';' if present
     let cleaned = desc
         .strip_prefix('L')
         .and_then(|s| s.strip_suffix(';'))

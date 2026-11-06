@@ -126,8 +126,6 @@ pub fn mixins_json(data: &[u8]) -> StdResult<String, JsError> {
 /// when the arrays differ in length.
 #[cfg(feature = "classfile")]
 #[wasm_bindgen]
-// wasm-bindgen only converts JS string arrays into an owned `Vec<String>`;
-// `&[String]` is not a supported argument type.
 #[allow(clippy::needless_pass_by_value)]
 pub fn dupes_json(names: Vec<String>, jars: &js_sys::Array) -> StdResult<String, JsError> {
     let mut decoded: Vec<Vec<u8>> = Vec::with_capacity(jars.length() as usize);

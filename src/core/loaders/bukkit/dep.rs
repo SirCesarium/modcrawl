@@ -1,9 +1,16 @@
+//! Dependency extraction from `plugin.yml`.
+
 use serde_saphyr::from_str;
 
 use super::super::super::dep::types::{DepEntry, DepKind, VersionRange};
 use super::metadata::BukkitPluginMetadata;
 use crate::error::Result;
 
+/// Extracts dependencies from a Bukkit or Spigot `plugin.yml` document.
+///
+/// # Errors
+///
+/// Returns an error when the YAML is malformed or does not match the schema.
 pub fn extract(raw: &str) -> Result<Vec<DepEntry>> {
     let meta = from_str::<BukkitPluginMetadata>(raw)?;
     let mut deps = Vec::new();

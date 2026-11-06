@@ -1,3 +1,5 @@
+//! Dependency kinds, version ranges, and report types.
+
 use std::fmt;
 
 use serde::Serialize;
@@ -5,16 +7,26 @@ use serde::Serialize;
 /// The kind/semantics of a dependency entry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub enum DepKind {
+    /// The dependency must be present at runtime.
     Required,
+    /// The dependency is optional.
     Optional,
+    /// The dependency is recommended to the user.
     Recommended,
+    /// The dependency is suggested but not expected.
     Suggested,
+    /// The dependency must not be present.
     Incompatible,
+    /// The dependency is discouraged but allowed.
     Discouraged,
+    /// The dependency must load before this mod.
     LoadBefore,
 }
 
 impl DepKind {
+    /// Returns the precedence used when duplicate dependency names are merged.
+    ///
+    /// A higher value wins, so `Required` overrides a softer declaration.
     #[must_use]
     pub fn priority(self) -> u8 {
         match self {
@@ -27,6 +39,7 @@ impl DepKind {
         }
     }
 
+    /// Returns `true` when this kind marks a dependency as excluded.
     #[must_use]
     pub fn is_excluded(self) -> bool {
         matches!(self, Self::Incompatible | Self::Discouraged)
@@ -45,14 +58,24 @@ impl DepKind {
 /// A parsed version range with structured bounds.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct VersionRange {
+    /// Lower bound, if the constraint declares one.
     pub min: Option<String>,
+    /// Upper bound, if the constraint declares one.
     pub max: Option<String>,
+    /// Whether the lower bound is inclusive.
     pub min_inclusive: bool,
+    /// Whether the upper bound is inclusive.
     pub max_inclusive: bool,
+    /// The constraint exactly as written in the metadata.
     pub raw: Option<String>,
 }
 
 impl VersionRange {
+    /// Parses a raw version constraint into structured bounds.
+    ///
+    /// Maven-style ranges (`[1.0,2.0)`) and simple comparison constraints
+    /// (`<2.0`, `>=1.0<2.0`, `>=1.0`) are understood. Anything else is kept
+    /// verbatim in [`VersionRange::raw`].
     #[must_use]
     pub fn parse(raw: Option<String>) -> Self {
         let owned = raw.as_ref().filter(|s| !s.is_empty() && *s != "*").cloned();
@@ -101,8 +124,6 @@ impl VersionRange {
     fn parse_simple(s: &str, raw: Option<String>) -> Self {
         let trimmed = s.trim();
 
-        // Single < must be checked before split_once('<') so `<2.0`
-        // doesn't get caught by the `>=a<b` branch as `("", "2.0")`.
         if let Some(max) = trimmed.strip_prefix('<') {
             return Self {
                 min: None,
@@ -155,12 +176,16 @@ impl fmt::Display for VersionRange {
 /// A single dependency entry extracted from mod metadata.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DepEntry {
+    /// Mod or plugin identifier of the dependency.
     pub name: String,
+    /// Semantic kind of the dependency.
     pub kind: DepKind,
+    /// Version constraint declared by the metadata.
     pub version_range: VersionRange,
 }
 
 impl DepEntry {
+    /// Creates a dependency entry from its identifier, kind, and version range.
     #[must_use]
     pub fn new(name: impl Into<String>, kind: DepKind, version_range: VersionRange) -> Self {
         Self {
@@ -174,13 +199,16 @@ impl DepEntry {
 /// An embedded JAR found inside the main archive.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct JarInJar {
+    /// Archive-relative path of the embedded JAR.
     pub path: String,
 }
 
 /// Full dependency analysis report for a single JAR.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct DepReport {
+    /// Declared dependencies, after merge and deduplication.
     pub dependencies: Vec<DepEntry>,
+    /// Embedded JARs discovered inside the scanned archive.
     pub jar_in_jar: Vec<JarInJar>,
 }
 

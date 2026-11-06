@@ -90,7 +90,6 @@
 		lg: 20
 	};
 
-	// Global window shortcut listener (e.g. Ctrl+K, Cmd+K, /)
 	const handleWindowKeyDown = (e: KeyboardEvent) => {
 		if (!shortcut || disabled || readonly) return;
 
@@ -166,7 +165,6 @@
 {/snippet}
 
 <div class="relative flex flex-col gap-1.5 {full ? 'w-full' : 'w-auto'} {className}">
-	<!-- Label -->
 	{#if label}
 		<label
 			for={inputId}
@@ -181,7 +179,6 @@
 		</label>
 	{/if}
 
-	<!-- Container -->
 	<div
 		class={twMerge(
 			'group relative inline-flex items-center border border-neutral-700 bg-neutral-900/80 font-medium text-neutral-100 transition duration-150 ease-out focus-within:border-purple-400 focus-within:ring-1 focus-within:ring-purple-400/50 hover:border-neutral-500 active:scale-[0.99] motion-reduce:transform-none motion-reduce:transition-none',
@@ -195,7 +192,6 @@
 	>
 		{@render cornerMarks()}
 
-		<!-- Prefix slot or icon -->
 		{#if prefix}
 			<div class="shrink-0 text-neutral-400">
 				{@render prefix()}
@@ -206,7 +202,6 @@
 			<Icon name={icon} size={iconSizes[size]} class="shrink-0 opacity-70" alt="" />
 		{/if}
 
-		<!-- The Input Element -->
 		<input
 			bind:this={inputRef}
 			id={inputId}
@@ -226,7 +221,6 @@
 			{...restProps}
 		/>
 
-		<!-- Shortcut Badge -->
 		{#if shortcut}
 			<button
 				type="button"
@@ -242,7 +236,6 @@
 			</button>
 		{/if}
 
-		<!-- Clearable Button -->
 		{#if clearable && value !== '' && !disabled && !readonly}
 			<button
 				type="button"
@@ -254,7 +247,6 @@
 			</button>
 		{/if}
 
-		<!-- Password Toggle -->
 		{#if isPassword}
 			<button
 				type="button"
@@ -266,12 +258,10 @@
 			</button>
 		{/if}
 
-		<!-- Warning Icon on Error -->
 		{#if error}
 			<Icon name="alert" size={iconSizes[size]} class="shrink-0 opacity-90" alt="Error" />
 		{/if}
 
-		<!-- Suffix slot or icon -->
 		{#if suffix}
 			<div class="shrink-0 text-neutral-400">
 				{@render suffix()}
@@ -281,7 +271,6 @@
 		{/if}
 	</div>
 
-	<!-- Hint -->
 	{#if error}
 		<p
 			class="animate-[code-line-in_150ms_ease-out] font-mono text-xs text-red-400 transition duration-150"

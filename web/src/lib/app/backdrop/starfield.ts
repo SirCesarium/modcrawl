@@ -14,6 +14,11 @@ const COLORS = ['179, 92, 255', '235, 219, 178', '200, 200, 210', '255, 255, 255
 const MAX_PIXELS = 1_600_000;
 const TARGET_FPS = 24;
 
+/**
+ * Starts the animated starfield on `canvas`.
+ *
+ * @returns A handle whose `destroy` method stops the animation loop.
+ */
 export function createStarfield(canvas: HTMLCanvasElement): { destroy: () => void } {
 	const context = canvas.getContext('2d', { desynchronized: true });
 

@@ -1,3 +1,5 @@
+//! Loader detection for JAR files and in-memory archives.
+
 use std::io::{Read, Seek};
 use std::path::Path;
 

@@ -1,3 +1,5 @@
+//! Error types shared by the library and the CLI.
+
 use std::error::Error as StdError;
 use std::io;
 use std::result;
@@ -11,6 +13,7 @@ use zipcrawl::ZipCrawlError;
 
 use toml::de;
 
+/// Convenience result type used throughout the crate.
 pub type Result<T> = result::Result<T, Error>;
 
 /// Deepest cause in a `zipcrawl` error's source chain.
@@ -31,42 +34,52 @@ fn zipcrawl_reason(err: &ZipCrawlError) -> String {
     }
 }
 
+/// Errors produced while reading or parsing mod and archive data.
 #[derive(Error, Debug)]
 #[cfg_attr(feature = "cli", derive(Diagnostic))]
 pub enum Error {
+    /// An underlying I/O operation failed.
     #[error("I/O error: {0}")]
     #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::io)))]
     Io(#[from] io::Error),
 
+    /// Reading the ZIP/JAR archive failed.
     #[error("{}", zipcrawl_reason(.0))]
     #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::zipcrawl)))]
     ZipCrawl(#[from] ZipCrawlError),
 
+    /// JSON metadata could not be parsed.
     #[error("JSON error: {0}")]
     #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::json)))]
     Json(#[from] JsonError),
 
+    /// TOML metadata could not be parsed.
     #[error("TOML error: {0}")]
     #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::toml)))]
     Toml(#[from] de::Error),
 
+    /// YAML metadata could not be parsed.
     #[error("YAML error: {0}")]
     #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::yaml)))]
     Yaml(#[from] YamlError),
 
+    /// The archive does not contain metadata for a supported loader.
     #[error("Unsupported metadata format for {0}")]
     #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::unsupported_metadata)))]
     UnsupportedMetadata(String),
 
+    /// The command was invoked with invalid arguments.
     #[error("{0}")]
     #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::usage)))]
     Usage(String),
 
+    /// A class file could not be read or interpreted.
     #[cfg(feature = "classfile")]
     #[error("Class file error: {0}")]
     #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::classfile)))]
     ClassFile(String),
 
+    /// A class-file structure could not be parsed.
     #[cfg(feature = "classfile")]
     #[error("Parse error: {0}")]
     #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::parse)))]

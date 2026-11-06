@@ -1,3 +1,5 @@
+//! Modern Forge mod support (`META-INF/mods.toml`).
+
 pub mod dep;
 pub mod metadata;
 
@@ -7,6 +9,7 @@ use crate::core::metadata::ModMetadata;
 use crate::core::registry::ModHandler;
 use crate::error::Result;
 
+/// Handles modern Forge mods detected through `META-INF/mods.toml`.
 pub struct ForgeModernHandler;
 
 impl ModHandler for ForgeModernHandler {

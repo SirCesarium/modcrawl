@@ -1,3 +1,5 @@
+//! Duplicate-class detection.
+
 use std::collections::BTreeMap;
 use std::io::{Cursor, Read, Seek};
 use std::path::Path;
@@ -8,9 +10,12 @@ use zipcrawl::ZipManager;
 use super::is_class_entry;
 use crate::error::Result;
 
+/// A class entry that appears in more than one JAR.
 #[derive(Debug, Clone, Serialize)]
 pub struct DupEntry {
+    /// Archive-relative path of the duplicated class.
     pub class_name: String,
+    /// Labels of the JARs that contain the same class.
     pub files: Vec<String>,
 }
 

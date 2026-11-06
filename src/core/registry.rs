@@ -1,3 +1,5 @@
+//! Registry of mod and plugin handlers used for detection and parsing.
+
 use zipcrawl::ZipEntry;
 
 use crate::core::dep::types::DepEntry;
@@ -8,7 +10,10 @@ use crate::error::Result;
 
 /// Handler for a specific mod/plugin type.
 pub trait ModHandler: Send + Sync {
+    /// Returns the mod or plugin type handled by this implementation.
     fn mod_type(&self) -> ModType;
+
+    /// Returns the metadata files that identify this mod type.
     fn detection_files(&self) -> &'static [&'static str];
 
     /// Extract dependencies from the raw content of the metadata file.
@@ -27,6 +32,9 @@ pub trait ModHandler: Send + Sync {
     /// Returns an error if the metadata cannot be parsed.
     fn read_metadata(&self, raw: &str) -> Result<ModMetadata>;
 
+    /// Returns the metadata file used to read this mod type.
+    ///
+    /// Defaults to the first detection file.
     fn metadata_file_path(&self) -> Option<&'static str> {
         self.detection_files().first().copied()
     }
@@ -38,6 +46,7 @@ pub struct Registry {
 }
 
 impl Registry {
+    /// Creates an empty registry.
     #[must_use]
     pub fn new() -> Self {
         Self {
@@ -45,10 +54,17 @@ impl Registry {
         }
     }
 
+    /// Adds a handler to the registry.
+    ///
+    /// Handlers are checked in registration order by [`Registry::detect`].
     pub fn register(&mut self, handler: Box<dyn ModHandler>) {
         self.handlers.push(handler);
     }
 
+    /// Detects the mod type from a JAR's entry list.
+    ///
+    /// The first registered handler whose detection file is present wins.
+    /// Returns [`ModType::Unknown`] when nothing matches.
     #[must_use]
     pub fn detect(&self, entries: &[ZipEntry]) -> ModType {
         for handler in &self.handlers {
@@ -71,6 +87,7 @@ impl Registry {
             .map(Box::as_ref)
     }
 
+    /// Returns the handler registered for `mod_type`, if any.
     #[must_use]
     pub fn handler(&self, mod_type: &ModType) -> Option<&dyn ModHandler> {
         self.handlers
@@ -79,6 +96,7 @@ impl Registry {
             .map(Box::as_ref)
     }
 
+    /// Returns the metadata file path for `mod_type`, if it has a handler.
     #[must_use]
     pub fn metadata_file_path(&self, mod_type: &ModType) -> Option<&'static str> {
         self.handler(mod_type)
@@ -198,7 +216,6 @@ mod tests {
         let mut r = Registry::new();
         r.register(Box::new(MockPaperHandler));
         r.register(Box::new(MockForgeHandler));
-        // Both paper-plugin.yml and META-INF/mods.toml present
         let entries = vec![entry("paper-plugin.yml"), entry("META-INF/mods.toml")];
         assert_eq!(r.detect(&entries), ModType::Plugin(PluginType::Paper));
     }

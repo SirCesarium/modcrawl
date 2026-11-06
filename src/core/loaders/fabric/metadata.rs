@@ -1,3 +1,5 @@
+//! Metadata types for `fabric.mod.json`.
+
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -6,10 +8,16 @@ use serde_json::{Value, from_str};
 
 use crate::error::Result;
 
+/// Parses a `fabric.mod.json` document.
+///
+/// # Errors
+///
+/// Returns an error when the JSON is malformed or does not match the schema.
 pub fn parse(input: &str) -> Result<FabricModMetadata> {
     Ok(from_str(input)?)
 }
 
+/// Metadata declared by a Fabric mod in `fabric.mod.json`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FabricModMetadata {
     #[serde(rename = "schemaVersion")]
@@ -53,6 +61,7 @@ pub struct FabricModMetadata {
     pub language_adapters: BTreeMap<String, String>,
 }
 
+/// Contact links declared by a Fabric mod.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FabricContact {
     pub sources: Option<String>,
@@ -64,6 +73,7 @@ pub struct FabricContact {
     pub source_url: Option<String>,
 }
 
+/// An embedded JAR declared in a Fabric mod's `jars` list.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct FabricJarEntry {
     pub file: String,

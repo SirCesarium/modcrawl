@@ -1,3 +1,5 @@
+//! Metadata types for `paper-plugin.yml`.
+
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
@@ -5,10 +7,16 @@ use serde_saphyr::from_str;
 
 use crate::error::Result;
 
+/// Parses a Paper `paper-plugin.yml` document.
+///
+/// # Errors
+///
+/// Returns an error when the YAML is malformed or does not match the schema.
 pub fn parse(input: &str) -> Result<PaperPluginMetadata> {
     Ok(from_str(input)?)
 }
 
+/// Metadata declared by a Paper plugin in `paper-plugin.yml`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PaperPluginMetadata {
     pub name: String,

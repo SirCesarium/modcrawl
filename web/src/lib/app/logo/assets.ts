@@ -92,6 +92,12 @@ export const createStreakTexture = (): THREE.CanvasTexture => {
 	return configurePixelTexture(new THREE.CanvasTexture(canvas));
 };
 
+/**
+ * Loads a texture with nearest-neighbour filtering for pixel-art assets.
+ *
+ * @param url - Public URL of the texture.
+ * @returns The texture, available before the image finishes loading.
+ */
 export const loadPixelTexture = (url: string): THREE.Texture => {
 	const texture = new THREE.TextureLoader().load(url, undefined, undefined, () => {
 		console.error(`Failed to load texture: ${url}`);

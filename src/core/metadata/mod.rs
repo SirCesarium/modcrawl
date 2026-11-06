@@ -1,3 +1,5 @@
+//! Parsed metadata for every supported mod and plugin loader.
+
 use std::fmt;
 use std::io::{Read, Seek};
 use std::path::Path;

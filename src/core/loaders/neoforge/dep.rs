@@ -1,7 +1,14 @@
+//! Dependency extraction from `neoforge.mods.toml`.
+
 use super::super::super::dep::types::{DepEntry, DepKind, VersionRange};
 use super::super::forge_modern::metadata::parse;
 use crate::error::Result;
 
+/// Extracts dependencies from a `NeoForge` `mods.toml` document.
+///
+/// # Errors
+///
+/// Returns an error when the TOML is malformed or does not match the schema.
 pub fn extract(raw: &str) -> Result<Vec<DepEntry>> {
     let meta = parse(raw)?;
     let mut deps = Vec::new();

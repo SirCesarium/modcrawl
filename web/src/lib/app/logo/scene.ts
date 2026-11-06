@@ -42,6 +42,7 @@ import {
 import { isCoarsePointer } from '../utils/device';
 import { createGrassBlock, createPortalLogoParts } from './objects';
 
+/** Inputs and lifecycle callbacks for the portal logo scene. */
 export interface PortalLogoOptions {
 	canvas: HTMLCanvasElement;
 	container: HTMLElement;
@@ -53,6 +54,7 @@ export interface PortalLogoOptions {
 	onReset?: () => void;
 }
 
+/** Handle used to tear the portal logo scene down. */
 export interface PortalLogo {
 	destroy: () => void;
 }
@@ -77,6 +79,11 @@ const disposeObject = (root: THREE.Object3D): void => {
 	});
 };
 
+/**
+ * Creates the animated portal logo and starts rendering it.
+ *
+ * @returns A handle whose `destroy` method releases the renderer and GPU resources.
+ */
 export const createPortalLogo = ({
 	canvas,
 	container,
@@ -139,7 +146,6 @@ export const createPortalLogo = ({
 	};
 
 	const pointer = { yaw: 0, pitch: 0 };
-	// Touch devices have no reliable hover position; keep the portal at its base angle.
 	const coarsePointer = isCoarsePointer();
 	const baseYaw = coarsePointer ? MOBILE_BASE_YAW : BASE_YAW;
 
@@ -188,7 +194,6 @@ export const createPortalLogo = ({
 		introTimer = setTimeout(() => {
 			introTimer = undefined;
 
-			// Leave the sequence running when the pointer already holds it open.
 			if (!container.matches(':hover')) onLeave();
 		}, INTRO_DURATION * 1000);
 	};
@@ -319,7 +324,6 @@ export const createPortalLogo = ({
 	const onPointerMove = (event: PointerEvent): void => {
 		if (coarsePointer || event.pointerType === 'touch') return;
 
-		// Outside the logo's side of the viewport the logo drifts back to its base angle.
 		if (event.clientX > window.innerWidth * POINTER_ZONE) {
 			pointer.yaw = 0;
 			pointer.pitch = 0;

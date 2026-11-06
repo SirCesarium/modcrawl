@@ -1,3 +1,5 @@
+//! The `dupes` command.
+
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
@@ -9,6 +11,7 @@ use crate::core::classfile;
 use crate::error::{Error, Result};
 use crate::ui;
 
+/// Arguments for the `dupes` command.
 #[derive(ClapArgs)]
 pub struct Args {
     /// Path of JAR file or directory containing JAR files
@@ -44,8 +47,6 @@ pub struct Args {
 pub fn run(args: &Args) -> Result<()> {
     let sources = collect_sources(&args.path)?;
 
-    // A single streamed JAR cannot duplicate against itself, so `dupes` takes
-    // paths only — a piped list of them works, a piped archive does not.
     let mut paths = Vec::with_capacity(sources.len());
     for source in &sources {
         match source.as_path() {

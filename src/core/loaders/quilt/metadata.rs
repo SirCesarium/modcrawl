@@ -1,3 +1,5 @@
+//! Metadata types for `quilt.mod.json`.
+
 use std::collections::BTreeMap;
 use std::fmt;
 
@@ -6,10 +8,16 @@ use serde_json::from_str;
 
 use crate::error::Result;
 
+/// Parses a `quilt.mod.json` document.
+///
+/// # Errors
+///
+/// Returns an error when the JSON is malformed or does not match the schema.
 pub fn parse(input: &str) -> Result<QuiltModMetadata> {
     Ok(from_str(input)?)
 }
 
+/// Metadata declared by a Quilt mod in `quilt.mod.json`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct QuiltModMetadata {
     #[serde(rename = "schema_version")]
@@ -17,6 +25,7 @@ pub struct QuiltModMetadata {
     pub quilt_loader: QuiltLoader,
 }
 
+/// The `quilt_loader` block of a Quilt mod's metadata.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct QuiltLoader {
     pub id: String,
@@ -28,6 +37,7 @@ pub struct QuiltLoader {
     pub depends: Vec<QuiltDep>,
 }
 
+/// Human-readable metadata nested under `quilt_loader.metadata`.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct QuiltMetadataInfo {
     pub name: Option<String>,
@@ -41,6 +51,7 @@ pub struct QuiltMetadataInfo {
     pub icon: Option<String>,
 }
 
+/// Contact links declared by a Quilt mod.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct QuiltContact {
     pub homepage: Option<String>,
@@ -62,6 +73,7 @@ pub enum QuiltDep {
 }
 
 impl QuiltDep {
+    /// Returns the dependency's mod ID.
     #[must_use]
     pub fn id(&self) -> &str {
         match self {
@@ -69,6 +81,7 @@ impl QuiltDep {
         }
     }
 
+    /// Returns the dependency's version constraints, if any.
     #[must_use]
     pub fn versions(&self) -> Option<&QuiltVersions> {
         match self {
@@ -89,6 +102,7 @@ pub enum QuiltVersions {
 }
 
 impl QuiltVersions {
+    /// Joins every version constraint into one display string.
     #[must_use]
     pub fn join(&self) -> String {
         match self {
@@ -109,6 +123,7 @@ pub enum StringOrList {
 }
 
 impl StringOrList {
+    /// Joins every value into one display string.
     #[must_use]
     pub fn join(&self) -> String {
         match self {

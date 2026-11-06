@@ -1,3 +1,5 @@
+//! Metadata types for `plugin.yml`.
+
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
@@ -5,10 +7,16 @@ use serde_saphyr::from_str;
 
 use crate::error::Result;
 
+/// Parses a Bukkit or Spigot `plugin.yml` document.
+///
+/// # Errors
+///
+/// Returns an error when the YAML is malformed or does not match the schema.
 pub fn parse(input: &str) -> Result<BukkitPluginMetadata> {
     Ok(from_str(input)?)
 }
 
+/// Metadata declared by a Bukkit or Spigot plugin in `plugin.yml`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BukkitPluginMetadata {
     pub name: String,

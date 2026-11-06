@@ -1,3 +1,5 @@
+//! Dependency extraction and JAR-in-JAR discovery.
+
 pub mod types;
 
 use std::collections::HashMap;
@@ -80,8 +82,6 @@ fn dedup_deps(raw: Vec<DepEntry>) -> Vec<DepEntry> {
     for dep in raw {
         if let Some(&pos) = indices.get(&dep.name) {
             if dep.kind.priority() > out[pos].kind.priority() {
-                // The winning entry brings its own version range along; keeping
-                // the loser's range would report the wrong constraint.
                 out[pos].kind = dep.kind;
                 out[pos].version_range = dep.version_range;
             }
@@ -122,9 +122,6 @@ fn is_bundled(name: &str, jars: &[JarInJar]) -> bool {
             return true;
         }
 
-        // A versioned bundle is `<name>-<version>.jar`, where the version starts
-        // with a digit. Anything else after the dash (`-common`, `-core`) is a
-        // different artifact, not a bundled copy of this dependency.
         stem.strip_prefix(&prefix)
             .is_some_and(|suffix| suffix.starts_with(|c: char| c.is_ascii_digit()))
     })
@@ -149,8 +146,6 @@ mod tests {
             path: path.to_owned(),
         }
     }
-
-    // ── dedup_deps ─────────────────────────────────────────────────────────
 
     #[test]
     fn dedup_empty() {
@@ -189,8 +184,6 @@ mod tests {
         ];
         let result = dedup_deps(deps);
         assert_eq!(result.len(), 2);
-        // 'a' should be LoadBefore (priority 4 > Required's 5? No, Required is 5)
-        // Wait: Required=5, LoadBefore=4. So Required should win.
         assert_eq!(result[0].kind, DepKind::Required);
         assert_eq!(result[0].name, "a");
         assert_eq!(result[1].name, "b");
@@ -237,8 +230,6 @@ mod tests {
         assert_eq!(result[0].kind, DepKind::Optional);
         assert_eq!(result[0].version_range.raw, Some(">=1.0".to_owned()));
     }
-
-    // ── find_embedded_jars ─────────────────────────────────────────────────
 
     fn zip_entry(name: &str, is_dir: bool) -> ZipEntry {
         ZipEntry {
@@ -290,8 +281,6 @@ mod tests {
         assert_eq!(jars.len(), 1);
         assert_eq!(jars[0].path, "META-INF/jars/dep-1.0.jar");
     }
-
-    // ── is_bundled ─────────────────────────────────────────────────────────
 
     #[test]
     fn bundled_exact_stem_match() {

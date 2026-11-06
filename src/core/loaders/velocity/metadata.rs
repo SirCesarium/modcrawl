@@ -1,3 +1,5 @@
+//! Metadata types for `velocity-plugin.json`.
+
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
@@ -5,10 +7,16 @@ use serde_json::from_str;
 
 use crate::error::Result;
 
+/// Parses a Velocity `velocity-plugin.json` document.
+///
+/// # Errors
+///
+/// Returns an error when the JSON is malformed or does not match the schema.
 pub fn parse(input: &str) -> Result<VelocityPluginMetadata> {
     Ok(from_str(input)?)
 }
 
+/// Metadata declared by a Velocity plugin in `velocity-plugin.json`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VelocityPluginMetadata {
     pub id: String,
@@ -22,6 +30,7 @@ pub struct VelocityPluginMetadata {
     pub dependencies: Vec<VelocityDependency>,
 }
 
+/// A dependency declared by a Velocity plugin.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VelocityDependency {
     pub id: String,

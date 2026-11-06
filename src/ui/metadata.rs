@@ -343,7 +343,6 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
     if let Some(last) = blocks.last_mut() {
         last.depends = depends;
     } else {
-        // No `mods[]` entries.
         let mut fields = Vec::new();
 
         push_field(&mut fields, "Loader", loader_name(&kind).to_owned());

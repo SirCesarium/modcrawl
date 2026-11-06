@@ -1,3 +1,5 @@
+//! Handlers for each supported mod and plugin loader.
+
 pub(crate) mod bukkit;
 pub(crate) mod bungee;
 pub(crate) mod fabric;

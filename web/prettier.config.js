@@ -1,4 +1,8 @@
-/** @type {import("prettier").Config} */
+/**
+ * Prettier configuration for the web app.
+ *
+ * @type {import("prettier").Config}
+ */
 const config = {
 	useTabs: true,
 	singleQuote: true,

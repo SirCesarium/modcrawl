@@ -1,3 +1,5 @@
+//! Quilt mod support (`quilt.mod.json`).
+
 pub mod metadata;
 
 use crate::core::detect_mod_type::ModType;

@@ -1,3 +1,5 @@
+//! The `classes` command.
+
 use std::io::Cursor;
 use std::path::PathBuf;
 
@@ -9,6 +11,7 @@ use crate::core::classfile;
 use crate::error::Result;
 use crate::ui;
 
+/// Arguments for the `classes` command.
 #[derive(ClapArgs)]
 pub struct Args {
     /// Path of JAR file or directory containing JAR files

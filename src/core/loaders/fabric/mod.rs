@@ -1,3 +1,5 @@
+//! Fabric mod support.
+
 pub mod dep;
 pub mod metadata;
 
@@ -7,6 +9,7 @@ use crate::core::metadata::ModMetadata;
 use crate::core::registry::ModHandler;
 use crate::error::Result;
 
+/// Handles Fabric mods detected through `fabric.mod.json`.
 pub struct FabricHandler;
 
 impl ModHandler for FabricHandler {

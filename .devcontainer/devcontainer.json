@@ -1,4 +1,3 @@
-// For config options see https://aka.ms/devcontainer.json
 {
   "name": "modcrawl",
   "build": {
@@ -23,5 +22,4 @@
       ]
     }
   }
-  // "remoteUser": "root"
 }

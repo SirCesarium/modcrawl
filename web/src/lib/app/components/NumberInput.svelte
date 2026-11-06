@@ -97,7 +97,6 @@
 		value = next;
 	};
 
-	// Continuous hold stepper
 	let stepTimer: ReturnType<typeof setTimeout> | null = null;
 	let stepInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -121,7 +120,6 @@
 		stepInterval = null;
 	};
 
-	// Mouse wheel support
 	const handleWheel = (e: WheelEvent) => {
 		if (disabled || readonly) return;
 		if (document.activeElement === inputRef) {
@@ -133,7 +131,6 @@
 		}
 	};
 
-	// Keyboard arrows
 	const handleKeyDown = (e: KeyboardEvent) => {
 		if (disabled || readonly) return;
 		if (e.key === 'ArrowUp') {
@@ -182,7 +179,6 @@
 {/snippet}
 
 <div class="relative flex flex-col gap-1.5 {full ? 'w-full' : 'w-auto'} {className}">
-	<!-- Label -->
 	{#if label}
 		<label
 			for={inputId}
@@ -197,7 +193,6 @@
 		</label>
 	{/if}
 
-	<!-- Container -->
 	<div
 		class={twMerge(
 			'group relative inline-flex items-center border border-neutral-700 bg-neutral-900/80 font-medium text-neutral-100 transition duration-150 ease-out focus-within:border-purple-400 focus-within:ring-1 focus-within:ring-purple-400/50 hover:border-neutral-500 active:scale-[0.99] motion-reduce:transform-none motion-reduce:transition-none',
@@ -212,14 +207,12 @@
 	>
 		{@render cornerMarks()}
 
-		<!-- Prefix slot -->
 		{#if prefix}
 			<div class="shrink-0 text-neutral-400">
 				{@render prefix()}
 			</div>
 		{/if}
 
-		<!-- The Number Input -->
 		<input
 			bind:this={inputRef}
 			id={inputId}
@@ -271,12 +264,10 @@
 			</div>
 		{/if}
 
-		<!-- Warning Icon on Error -->
 		{#if error}
 			<Icon name="alert" size={iconSizes[size]} class="shrink-0 opacity-90" alt="Error" />
 		{/if}
 
-		<!-- Suffix slot -->
 		{#if suffix}
 			<div class="shrink-0 text-neutral-400">
 				{@render suffix()}
@@ -284,7 +275,6 @@
 		{/if}
 	</div>
 
-	<!-- Hint -->
 	{#if error}
 		<p
 			class="animate-[code-line-in_150ms_ease-out] font-mono text-xs text-red-400 transition duration-150"

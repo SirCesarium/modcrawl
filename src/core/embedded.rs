@@ -1,3 +1,5 @@
+//! Discovery of metadata inside embedded JARs.
+
 use std::io::{Cursor, Read, Seek};
 
 use zipcrawl::ZipManager;

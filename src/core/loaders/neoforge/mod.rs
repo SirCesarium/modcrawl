@@ -1,3 +1,5 @@
+//! `NeoForge` mod support (`META-INF/neoforge.mods.toml`).
+
 pub mod dep;
 
 use super::forge_modern::metadata;
@@ -7,6 +9,7 @@ use crate::core::metadata::ModMetadata;
 use crate::core::registry::ModHandler;
 use crate::error::Result;
 
+/// Handles `NeoForge` mods detected through `META-INF/neoforge.mods.toml`.
 pub struct NeoForgeHandler;
 
 impl ModHandler for NeoForgeHandler {

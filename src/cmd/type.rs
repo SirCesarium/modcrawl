@@ -1,3 +1,5 @@
+//! The `type` command.
+
 use std::io;
 use std::path::PathBuf;
 
@@ -10,6 +12,7 @@ use crate::ui;
 
 const EOCD_MAGIC: &[u8] = b"PK\x05\x06";
 
+/// Arguments for the `type` command.
 #[derive(ClapArgs)]
 pub struct Args {
     /// Path of JAR file or directory containing JAR files
@@ -90,8 +93,6 @@ pub fn run(args: &Args) -> Result<()> {
         return Ok(());
     }
 
-    // A directory is always rendered as a table: its caller never named the
-    // file, so the FILE column is the only thing identifying it.
     let named_only = matches!(args.path.as_slice(), [one] if !one.is_dir());
 
     render(&collect_jar_paths(&args.path)?, named_only);

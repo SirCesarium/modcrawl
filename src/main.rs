@@ -1,3 +1,5 @@
+//! Command-line entry point for `modcrawl`.
+
 use std::process;
 
 use clap::Parser;

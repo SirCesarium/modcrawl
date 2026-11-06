@@ -1,3 +1,5 @@
+//! `BungeeCord` proxy plugin support.
+
 pub mod metadata;
 
 use crate::core::detect_mod_type::{ModType, PluginType};
