@@ -1,0 +1,64 @@
+name: Loader support
+description: Request support for a new mod loader or plugin platform
+title: "[Loader]: "
+labels: ["loader-support"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to request support for a mod loader or plugin platform that modcrawl does not handle yet.
+
+        Please check the supported loaders table in the README before opening a request.
+
+  - type: input
+    id: loader_name
+    attributes:
+      label: Loader or platform name
+      description: The name of the mod loader or plugin platform.
+      placeholder: "Example: NeoForge, Fabric, Sponge, ..."
+    validations:
+      required: true
+
+  - type: input
+    id: docs
+    attributes:
+      label: Documentation or specification
+      description: Link to the official documentation or metadata specification.
+      placeholder: "https://..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: metadata_example
+    attributes:
+      label: Example metadata
+      description: Paste an example of the metadata file found inside a JAR (for example `fabric.mod.json`, `mods.toml`, or `plugin.yml`).
+      render: json
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Type
+      description: What kind of content does this platform use?
+      options:
+        - Mods
+        - Plugins
+        - Both
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: target_versions
+    attributes:
+      label: Target versions
+      description: Which versions of this platform should be supported?
+      placeholder: "Example: 1.20.1 - 1.21.1"
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Add any other details, links, or sample JARs that would help implement support.

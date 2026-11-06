@@ -1,0 +1,137 @@
+name: Bug report
+description: Report a problem with modcrawl
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the sections below so we can reproduce and fix the issue.
+
+        Before opening a new issue, please search the existing issues to avoid duplicates.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of the bug.
+      placeholder: What went wrong?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the exact commands or steps that trigger the bug.
+      placeholder: |
+        1. Run `modcrawl ...`
+        2. ...
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What actually happened? Include the full output or error message if possible.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: modcrawl version
+      description: Run `modcrawl --version` and paste the output here.
+      placeholder: "0.11.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: architecture
+    attributes:
+      label: Architecture
+      description: The CPU architecture you are running on.
+      placeholder: "x86_64, aarch64, ..."
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Installation method
+      description: How did you install modcrawl?
+      options:
+        - GitHub release binary
+        - cargo install
+        - Built from source
+        - npm package (WASM)
+        - Web version
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: loader
+    attributes:
+      label: Mod loader
+      description: Which mod loader or plugin platform is involved? Choose "Not applicable" if unsure.
+      options:
+        - NeoForge
+        - Fabric
+        - Forge
+        - Forge (legacy, < 1.12)
+        - Quilt
+        - Bukkit
+        - Paper
+        - Bungee
+        - Velocity
+        - Other
+        - Not applicable
+
+  - type: input
+    id: minecraft_version
+    attributes:
+      label: Minecraft version
+      description: If relevant, the Minecraft version of the mods/plugins involved.
+      placeholder: "1.21.1"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or stack trace
+      description: Paste any relevant logs, backtraces, or error output.
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Add any other context, links, or sample JARs that help explain the problem.
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I have searched the existing issues and this is not a duplicate.
+          required: true
