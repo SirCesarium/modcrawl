@@ -21,16 +21,16 @@ wasm = ["dep:wasm-bindgen", "dep:js-sys"]
 [dependencies]
 anstream = { version = "1.0.0", optional = true }
 anstyle = { version = "1.0.14", optional = true }
-clap = { version = "4.6.1", features = ["derive"], optional = true }
+clap = { version = "4.6.7", features = ["derive"], optional = true }
 java-class-rs = { version = "0.1.0", default-features = false, optional = true }
-js-sys = { version = "0.3.106", optional = true }
+js-sys = { version = "0.3.107", optional = true }
 miette = { version = "7.6.0", features = ["fancy"], optional = true }
-serde = { version = "1.0.228", features = ["derive"] }
-serde-saphyr = "2.0.0"
-serde_json = "1.0.150"
-thiserror = "2.0.18"
-toml = "1.1.2"
-wasm-bindgen = { version = "0.2.129", optional = true }
+serde = { version = "1.0.229", features = ["derive"] }
+serde-saphyr = "2.1.1"
+serde_json = "1.0.154"
+thiserror = "2.0.21"
+toml = "1.2.0"
+wasm-bindgen = { version = "0.2.130", optional = true }
 zipcrawl = { version = "4.0.0", default-features = false, features = ["serde"] }
 
 [[bin]]
@@ -51,7 +51,7 @@ expect_used = "deny"
 absolute_paths = "deny"
 
 [dev-dependencies]
-zip = "9"
+zip = "9.4.0"
 
 [package.metadata.deb]
 maintainer = "Cesarium <239650612+SirCesarium@users.noreply.github.com>"
