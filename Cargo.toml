@@ -1,6 +1,6 @@
 [package]
 name = "modcrawl"
-version = "0.10.2"
+version = "0.11.0"
 edition = "2024"
 description = "Detect, inspect, and analyze Minecraft mods and plugins from JAR files"
 license = "MIT"
@@ -9,7 +9,7 @@ repository = "https://github.com/SirCesarium/modcrawl"
 homepage = "https://github.com/SirCesarium/modcrawl"
 documentation = "https://docs.rs/modcrawl"
 keywords = ["minecraft", "mod", "analyzer", "loaders", "forge"]
-categories = ["development-tools", "development-tools::ffi", "command-line-utilities"]
+categories = ["development-tools", "command-line-utilities"]
 
 [features]
 default = ["cli", "classfile"]
@@ -40,7 +40,7 @@ required-features = ["cli"]
 [lib]
 name = "modcrawl"
 path = "src/lib.rs"
-crate-type = ["lib", "cdylib", "staticlib"]
+crate-type = ["lib", "cdylib"]
 
 [lints.clippy]
 all = "deny"

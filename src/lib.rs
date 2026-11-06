@@ -2,7 +2,6 @@
 pub mod cmd;
 pub mod core;
 pub mod error;
-pub mod ffi;
 #[cfg(feature = "cli")]
 pub(crate) mod ui;
 #[cfg(all(feature = "wasm", target_arch = "wasm32"))]

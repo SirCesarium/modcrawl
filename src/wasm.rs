@@ -1,8 +1,7 @@
 //! wasm-bindgen bindings for the browser.
 //!
-//! Mirrors the C FFI surface over in-memory buffers: every export takes a
-//! JAR as a `Uint8Array` and returns JSON as a `String`. Errors surface as
-//! JS exceptions (`JsError`).
+//! Every export takes a JAR as a `Uint8Array` and returns JSON as a `String`.
+//! Errors surface as JS exceptions (`JsError`).
 
 use std::io::Cursor;
 use std::result::Result as StdResult;
