@@ -29,7 +29,9 @@ pub(crate) fn read_raw<R: Read + Seek>(
             continue;
         };
 
-        let raw = nested.read_to_string(file)?;
+        let Ok(raw) = nested.read_to_string(file) else {
+            continue;
+        };
         return Ok(Some((mod_type, raw)));
     }
 
