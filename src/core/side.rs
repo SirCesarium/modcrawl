@@ -134,7 +134,7 @@ mod tests {
         forge(toml, ModMetadata::NeoForge)
     }
 
-    fn fabric_environment(environment: Option<&str>) -> ModMetadata {
+    fn fabric_with_environment(environment: Option<&str>) -> ModMetadata {
         let environment = environment.map_or_else(String::new, |value| {
             format!(r#","environment":"{value}""#)
         });
@@ -155,22 +155,22 @@ mod tests {
     #[test]
     fn fabric_environment() {
         assert_eq!(
-            classify(&fabric_environment(Some("client"))),
+            classify(&fabric_with_environment(Some("client"))),
             Side::Client
         );
         assert_eq!(
-            classify(&fabric_environment(Some("server"))),
+            classify(&fabric_with_environment(Some("server"))),
             Side::Server
         );
-        assert_eq!(classify(&fabric_environment(Some("*"))), Side::Both);
-        assert_eq!(classify(&fabric_environment(Some("both"))), Side::Both);
-        assert_eq!(classify(&fabric_environment(Some("CLIENT"))), Side::Client);
-        assert_eq!(classify(&fabric_environment(Some("weird"))), Side::Unknown);
+        assert_eq!(classify(&fabric_with_environment(Some("*"))), Side::Both);
+        assert_eq!(classify(&fabric_with_environment(Some("both"))), Side::Both);
+        assert_eq!(classify(&fabric_with_environment(Some("CLIENT"))), Side::Client);
+        assert_eq!(classify(&fabric_with_environment(Some("weird"))), Side::Unknown);
     }
 
     #[test]
     fn fabric_without_environment_is_unknown() {
-        assert_eq!(classify(&fabric_environment(None)), Side::Unknown);
+        assert_eq!(classify(&fabric_with_environment(None)), Side::Unknown);
     }
 
     #[test]
