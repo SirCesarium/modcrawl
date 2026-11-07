@@ -350,7 +350,9 @@ impl fmt::Display for DepEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let marker = self.kind.marker();
         write!(f, "  {marker} {}", self.name)?;
-        if self.version_range.raw.is_some()
+        if self.version_range.raw.as_deref() == Some("*") {
+            write!(f, " *")?;
+        } else if self.version_range.raw.is_some()
             || self.version_range.min.is_some()
             || self.version_range.max.is_some()
         {
@@ -692,6 +694,21 @@ mod tests {
         assert!(s.contains('-'));
         assert!(s.contains("bar"));
         assert!(!s.contains('('));
+    }
+
+    #[test]
+    fn dep_entry_display_with_wildcard() {
+        let e = DepEntry::new(
+            "foo",
+            DepKind::Required,
+            VersionRange::parse(Some("*".to_owned())),
+        );
+        let s = e.to_string();
+        assert!(s.contains('*'));
+        assert!(s.contains("foo"));
+        assert!(!s.contains('('));
+        assert!(!s.contains(')'));
+        assert_eq!(s, "  * foo *");
     }
 
     #[test]

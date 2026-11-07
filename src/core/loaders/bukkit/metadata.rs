@@ -54,6 +54,12 @@ impl fmt::Display for BukkitPluginMetadata {
         if !self.depend.is_empty() {
             writeln!(f, "Depends:  {}", self.depend.join(", "))?;
         }
+        if !self.softdepend.is_empty() {
+            writeln!(f, "Soft-Depends: {}", self.softdepend.join(", "))?;
+        }
+        if !self.loadbefore.is_empty() {
+            writeln!(f, "Load-Before:  {}", self.loadbefore.join(", "))?;
+        }
         Ok(())
     }
 }
@@ -117,5 +123,22 @@ main: com.example.TestPlugin
         let out = meta.to_string();
         assert!(out.contains("Name:     TestPlugin"));
         assert!(out.contains("Version:  1.0.0"));
+    }
+
+    #[test]
+    fn display_output_with_all_dependencies() {
+        let yaml = r#"
+name: TestPlugin
+version: "1.0.0"
+main: com.example.TestPlugin
+depend: [Vault, WorldEdit]
+softdepend: [PlaceholderAPI]
+loadbefore: [OtherPlugin]
+"#;
+        let meta = parse(yaml).unwrap();
+        let out = meta.to_string();
+        assert!(out.contains("Depends:  Vault, WorldEdit"));
+        assert!(out.contains("Soft-Depends: PlaceholderAPI"));
+        assert!(out.contains("Load-Before:  OtherPlugin"));
     }
 }
