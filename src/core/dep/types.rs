@@ -75,8 +75,9 @@ impl VersionRange {
     ///
     /// Maven-style ranges (`[1.0,2.0)`), simple comparison constraints
     /// (`<2.0`, `>=1.0<2.0`, `>=1.0`), and tilde/caret/wildcard constraints
-    /// (`~1.20.1`, `^1.2`, `1.20.x`) are understood. Anything else is kept
-    /// verbatim in [`VersionRange::raw`] with exact bounds.
+    /// (`~1.20.1`, `^1.2`, `1.20.x`) are understood. Plain versions keep exact
+    /// bounds; constraint syntax that cannot be parsed keeps
+    /// [`VersionRange::raw`] and exposes no structured bounds.
     #[must_use]
     pub fn parse(raw: Option<String>) -> Self {
         let owned = raw.as_ref().filter(|s| !s.is_empty() && *s != "*").cloned();
@@ -165,6 +166,16 @@ impl VersionRange {
             };
         }
 
+        if looks_like_constraint(trimmed) {
+            return Self {
+                min: None,
+                max: None,
+                min_inclusive: true,
+                max_inclusive: false,
+                raw,
+            };
+        }
+
         Self {
             min: Some(trimmed.to_owned()),
             max: Some(trimmed.to_owned()),
@@ -175,27 +186,33 @@ impl VersionRange {
     }
 }
 
-/// Splits a version into numeric components; `None` marks a trailing
-/// `x`/`X`/`*` wildcard; pre-release and build suffixes are ignored.
-fn version_components(version: &str) -> Option<Vec<Option<u64>>> {
+/// Splits a version into numeric components and its trailing suffix.
+///
+/// `None` marks a trailing `x`/`X`/`*` wildcard. The suffix keeps its leading
+/// `-` or `+` so callers can preserve it on lower bounds.
+fn version_components(version: &str) -> Option<(Vec<Option<u64>>, &str)> {
+    let split = version.find(['-', '+']).unwrap_or(version.len());
+    let (numeric, suffix) = version.split_at(split);
+
     let mut parts = Vec::new();
-    for piece in version.split('.') {
+    for piece in numeric.split('.') {
         if matches!(piece, "x" | "X" | "*") {
             parts.push(None);
             continue;
         }
-        let digits = piece.split(['-', '+']).next()?;
-        if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        if piece.is_empty() || !piece.bytes().all(|b| b.is_ascii_digit()) {
             return None;
         }
-        parts.push(Some(digits.parse::<u64>().ok()?));
+        parts.push(Some(piece.parse::<u64>().ok()?));
     }
+
     let first_wildcard = parts.iter().position(Option::is_none);
     let bad_wildcard = first_wildcard.is_some_and(|i| parts[i..].iter().any(Option::is_some));
-    if parts.is_empty() || bad_wildcard {
+    if bad_wildcard {
         return None;
     }
-    Some(parts)
+
+    Some((parts, suffix))
 }
 
 /// Renders the concrete components as a dotted version padded to `len`,
@@ -205,31 +222,36 @@ fn rendered(parts: &[Option<u64>], level: Option<usize>, len: usize) -> Option<S
     if out.is_empty() {
         return None;
     }
+
     if let Some(level) = level {
         while out.len() <= level {
             out.push(0);
         }
-        out[level] += 1;
+        out[level] = out[level].checked_add(1)?;
         out.truncate(level + 1);
     }
+
     while out.len() < len {
         out.push(0);
     }
+
     Some(out.iter().map(u64::to_string).collect::<Vec<_>>().join("."))
 }
 
 /// Parses tilde (`~1.20.1`), caret (`^1.2`), and wildcard (`1.20.x`)
-/// constraints into `(min, max)` bounds; `None` keeps the exact fallback.
+/// constraints into `(min, max)` bounds; `None` leaves the decision to the
+/// caller because the input may be either an exact version or invalid syntax.
 fn parse_flex(trimmed: &str) -> Option<(Option<String>, Option<String>)> {
     if let Some(base) = trimmed
         .strip_prefix('~')
         .or_else(|| trimmed.strip_prefix('^'))
     {
         let is_tilde = trimmed.starts_with('~');
-        let parts = version_components(base)?;
-        if parts.iter().any(Option::is_none) {
+        let (parts, suffix) = version_components(base)?;
+        if parts.len() > 3 || parts.iter().any(Option::is_none) {
             return None;
         }
+
         let len = parts.len();
         let level = if is_tilde {
             len.min(2).saturating_sub(1)
@@ -243,13 +265,16 @@ fn parse_flex(trimmed: &str) -> Option<(Option<String>, Option<String>)> {
                 2
             }
         };
-        return Some((rendered(&parts, None, 3), rendered(&parts, Some(level), 3)));
+
+        let min = format!("{}{suffix}", rendered(&parts, None, 3)?);
+        return Some((Some(min), Some(rendered(&parts, Some(level), 3)?)));
     }
 
-    let parts = version_components(trimmed)?;
-    if parts.iter().all(Option::is_some) {
-        return None; // a fully concrete version stays exact
+    let (parts, suffix) = version_components(trimmed)?;
+    if !suffix.is_empty() || parts.len() > 3 || parts.iter().all(Option::is_some) {
+        return None;
     }
+
     let concrete = parts.iter().position(Option::is_none)?;
     let max = if concrete == 0 {
         None // an all-wildcard version ("x") is unbounded
@@ -257,6 +282,20 @@ fn parse_flex(trimmed: &str) -> Option<(Option<String>, Option<String>)> {
         rendered(&parts, Some(concrete - 1), 3)
     };
     Some((rendered(&parts, None, 3), max))
+}
+
+/// Returns `true` for inputs that use constraint syntax, even when the concrete
+/// shape is unsupported. Exact versions must keep their bounds; malformed
+/// constraints must not surface invalid ones.
+fn looks_like_constraint(trimmed: &str) -> bool {
+    if trimmed.starts_with(['~', '^', '>', '<', '=', '!']) {
+        return true;
+    }
+
+    trimmed.split('.').any(|part| {
+        let head = part.split(['-', '+']).next().unwrap_or(part);
+        matches!(head, "x" | "X" | "*")
+    })
 }
 
 impl fmt::Display for VersionRange {
@@ -531,6 +570,9 @@ mod tests {
             ("^1.2.3", "1.2.3", "2.0.0"),
             ("^0.2.3", "0.2.3", "0.3.0"),
             ("^0.0.3", "0.0.3", "0.0.4"),
+            ("~1.20.1-beta", "1.20.1-beta", "1.21.0"),
+            ("~1.20.1+build", "1.20.1+build", "1.21.0"),
+            ("^1.20.1-beta", "1.20.1-beta", "2.0.0"),
         ] {
             let v = VersionRange::parse(Some(raw.to_owned()));
             assert_eq!(v.min, Some(min.to_owned()), "min of {raw}");
@@ -560,12 +602,40 @@ mod tests {
     }
 
     #[test]
-    fn version_range_unsupported_stays_exact() {
-        for raw in ["1.20.1-beta", "~abc", "1.x.3"] {
+    fn version_range_unsupported_constraints_have_no_bounds() {
+        for raw in [
+            "~abc",
+            "1.x.3",
+            "1.20.x.3",
+            "1.20.x-beta",
+            "~1.2.3.4",
+            "^0.0.3.4",
+        ] {
+            let v = VersionRange::parse(Some(raw.to_owned()));
+            assert_eq!(v.min, None, "min of {raw}");
+            assert_eq!(v.max, None, "max of {raw}");
+            assert!(!v.max_inclusive);
+            assert_eq!(v.raw, Some(raw.to_owned()));
+        }
+    }
+
+    #[test]
+    fn version_range_exact_versions_stay_exact() {
+        for raw in ["1.20.1", "1.20.1-beta", "1.20.1+build", "1.20.1-rc.1+build"] {
             let v = VersionRange::parse(Some(raw.to_owned()));
             assert_eq!(v.min, Some(raw.to_owned()), "min of {raw}");
             assert_eq!(v.max, Some(raw.to_owned()), "max of {raw}");
             assert!(v.max_inclusive);
+        }
+    }
+
+    #[test]
+    fn version_range_overflow_has_no_bounds() {
+        for raw in ["^18446744073709551615.0.0", "~18446744073709551615"] {
+            let v = VersionRange::parse(Some(raw.to_owned()));
+            assert_eq!(v.min, None, "min of {raw}");
+            assert_eq!(v.max, None, "max of {raw}");
+            assert_eq!(v.raw, Some(raw.to_owned()));
         }
     }
 
