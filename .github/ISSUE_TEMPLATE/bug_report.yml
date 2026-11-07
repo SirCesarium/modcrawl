@@ -99,7 +99,7 @@ body:
         - NeoForge
         - Fabric
         - Forge
-        - Forge (legacy, < 1.12)
+        - Forge (legacy, <= 1.12.2)
         - Quilt
         - Bukkit
         - Paper

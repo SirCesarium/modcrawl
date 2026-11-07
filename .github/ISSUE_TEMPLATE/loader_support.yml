@@ -1,7 +1,7 @@
 name: Loader support
 description: Request support for a new mod loader or plugin platform
 title: "[Loader]: "
-labels: ["loader-support"]
+labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
@@ -33,7 +33,6 @@ body:
     attributes:
       label: Example metadata
       description: Paste an example of the metadata file found inside a JAR (for example `fabric.mod.json`, `mods.toml`, or `plugin.yml`).
-      render: json
     validations:
       required: true
 
