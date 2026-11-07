@@ -65,8 +65,8 @@ jobs:
         if: runner.os == 'Linux'
         shell: bash
         run: |
-          cargo install cargo-deb --version 3.8.0 --locked
-          cargo install cargo-generate-rpm --version 0.21.1 --locked
+          cargo install cargo-deb --version 3.8.0 --locked --force
+          cargo install cargo-generate-rpm --version 0.21.1 --locked --force
 
       - name: Build .deb package
         if: runner.os == 'Linux'
