@@ -3,6 +3,8 @@
 <img src="./web/static/readme/banner.png" alt="Modcrawl banner" />
 
 [![Crates.io](https://img.shields.io/crates/v/modcrawl?style=flat-square)](https://crates.io/crates/modcrawl)
+[![docs.rs](https://img.shields.io/docsrs/modcrawl?style=flat-square)](https://docs.rs/modcrawl)
+[![npm](https://img.shields.io/npm/v/modcrawl?style=flat-square)](https://www.npmjs.com/package/modcrawl)
 [![CI](https://img.shields.io/github/actions/workflow/status/SirCesarium/modcrawl/ci.yml?branch=main&style=flat-square)](https://github.com/SirCesarium/modcrawl/actions)
 [![License](https://img.shields.io/github/license/SirCesarium/modcrawl?style=flat-square)](https://github.com/SirCesarium/modcrawl/blob/main/LICENSE)
 
@@ -55,16 +57,14 @@ The binaries are uploaded into the [releases](https://github.com/SirCesarium/mod
 
 <div align="center">
 
-<!-- TODO make the download buttons actually work -->
-
-<a href="https://github.com/SirCesarium/modcrawl/releases"><img src="./web/static/readme/windows.png" alt="Modcrawl Windows binary"></a>
-<a href="https://github.com/SirCesarium/modcrawl/releases"><img src="./web/static/readme/debian.png" alt="Modcrawl Debian binary"></a>
-<a href="https://github.com/SirCesarium/modcrawl/releases"><img src="./web/static/readme/fedora.png" alt="Modcrawl Fedora binary"></a>
-<a href="https://github.com/SirCesarium/modcrawl/releases"><img src="./web/static/readme/macos.png" alt="Modcrawl Mac OS binary"></a>
+<a href="https://github.com/SirCesarium/modcrawl/releases/latest/download/modcrawl-windows-x86_64-msvc.exe"><img src="./web/static/readme/windows.png" alt="Modcrawl Windows binary"></a>
+<a href="https://github.com/SirCesarium/modcrawl/releases/latest/download/modcrawl-linux-x86_64-musl"><img src="./web/static/readme/debian.png" alt="Modcrawl Debian binary"></a>
+<a href="https://github.com/SirCesarium/modcrawl/releases/latest/download/modcrawl-linux-x86_64-musl"><img src="./web/static/readme/fedora.png" alt="Modcrawl Fedora binary"></a>
+<a href="https://github.com/SirCesarium/modcrawl/releases/latest/download/modcrawl-macos-arm64"><img src="./web/static/readme/macos.png" alt="Modcrawl macOS binary"></a>
 
 </div>
 
-Those quick downloads point to the most common OS architectures (eg., `Windows x86_64`, `Debian x86_64`, ...). If you have an uncommon architecture (like `Debian ARM64`) you can check the [releases](https://github.com/SirCesarium/modcrawl/releases) page.
+Those quick downloads point to the most common OS architectures (e.g., `Windows x86_64`, `Linux x86_64`, `macOS arm64`, ...). If you have an uncommon architecture (like `Linux ARM64`) you can check the [releases](https://github.com/SirCesarium/modcrawl/releases) page.
 
 Or even check the [Installation](#installation) section.
 
@@ -88,7 +88,7 @@ These are the loaders that `modcrawl` currently supports.
 
 ## Installation
 
-Before all, **make sure** you have the **Rust Programming Language** installed on your machine, if not, [click here](https://rust-lang.org/).
+First, **make sure** you have the **Rust Programming Language** installed on your machine, if not, [click here](https://rust-lang.org/).
 
 ### Install with cargo
 
@@ -99,6 +99,50 @@ Before all, **make sure** you have the **Rust Programming Language** installed o
 - Clone the repository `git clone https://github.com/SirCesarium/modcrawl.git` and navigate to the `modcrawl` directory.
 - Install `modcrawl` with `cargo install --path .`.
 
+## Library usage
+
+### Rust
+
+Add the crate with Cargo and use the exported detect, metadata, and dependency APIs:
+
+```bash
+cargo add modcrawl
+```
+
+```rust
+use std::path::Path;
+
+use modcrawl::{analyze, identify, read_metadata};
+
+fn main() -> modcrawl::Result<()> {
+    let jar = Path::new("MyMod.jar");
+
+    println!("{}", identify(jar)?);
+    println!("{}", read_metadata(jar)?);
+    print!("{}", analyze(jar, false)?);
+
+    Ok(())
+}
+```
+
+### npm
+
+The WASM package exposes the same core functionality to JavaScript and TypeScript:
+
+```bash
+npm install modcrawl
+```
+
+```js
+import init, { identify, metadata_json } from "modcrawl";
+
+await init();
+
+const data = new Uint8Array(await (await fetch("/MyMod.jar")).arrayBuffer());
+console.log(identify(data));
+console.log(metadata_json(data));
+```
+
 ## Web
 
 There's a **WIP** web version of `modcrawl` that aims to provide all of the features of `modcrawl` in a more user-friendly way and will work completely offline (thanks to `WASM`!). It's still in development (currently there's not even a MVP), so expect some bugs and missing features. Stay tuned in [GitHub Discussions](https://github.com/SirCesarium/modcrawl/discussions) for any major updates :).
@@ -106,7 +150,7 @@ There's a **WIP** web version of `modcrawl` that aims to provide all of the feat
 > [!NOTE]
 > There will be a structured documentation when the web version reaches a stable state.
 >
-> The documentation will show a deep overreview about all of the commands and the *API Reference* of the **Rust Library** and the **NPM (TypeScript) Library**
+> The documentation will show a deep overview of all of the commands and the *API Reference* of the **Rust Library** and the **NPM (TypeScript) Library**
 
 ### Web setup
 
