@@ -57,14 +57,14 @@ The binaries are uploaded into the [releases](https://github.com/SirCesarium/mod
 
 <div align="center">
 
-<a href="https://github.com/SirCesarium/modcrawl/releases/latest/download/modcrawl-windows-x86_64-msvc.exe"><img src="./web/static/readme/windows.png" alt="Modcrawl Windows binary"></a>
-<a href="https://github.com/SirCesarium/modcrawl/releases/latest/download/modcrawl-linux-x86_64-musl"><img src="./web/static/readme/debian.png" alt="Modcrawl Debian binary"></a>
-<a href="https://github.com/SirCesarium/modcrawl/releases/latest/download/modcrawl-linux-x86_64-musl"><img src="./web/static/readme/fedora.png" alt="Modcrawl Fedora binary"></a>
-<a href="https://github.com/SirCesarium/modcrawl/releases/latest/download/modcrawl-macos-arm64"><img src="./web/static/readme/macos.png" alt="Modcrawl macOS binary"></a>
+<a href="https://github.com/SirCesarium/modcrawl/releases/download/v0.11.2/modcrawl-0.11.2-x86_64.msi"><img src="./web/static/readme/windows.png" alt="Modcrawl Windows installer"></a>
+<a href="https://github.com/SirCesarium/modcrawl/releases/download/v0.11.2/modcrawl_0.11.2-1_amd64.deb"><img src="./web/static/readme/debian.png" alt="Modcrawl Debian package"></a>
+<a href="https://github.com/SirCesarium/modcrawl/releases/download/v0.11.2/modcrawl-0.11.2-1.x86_64.rpm"><img src="./web/static/readme/fedora.png" alt="Modcrawl Fedora package"></a>
+<a href="https://github.com/SirCesarium/modcrawl/releases/download/v0.11.2/modcrawl-macos-arm64"><img src="./web/static/readme/macos.png" alt="Modcrawl macOS binary"></a>
 
 </div>
 
-Those quick downloads point to the most common OS architectures (e.g., `Windows x86_64`, `Linux x86_64`, `macOS arm64`, ...). If you have an uncommon architecture (like `Linux ARM64`) you can check the [releases](https://github.com/SirCesarium/modcrawl/releases) page.
+The Windows, Debian, and Fedora buttons download installers; macOS downloads the standalone binary. If you have an uncommon architecture (like `Linux ARM64`) you can check the [releases](https://github.com/SirCesarium/modcrawl/releases) page.
 
 Or even check the [Installation](#installation) section.
 
