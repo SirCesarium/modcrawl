@@ -3,6 +3,7 @@
 pub mod dep;
 pub mod metadata;
 pub mod r#type;
+pub mod side;
 
 #[cfg(feature = "classfile")]
 pub mod classes;
@@ -50,6 +51,10 @@ pub enum Commands {
     /// Get mod type. (eg. `NeoForge` mod, `Fabric` mod, ...)
     #[command(name = "type", aliases = &["t", "ty"])]
     Type(r#type::Args),
+
+    /// Classify mods and plugins as client, server, both, or unknown.
+    #[command(aliases = &["sd"])]
+    Side(side::Args),
 
     /// List all `.class` files inside a JAR with Java version and access flags.
     #[cfg(feature = "classfile")]

@@ -248,6 +248,13 @@ fn quilt(m: &QuiltModMetadata) -> Vec<Block> {
             .as_ref()
             .map_or_else(String::new, StringOrList::join),
     );
+    if let Some(minecraft) = &m.minecraft {
+        push_field(
+            &mut fields,
+            "Environment",
+            minecraft.environment.clone().unwrap_or_default(),
+        );
+    }
 
     let contributors: Vec<String> = meta
         .contributors
@@ -315,6 +322,7 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
             "Display URL",
             m.display_url.clone().unwrap_or_default(),
         );
+        push_client_side_only(&mut fields, m);
 
         push_mod_fields(&mut fields, first);
 
@@ -357,6 +365,7 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
             "Display URL",
             m.display_url.clone().unwrap_or_default(),
         );
+        push_client_side_only(&mut fields, m);
 
         blocks.push(Block {
             kind,
@@ -387,6 +396,13 @@ fn loader_version(m: &ModsTomlMetadata, kind: &ModType) -> String {
         .find_map(|raw| VersionRange::parse(Some(raw)).min);
 
     from_dep.unwrap_or_else(|| m.loader_version.clone().unwrap_or_default())
+}
+
+/// Note `clientSideOnly` when the mod declares it.
+fn push_client_side_only(fields: &mut Vec<Field>, m: &ModsTomlMetadata) {
+    if let Some(client_only) = m.client_side_only {
+        push_field(fields, "Client side only", client_only.to_string());
+    }
 }
 
 /// The per-entry fields every `mods[]` block carries.

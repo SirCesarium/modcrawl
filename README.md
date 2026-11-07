@@ -19,7 +19,7 @@ Analyze **Minecraft mods and plugins** to find out which loader they belong to, 
 It helps you quickly answer the everyday questions that pop up while building or fixing a modpack:
 
 - **Clean up mixed mod loaders:** Easily spot and remove leftover Fabric mods in a NeoForge modpack (like when **moving away from Sinytra Connector**).
-- **Separate Client, Server, and Both:** Quickly **identify client-only mods** mixed into a **server folder** so you can purge them before launching.
+- **Separate Client, Server, Both, and Unknown:** Quickly **identify client-only mods** mixed into a **server folder** so you can purge them before launching.
 - **Find the culprit behind cryptic crashes:** When a crash log gives you an obfuscated Java method call but doesn't mention which mod broke, trace references directly back to the offending JAR.
 - **Catch conflicts before they happen:** Identify duplicate classes or overlapping mixin targets across multiple mods that might collide on startup.
 - **Inspect metadata instantly:** Check mod loaders, dependencies, versions, and internal file lists without manually unzipping every JAR.
@@ -38,6 +38,9 @@ It helps you quickly answer the everyday questions that pop up while building or
 ```bash
 # Detect mod loader
 modcrawl type MyMod.jar
+
+# Classify client-only, server-only, both, or unknown mods
+modcrawl side mods/
 
 # Inspect metadata and dependencies
 modcrawl deps MyMod.jar
@@ -112,13 +115,17 @@ cargo add modcrawl
 ```rust
 use std::path::Path;
 
-use modcrawl::{analyze, identify, read_metadata};
+use modcrawl::{analyze, classify, identify, read_metadata};
 
 fn main() -> modcrawl::Result<()> {
     let jar = Path::new("MyMod.jar");
 
     println!("{}", identify(jar)?);
-    println!("{}", read_metadata(jar)?);
+
+    let metadata = read_metadata(jar)?;
+    println!("{metadata}");
+    println!("{}", classify(&metadata));
+
     print!("{}", analyze(jar, false)?);
 
     Ok(())

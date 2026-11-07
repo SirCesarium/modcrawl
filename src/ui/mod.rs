@@ -8,6 +8,7 @@ pub(crate) mod grep;
 pub(crate) mod lines;
 pub(crate) mod metadata;
 pub(crate) mod mixins;
+pub(crate) mod side;
 pub(crate) mod style;
 pub(crate) mod table;
 pub(crate) mod r#type;
@@ -22,3 +23,4 @@ pub(crate) use mixins::render as render_mixins;
 pub(crate) use r#type::{
     render as render_type, render_multi as render_type_multi, render_tagged as render_type_tagged,
 };
+pub(crate) use side::render as render_side;

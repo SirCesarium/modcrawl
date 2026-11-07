@@ -4,6 +4,7 @@ use anstyle::{AnsiColor, Color, Style};
 
 use crate::core::dep::types::DepKind;
 use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
+use crate::core::side::Side;
 
 /// Foreground color for a loader or plugin type.
 pub(crate) fn loader_color(t: &ModType) -> Color {
@@ -39,6 +40,31 @@ pub(crate) fn loader_name(t: &ModType) -> &'static str {
         ModType::Plugin(PluginType::Bungee) => "BungeeCord",
         ModType::Plugin(PluginType::Velocity) => "Velocity",
         ModType::Unknown => "Unknown",
+    }
+}
+
+/// Foreground color for a side classification.
+pub(crate) fn side_color(side: Side) -> Color {
+    match side {
+        Side::Client => Color::Ansi(AnsiColor::Cyan),
+        Side::Server => Color::Ansi(AnsiColor::Green),
+        Side::Both => Color::Ansi(AnsiColor::Yellow),
+        Side::Unknown => Color::Ansi(AnsiColor::BrightBlack),
+    }
+}
+
+/// Bold side label in the side's color.
+pub(crate) fn side_style(side: Side) -> Style {
+    Style::new().bold().fg_color(Some(side_color(side)))
+}
+
+/// Lowercase side label.
+pub(crate) fn side_label(side: Side) -> &'static str {
+    match side {
+        Side::Client => "client",
+        Side::Server => "server",
+        Side::Both => "both",
+        Side::Unknown => "unknown",
     }
 }
 

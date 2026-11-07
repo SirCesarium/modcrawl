@@ -19,6 +19,7 @@ pub mod identify;
 pub mod loaders;
 pub mod metadata;
 pub mod registry;
+pub mod side;
 
 #[cfg(feature = "classfile")]
 pub mod classfile;

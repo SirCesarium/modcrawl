@@ -25,6 +25,7 @@ pub use core::dep::{DepEntry, DepReport, JarInJar, analyze, analyze_reader};
 pub use core::detect_mod_type::ModType;
 pub use core::identify::{identify, identify_reader};
 pub use core::metadata::{ModMetadata, read_metadata, read_metadata_reader};
+pub use core::side::{Side, classify};
 pub use error::{Error, Result};
 
 #[cfg(feature = "classfile")]

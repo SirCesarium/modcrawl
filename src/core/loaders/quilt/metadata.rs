@@ -23,6 +23,15 @@ pub struct QuiltModMetadata {
     #[serde(rename = "schema_version")]
     pub schema_version: Option<i64>,
     pub quilt_loader: QuiltLoader,
+    #[serde(default)]
+    pub minecraft: Option<QuiltMinecraft>,
+}
+
+/// The `minecraft` block of a Quilt mod's metadata.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct QuiltMinecraft {
+    /// Where the mod runs: `client`, `server`, or `*`.
+    pub environment: Option<String>,
 }
 
 /// The `quilt_loader` block of a Quilt mod's metadata.
