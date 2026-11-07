@@ -248,13 +248,14 @@ fn quilt(m: &QuiltModMetadata) -> Vec<Block> {
             .as_ref()
             .map_or_else(String::new, StringOrList::join),
     );
-    if let Some(minecraft) = &m.minecraft {
-        push_field(
-            &mut fields,
-            "Environment",
-            minecraft.environment.clone().unwrap_or_default(),
-        );
-    }
+    let environment = m
+        .minecraft
+        .as_ref()
+        .and_then(|mc| mc.environment.as_deref())
+        .or(m.environment.as_deref())
+        .or(loader.environment.as_deref())
+        .unwrap_or_default();
+    push_field(&mut fields, "Environment", environment.to_owned());
 
     let contributors: Vec<String> = meta
         .contributors
@@ -288,7 +289,11 @@ fn quilt(m: &QuiltModMetadata) -> Vec<Block> {
         .map(|d| DepRow {
             name: d.id().to_owned(),
             version: d.versions().map_or_else(String::new, QuiltVersions::join),
-            kind: Some(DepKind::Required),
+            kind: Some(if d.optional() {
+                DepKind::Optional
+            } else {
+                DepKind::Required
+            }),
             side: None,
         })
         .collect();

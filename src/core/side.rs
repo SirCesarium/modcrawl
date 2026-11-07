@@ -48,6 +48,8 @@ pub fn classify(metadata: &ModMetadata) -> Side {
             .minecraft
             .as_ref()
             .and_then(|m| m.environment.as_deref())
+            .or(m.environment.as_deref())
+            .or(m.quilt_loader.environment.as_deref())
             .map_or(Side::Unknown, environment_side),
         ModMetadata::ForgeModern(m) | ModMetadata::NeoForge(m) => forge_side(m),
         ModMetadata::Bukkit(_)
@@ -183,6 +185,23 @@ mod tests {
             }"#,
         );
         assert_eq!(classify(&client), Side::Client);
+
+        let root = quilt(
+            r#"{
+                "schema_version": 1,
+                "quilt_loader": {"id": "example", "version": "1.0.0"},
+                "environment": "client"
+            }"#,
+        );
+        assert_eq!(classify(&root), Side::Client);
+
+        let loader = quilt(
+            r#"{
+                "schema_version": 1,
+                "quilt_loader": {"id": "example", "version": "1.0.0", "environment": "server"}
+            }"#,
+        );
+        assert_eq!(classify(&loader), Side::Server);
 
         let without = quilt(
             r#"{"schema_version": 1, "quilt_loader": {"id": "example", "version": "1.0.0"}}"#,

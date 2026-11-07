@@ -25,6 +25,8 @@ pub struct QuiltModMetadata {
     pub quilt_loader: QuiltLoader,
     #[serde(default)]
     pub minecraft: Option<QuiltMinecraft>,
+    #[serde(default)]
+    pub environment: Option<String>,
 }
 
 /// The `minecraft` block of a Quilt mod's metadata.
@@ -44,6 +46,8 @@ pub struct QuiltLoader {
     pub metadata: QuiltMetadataInfo,
     #[serde(default)]
     pub depends: Vec<QuiltDep>,
+    #[serde(default)]
+    pub environment: Option<String>,
 }
 
 /// Human-readable metadata nested under `quilt_loader.metadata`.
@@ -76,8 +80,10 @@ pub enum QuiltDep {
     Bare(String),
     Detailed {
         id: String,
-        #[serde(default)]
+        #[serde(default, alias = "version")]
         versions: Option<QuiltVersions>,
+        #[serde(default)]
+        optional: bool,
     },
 }
 
@@ -96,6 +102,14 @@ impl QuiltDep {
         match self {
             Self::Bare(_) => None,
             Self::Detailed { versions, .. } => versions.as_ref(),
+        }
+    }
+
+    #[must_use]
+    pub fn optional(&self) -> bool {
+        match self {
+            Self::Bare(_) => false,
+            Self::Detailed { optional, .. } => *optional,
         }
     }
 }
@@ -256,6 +270,24 @@ mod tests {
         assert_eq!(loader.depends[2].versions().unwrap().join(), ">=17");
         assert_eq!(loader.depends[3].id(), "bare_dep");
         assert!(loader.depends[3].versions().is_none());
+    }
+
+    #[test]
+    fn optional_dependency() {
+        let json = r#"{
+            "schema_version": 1,
+            "quilt_loader": {
+                "id": "example_mod",
+                "version": "1.0.0",
+                "depends": [
+                    {"id": "opt_mod", "optional": true},
+                    {"id": "req_mod", "optional": false}
+                ]
+            }
+        }"#;
+        let meta = parse(json).unwrap();
+        assert!(meta.quilt_loader.depends[0].optional());
+        assert!(!meta.quilt_loader.depends[1].optional());
     }
 
     #[test]
