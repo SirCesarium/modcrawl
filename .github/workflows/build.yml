@@ -78,6 +78,28 @@ jobs:
         shell: bash
         run: cargo generate-rpm --target "${{ matrix.target }}" -o _packages/
 
+      - name: Rename Linux installers
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          case "${{ matrix.target }}" in
+            x86_64-unknown-linux-musl)
+              deb="modcrawl-linux-amd64.deb"
+              rpm="modcrawl-linux-x86_64.rpm"
+              ;;
+            aarch64-unknown-linux-musl)
+              deb="modcrawl-linux-arm64.deb"
+              rpm="modcrawl-linux-aarch64.rpm"
+              ;;
+            *)
+              echo "unexpected Linux target: ${{ matrix.target }}" >&2
+              exit 1
+              ;;
+          esac
+
+          mv _packages/*.deb "_packages/$deb"
+          mv _packages/*.rpm "_packages/$rpm"
+
       - name: Install WiX toolset
         if: runner.os == 'Windows'
         shell: pwsh
@@ -106,6 +128,16 @@ jobs:
         run: |
           cargo wix init --force
           cargo wix --no-build --target "${{ matrix.target }}" --target-bin-dir "target/${{ matrix.target }}/release" -o _packages/
+
+      - name: Rename MSI installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $msi = Get-ChildItem _packages/*.msi | Select-Object -First 1
+          if (-not $msi) {
+            throw "MSI installer not found"
+          }
+          Move-Item $msi.FullName "_packages/modcrawl-windows-x86_64.msi"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
