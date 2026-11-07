@@ -78,9 +78,11 @@ impl Registry {
     }
 
     /// Find a handler by detection file path.
+    ///
+    /// Only used by tests to keep the registration order honest.
+    #[cfg(test)]
     #[must_use]
-    #[allow(dead_code)]
-    pub fn handler_by_file(&self, file: &str) -> Option<&dyn ModHandler> {
+    pub(crate) fn handler_by_file(&self, file: &str) -> Option<&dyn ModHandler> {
         self.handlers
             .iter()
             .find(|h| h.detection_files().contains(&file))
