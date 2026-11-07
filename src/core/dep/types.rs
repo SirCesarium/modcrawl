@@ -237,10 +237,14 @@ impl fmt::Display for DepReport {
         if self.dependencies.is_empty() && self.jar_in_jar.is_empty() {
             return Ok(());
         }
+        let mut has_required = false;
         let mut has_optional = false;
         let mut has_loadbefore = false;
         for dep in &self.dependencies {
             match dep.kind {
+                DepKind::Required => {
+                    has_required = true;
+                }
                 DepKind::Optional | DepKind::Recommended | DepKind::Suggested => {
                     has_optional = true;
                 }
@@ -250,7 +254,9 @@ impl fmt::Display for DepReport {
                 _ => {}
             }
         }
-        writeln!(f, "* required")?;
+        if has_required {
+            writeln!(f, "* required")?;
+        }
         if has_optional {
             writeln!(f, "- optional/recommended/suggested")?;
         }
@@ -523,6 +529,21 @@ mod tests {
         assert!(s.contains("* required"));
         assert!(s.contains("- optional/recommended/suggested"));
         assert!(!s.contains("load before"));
+    }
+
+    #[test]
+    fn dep_report_without_required_omits_required_legend() {
+        let r = DepReport {
+            dependencies: vec![
+                DepEntry::new("a", DepKind::Optional, VersionRange::parse(None)),
+                DepEntry::new("b", DepKind::LoadBefore, VersionRange::parse(None)),
+            ],
+            jar_in_jar: vec![],
+        };
+        let s = r.to_string();
+        assert!(!s.contains("* required"));
+        assert!(s.contains("- optional/recommended/suggested"));
+        assert!(s.contains("< load before"));
     }
 
     #[test]
