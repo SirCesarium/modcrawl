@@ -73,9 +73,10 @@ pub struct VersionRange {
 impl VersionRange {
     /// Parses a raw version constraint into structured bounds.
     ///
-    /// Maven-style ranges (`[1.0,2.0)`) and simple comparison constraints
-    /// (`<2.0`, `>=1.0<2.0`, `>=1.0`) are understood. Anything else is kept
-    /// verbatim in [`VersionRange::raw`].
+    /// Maven-style ranges (`[1.0,2.0)`), simple comparison constraints
+    /// (`<2.0`, `>=1.0<2.0`, `>=1.0`), and tilde/caret/wildcard constraints
+    /// (`~1.20.1`, `^1.2`, `1.20.x`) are understood. Anything else is kept
+    /// verbatim in [`VersionRange::raw`] with exact bounds.
     #[must_use]
     pub fn parse(raw: Option<String>) -> Self {
         let owned = raw.as_ref().filter(|s| !s.is_empty() && *s != "*").cloned();
@@ -154,6 +155,16 @@ impl VersionRange {
             };
         }
 
+        if let Some((min, max)) = parse_flex(trimmed) {
+            return Self {
+                min,
+                max,
+                min_inclusive: true,
+                max_inclusive: false,
+                raw,
+            };
+        }
+
         Self {
             min: Some(trimmed.to_owned()),
             max: Some(trimmed.to_owned()),
@@ -162,6 +173,90 @@ impl VersionRange {
             raw,
         }
     }
+}
+
+/// Splits a version into numeric components; `None` marks a trailing
+/// `x`/`X`/`*` wildcard; pre-release and build suffixes are ignored.
+fn version_components(version: &str) -> Option<Vec<Option<u64>>> {
+    let mut parts = Vec::new();
+    for piece in version.split('.') {
+        if matches!(piece, "x" | "X" | "*") {
+            parts.push(None);
+            continue;
+        }
+        let digits = piece.split(['-', '+']).next()?;
+        if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+            return None;
+        }
+        parts.push(Some(digits.parse::<u64>().ok()?));
+    }
+    let first_wildcard = parts.iter().position(Option::is_none);
+    let bad_wildcard = first_wildcard.is_some_and(|i| parts[i..].iter().any(Option::is_some));
+    if parts.is_empty() || bad_wildcard {
+        return None;
+    }
+    Some(parts)
+}
+
+/// Renders the concrete components as a dotted version padded to `len`,
+/// optionally bumping component `level` first for exclusive upper bounds.
+fn rendered(parts: &[Option<u64>], level: Option<usize>, len: usize) -> Option<String> {
+    let mut out: Vec<u64> = parts.iter().filter_map(|p| *p).collect();
+    if out.is_empty() {
+        return None;
+    }
+    if let Some(level) = level {
+        while out.len() <= level {
+            out.push(0);
+        }
+        out[level] += 1;
+        out.truncate(level + 1);
+    }
+    while out.len() < len {
+        out.push(0);
+    }
+    Some(out.iter().map(u64::to_string).collect::<Vec<_>>().join("."))
+}
+
+/// Parses tilde (`~1.20.1`), caret (`^1.2`), and wildcard (`1.20.x`)
+/// constraints into `(min, max)` bounds; `None` keeps the exact fallback.
+fn parse_flex(trimmed: &str) -> Option<(Option<String>, Option<String>)> {
+    if let Some(base) = trimmed
+        .strip_prefix('~')
+        .or_else(|| trimmed.strip_prefix('^'))
+    {
+        let is_tilde = trimmed.starts_with('~');
+        let parts = version_components(base)?;
+        if parts.iter().any(Option::is_none) {
+            return None;
+        }
+        let len = parts.len();
+        let level = if is_tilde {
+            len.min(2).saturating_sub(1)
+        } else {
+            let major = parts[0].unwrap_or(0);
+            if major > 0 || len == 1 {
+                0
+            } else if len == 2 || parts[1] != Some(0) {
+                1
+            } else {
+                2
+            }
+        };
+        return Some((rendered(&parts, None, 3), rendered(&parts, Some(level), 3)));
+    }
+
+    let parts = version_components(trimmed)?;
+    if parts.iter().all(Option::is_some) {
+        return None; // a fully concrete version stays exact
+    }
+    let concrete = parts.iter().position(Option::is_none)?;
+    let max = if concrete == 0 {
+        None // an all-wildcard version ("x") is unbounded
+    } else {
+        rendered(&parts, Some(concrete - 1), 3)
+    };
+    Some((rendered(&parts, None, 3), max))
 }
 
 impl fmt::Display for VersionRange {
@@ -424,6 +519,54 @@ mod tests {
         assert_eq!(v.max, Some("1.0".to_owned()));
         assert!(v.min_inclusive);
         assert!(v.max_inclusive);
+    }
+
+    #[test]
+    fn version_range_flex_bounds() {
+        for (raw, min, max) in [
+            ("~1.20.1", "1.20.1", "1.21.0"),
+            ("~1.20", "1.20.0", "1.21.0"),
+            ("~1", "1.0.0", "2.0.0"),
+            ("^1.2", "1.2.0", "2.0.0"),
+            ("^1.2.3", "1.2.3", "2.0.0"),
+            ("^0.2.3", "0.2.3", "0.3.0"),
+            ("^0.0.3", "0.0.3", "0.0.4"),
+        ] {
+            let v = VersionRange::parse(Some(raw.to_owned()));
+            assert_eq!(v.min, Some(min.to_owned()), "min of {raw}");
+            assert_eq!(v.max, Some(max.to_owned()), "max of {raw}");
+            assert!(v.min_inclusive);
+            assert!(!v.max_inclusive);
+            assert_eq!(v.raw, Some(raw.to_owned()));
+        }
+    }
+
+    #[test]
+    fn version_range_wildcard_bounds() {
+        for (raw, min, max) in [
+            ("1.20.x", Some("1.20.0"), Some("1.21.0")),
+            ("1.x", Some("1.0.0"), Some("2.0.0")),
+        ] {
+            let v = VersionRange::parse(Some(raw.to_owned()));
+            assert_eq!(v.min, min.map(String::from), "min of {raw}");
+            assert_eq!(v.max, max.map(String::from), "max of {raw}");
+            assert!(v.min_inclusive);
+            assert!(!v.max_inclusive);
+        }
+        let bare = VersionRange::parse(Some("x".to_owned()));
+        assert_eq!(bare.min, None);
+        assert_eq!(bare.max, None);
+        assert_eq!(bare.raw, Some("x".to_owned()));
+    }
+
+    #[test]
+    fn version_range_unsupported_stays_exact() {
+        for raw in ["1.20.1-beta", "~abc", "1.x.3"] {
+            let v = VersionRange::parse(Some(raw.to_owned()));
+            assert_eq!(v.min, Some(raw.to_owned()), "min of {raw}");
+            assert_eq!(v.max, Some(raw.to_owned()), "max of {raw}");
+            assert!(v.max_inclusive);
+        }
     }
 
     #[test]
