@@ -139,10 +139,18 @@ impl Source {
 
 /// What piped stdin carried.
 pub(crate) enum Stdin {
-    /// A JAR archive, identified by its leading `PK\x03\x04`.
+    /// A ZIP archive, identified by one of its leading `PK` signatures.
     Archive(Vec<u8>),
     /// Newline-separated paths.
     Paths(Vec<PathBuf>),
+}
+
+/// Whether `data` starts with a ZIP local-file, empty-archive, or spanned
+/// archive signature.
+fn is_zip_archive(data: &[u8]) -> bool {
+    data.starts_with(b"PK\x03\x04")
+        || data.starts_with(b"PK\x05\x06")
+        || data.starts_with(b"PK\x07\x08")
 }
 
 /// Whether `paths` asks for stdin: nothing at all, or a lone `-`.
@@ -166,7 +174,7 @@ pub(crate) fn read_stdin() -> Result<Stdin> {
     let mut data = Vec::new();
     io::stdin().lock().read_to_end(&mut data)?;
 
-    if data.starts_with(b"PK\x03\x04") {
+    if is_zip_archive(&data) {
         return Ok(Stdin::Archive(data));
     }
 
@@ -292,5 +300,14 @@ mod tests {
         let missing = Path::new("/nonexistent/modcrawl-nope.jar").to_path_buf();
         let out = collect_jar_paths(slice::from_ref(&missing)).expect("no directory to read");
         assert_eq!(out, [missing]);
+    }
+
+    #[test]
+    fn recognizes_zip_signatures_on_stdin() {
+        assert!(is_zip_archive(b"PK\x03\x04local"));
+        assert!(is_zip_archive(b"PK\x05\x06empty"));
+        assert!(is_zip_archive(b"PK\x07\x08spanned"));
+        assert!(!is_zip_archive(b"a/path/to/mod.jar"));
+        assert!(!is_zip_archive(b""));
     }
 }
