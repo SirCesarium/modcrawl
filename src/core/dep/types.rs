@@ -73,9 +73,11 @@ pub struct VersionRange {
 impl VersionRange {
     /// Parses a raw version constraint into structured bounds.
     ///
-    /// Maven-style ranges (`[1.0,2.0)`) and simple comparison constraints
-    /// (`<2.0`, `>=1.0<2.0`, `>=1.0`) are understood. Anything else is kept
-    /// verbatim in [`VersionRange::raw`].
+    /// Maven-style ranges (`[1.0,2.0)`), simple comparison constraints
+    /// (`<2.0`, `>=1.0<2.0`, `>=1.0`), and tilde/caret/wildcard constraints
+    /// (`~1.20.1`, `^1.2`, `1.20.x`) are understood. Plain versions keep exact
+    /// bounds; constraint syntax that cannot be parsed keeps
+    /// [`VersionRange::raw`] and exposes no structured bounds.
     #[must_use]
     pub fn parse(raw: Option<String>) -> Self {
         let owned = raw.as_ref().filter(|s| !s.is_empty() && *s != "*").cloned();
@@ -154,6 +156,26 @@ impl VersionRange {
             };
         }
 
+        if let Some((min, max)) = parse_flex(trimmed) {
+            return Self {
+                min,
+                max,
+                min_inclusive: true,
+                max_inclusive: false,
+                raw,
+            };
+        }
+
+        if looks_like_constraint(trimmed) {
+            return Self {
+                min: None,
+                max: None,
+                min_inclusive: true,
+                max_inclusive: false,
+                raw,
+            };
+        }
+
         Self {
             min: Some(trimmed.to_owned()),
             max: Some(trimmed.to_owned()),
@@ -162,6 +184,118 @@ impl VersionRange {
             raw,
         }
     }
+}
+
+/// Splits a version into numeric components and its trailing suffix.
+///
+/// `None` marks a trailing `x`/`X`/`*` wildcard. The suffix keeps its leading
+/// `-` or `+` so callers can preserve it on lower bounds.
+fn version_components(version: &str) -> Option<(Vec<Option<u64>>, &str)> {
+    let split = version.find(['-', '+']).unwrap_or(version.len());
+    let (numeric, suffix) = version.split_at(split);
+
+    let mut parts = Vec::new();
+    for piece in numeric.split('.') {
+        if matches!(piece, "x" | "X" | "*") {
+            parts.push(None);
+            continue;
+        }
+        if piece.is_empty() || !piece.bytes().all(|b| b.is_ascii_digit()) {
+            return None;
+        }
+        parts.push(Some(piece.parse::<u64>().ok()?));
+    }
+
+    let first_wildcard = parts.iter().position(Option::is_none);
+    let bad_wildcard = first_wildcard.is_some_and(|i| parts[i..].iter().any(Option::is_some));
+    if bad_wildcard {
+        return None;
+    }
+
+    Some((parts, suffix))
+}
+
+/// Renders the concrete components as a dotted version padded to `len`,
+/// optionally bumping component `level` first for exclusive upper bounds.
+fn rendered(parts: &[Option<u64>], level: Option<usize>, len: usize) -> Option<String> {
+    let mut out: Vec<u64> = parts.iter().filter_map(|p| *p).collect();
+    if out.is_empty() {
+        return None;
+    }
+
+    if let Some(level) = level {
+        while out.len() <= level {
+            out.push(0);
+        }
+        out[level] = out[level].checked_add(1)?;
+        out.truncate(level + 1);
+    }
+
+    while out.len() < len {
+        out.push(0);
+    }
+
+    Some(out.iter().map(u64::to_string).collect::<Vec<_>>().join("."))
+}
+
+/// Parses tilde (`~1.20.1`), caret (`^1.2`), and wildcard (`1.20.x`)
+/// constraints into `(min, max)` bounds; `None` leaves the decision to the
+/// caller because the input may be either an exact version or invalid syntax.
+fn parse_flex(trimmed: &str) -> Option<(Option<String>, Option<String>)> {
+    if let Some(base) = trimmed
+        .strip_prefix('~')
+        .or_else(|| trimmed.strip_prefix('^'))
+    {
+        let is_tilde = trimmed.starts_with('~');
+        let (parts, suffix) = version_components(base)?;
+        if parts.len() > 3 || parts.iter().any(Option::is_none) {
+            return None;
+        }
+
+        let len = parts.len();
+        let level = if is_tilde {
+            len.min(2).saturating_sub(1)
+        } else {
+            let major = parts[0].unwrap_or(0);
+            if major > 0 || len == 1 {
+                0
+            } else if len == 2 || parts[1] != Some(0) {
+                1
+            } else {
+                2
+            }
+        };
+
+        let min = format!("{}{suffix}", rendered(&parts, None, 3)?);
+        return Some((Some(min), Some(rendered(&parts, Some(level), 3)?)));
+    }
+
+    let (parts, suffix) = version_components(trimmed)?;
+    if !suffix.is_empty() || parts.len() > 3 || parts.iter().all(Option::is_some) {
+        return None;
+    }
+
+    let concrete = parts.iter().position(Option::is_none)?;
+    let max = if concrete == 0 {
+        None // an all-wildcard version ("x") is unbounded
+    } else {
+        rendered(&parts, Some(concrete - 1), 3)
+    };
+    Some((rendered(&parts, None, 3), max))
+}
+
+/// Returns `true` for inputs that use constraint syntax, even when the concrete
+/// shape is unsupported. Exact versions must keep their bounds; malformed
+/// constraints must not surface invalid ones.
+fn looks_like_constraint(trimmed: &str) -> bool {
+    if trimmed.starts_with(['~', '^', '>', '<', '=', '!']) {
+        return true;
+    }
+
+    trimmed.split('.').any(|part| {
+        let head = part.split(['-', '+']).next().unwrap_or(part);
+        matches!(head, "x" | "X" | "*")
+    })
 }
 
 impl fmt::Display for VersionRange {
@@ -430,6 +564,85 @@ mod tests {
         assert_eq!(v.max, Some("1.0".to_owned()));
         assert!(v.min_inclusive);
         assert!(v.max_inclusive);
+    }
+
+    #[test]
+    fn version_range_flex_bounds() {
+        for (raw, min, max) in [
+            ("~1.20.1", "1.20.1", "1.21.0"),
+            ("~1.20", "1.20.0", "1.21.0"),
+            ("~1", "1.0.0", "2.0.0"),
+            ("^1.2", "1.2.0", "2.0.0"),
+            ("^1.2.3", "1.2.3", "2.0.0"),
+            ("^0.2.3", "0.2.3", "0.3.0"),
+            ("^0.0.3", "0.0.3", "0.0.4"),
+            ("~1.20.1-beta", "1.20.1-beta", "1.21.0"),
+            ("~1.20.1+build", "1.20.1+build", "1.21.0"),
+            ("^1.20.1-beta", "1.20.1-beta", "2.0.0"),
+        ] {
+            let v = VersionRange::parse(Some(raw.to_owned()));
+            assert_eq!(v.min, Some(min.to_owned()), "min of {raw}");
+            assert_eq!(v.max, Some(max.to_owned()), "max of {raw}");
+            assert!(v.min_inclusive);
+            assert!(!v.max_inclusive);
+            assert_eq!(v.raw, Some(raw.to_owned()));
+        }
+    }
+
+    #[test]
+    fn version_range_wildcard_bounds() {
+        for (raw, min, max) in [
+            ("1.20.x", Some("1.20.0"), Some("1.21.0")),
+            ("1.x", Some("1.0.0"), Some("2.0.0")),
+        ] {
+            let v = VersionRange::parse(Some(raw.to_owned()));
+            assert_eq!(v.min, min.map(String::from), "min of {raw}");
+            assert_eq!(v.max, max.map(String::from), "max of {raw}");
+            assert!(v.min_inclusive);
+            assert!(!v.max_inclusive);
+        }
+        let bare = VersionRange::parse(Some("x".to_owned()));
+        assert_eq!(bare.min, None);
+        assert_eq!(bare.max, None);
+        assert_eq!(bare.raw, Some("x".to_owned()));
+    }
+
+    #[test]
+    fn version_range_unsupported_constraints_have_no_bounds() {
+        for raw in [
+            "~abc",
+            "1.x.3",
+            "1.20.x.3",
+            "1.20.x-beta",
+            "~1.2.3.4",
+            "^0.0.3.4",
+        ] {
+            let v = VersionRange::parse(Some(raw.to_owned()));
+            assert_eq!(v.min, None, "min of {raw}");
+            assert_eq!(v.max, None, "max of {raw}");
+            assert!(!v.max_inclusive);
+            assert_eq!(v.raw, Some(raw.to_owned()));
+        }
+    }
+
+    #[test]
+    fn version_range_exact_versions_stay_exact() {
+        for raw in ["1.20.1", "1.20.1-beta", "1.20.1+build", "1.20.1-rc.1+build"] {
+            let v = VersionRange::parse(Some(raw.to_owned()));
+            assert_eq!(v.min, Some(raw.to_owned()), "min of {raw}");
+            assert_eq!(v.max, Some(raw.to_owned()), "max of {raw}");
+            assert!(v.max_inclusive);
+        }
+    }
+
+    #[test]
+    fn version_range_overflow_has_no_bounds() {
+        for raw in ["^18446744073709551615.0.0", "~18446744073709551615"] {
+            let v = VersionRange::parse(Some(raw.to_owned()));
+            assert_eq!(v.min, None, "min of {raw}");
+            assert_eq!(v.max, None, "max of {raw}");
+            assert_eq!(v.raw, Some(raw.to_owned()));
+        }
     }
 
     #[test]
