@@ -75,7 +75,7 @@ Or even check the [Installation](#installation) section.
 
 These are the loaders that `modcrawl` currently supports.
 
-*Feel free to contribute to the list while opening a **Pull request**!* ❤️
+*Feel free to contribute to the list by opening a **Pull request**!* ❤️
 
 | Loader | Status | Type |
 | --- | --- | --- |
