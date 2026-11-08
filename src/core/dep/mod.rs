@@ -44,9 +44,9 @@ pub fn analyze_reader<R: Read>(reader: &mut R, include_jij: bool) -> Result<DepR
 
 fn analyze_impl<R: Read + Seek>(mng: &mut ZipManager<R>, include_jij: bool) -> Result<DepReport> {
     let entries = mng.entries()?;
-    let mod_type = REGISTRY.detect(&entries);
+    let mod_type = REGISTRY.detect_archive(mng)?;
 
-    let mut dependencies = match REGISTRY.metadata_file_path(&mod_type) {
+    let mut dependencies = match REGISTRY.find_metadata_file(&mod_type, &entries) {
         Some(file) => {
             let raw = read_metadata_string(mng, file)?;
             let deps = match panic::catch_unwind(|| REGISTRY.extract_deps(&mod_type, &raw)) {

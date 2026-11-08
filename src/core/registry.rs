@@ -1,10 +1,13 @@
 //! Registry of mod and plugin handlers used for detection and parsing.
 
-use zipcrawl::ZipEntry;
+use std::io::{Read, Seek};
+
+use zipcrawl::{ZipEntry, ZipManager};
 
 use crate::core::dep::types::DepEntry;
-use crate::core::detect_mod_type::ModType;
-use crate::core::metadata::ModMetadata;
+use crate::core::detect_mod_type::{ForgeModFormat, ModType};
+use crate::core::loaders::neoforge;
+use crate::core::metadata::{ModMetadata, read_metadata_string};
 use crate::error::Error;
 use crate::error::Result;
 
@@ -15,6 +18,10 @@ pub trait ModHandler: Send + Sync {
 
     /// Returns the metadata files that identify this mod type.
     fn detection_files(&self) -> &'static [&'static str];
+
+    fn metadata_files(&self) -> &'static [&'static str] {
+        self.detection_files()
+    }
 
     /// Extract dependencies from the raw content of the metadata file.
     ///
@@ -75,6 +82,38 @@ impl Registry {
             }
         }
         ModType::Unknown
+    }
+
+    pub(crate) fn detect_archive<R: Read + Seek>(
+        &self,
+        mng: &mut ZipManager<R>,
+    ) -> Result<ModType> {
+        let entries = mng.entries()?;
+        let mut mod_type = self.detect(&entries);
+
+        if mod_type == ModType::Forge(ForgeModFormat::ModsToml)
+            && let Ok(raw) = read_metadata_string(mng, "META-INF/mods.toml")
+            && neoforge::is_neoforge_mods_toml(&raw)
+        {
+            mod_type = ModType::NeoForge;
+        }
+
+        Ok(mod_type)
+    }
+
+    #[must_use]
+    pub fn find_metadata_file(
+        &self,
+        mod_type: &ModType,
+        entries: &[ZipEntry],
+    ) -> Option<&'static str> {
+        let handler = self.handler(mod_type)?;
+        for file in handler.metadata_files() {
+            if entries.iter().any(|e| e.name.as_str() == *file) {
+                return Some(*file);
+            }
+        }
+        handler.metadata_file_path()
     }
 
     /// Find a handler by detection file path.

@@ -116,9 +116,9 @@ pub(crate) fn read_metadata_string<R: Read + Seek>(
 
 fn read_metadata_impl<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<ModMetadata> {
     let entries = mng.entries()?;
-    let mod_type = REGISTRY.detect(&entries);
+    let mod_type = REGISTRY.detect_archive(mng)?;
 
-    let Some(file) = REGISTRY.metadata_file_path(&mod_type) else {
+    let Some(file) = REGISTRY.find_metadata_file(&mod_type, &entries) else {
         return read_embedded(mng);
     };
 

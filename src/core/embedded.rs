@@ -24,9 +24,11 @@ pub(crate) fn read_raw<R: Read + Seek>(
             continue;
         };
 
-        let mod_type = REGISTRY.detect(&nested.entries()?);
+        let Ok(mod_type) = REGISTRY.detect_archive(&mut nested) else {
+            continue;
+        };
 
-        let Some(file) = REGISTRY.metadata_file_path(&mod_type) else {
+        let Some(file) = REGISTRY.find_metadata_file(&mod_type, &nested.entries()?) else {
             continue;
         };
 
