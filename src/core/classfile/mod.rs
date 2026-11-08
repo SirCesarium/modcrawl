@@ -281,13 +281,21 @@ fn is_class_entry(name: &str) -> bool {
         .is_some_and(|ext| ext.eq_ignore_ascii_case("class"))
 }
 
+const MAX_CLASS_SIZE: usize = 32 * 1024 * 1024;
+
 fn parse_class_in_jar<R: Read + Seek>(
     manager: &mut ZipManager<R>,
     name: &str,
 ) -> Result<Option<ClassFile>> {
-    let mut file = manager.open_file(name)?;
+    let file = manager.open_file(name)?;
     let mut bytes = Vec::new();
-    file.read_to_end(&mut bytes).map_err(Error::Io)?;
+    let read = file
+        .take((MAX_CLASS_SIZE as u64) + 1)
+        .read_to_end(&mut bytes)
+        .map_err(Error::Io)?;
+    if read > MAX_CLASS_SIZE {
+        return Ok(None);
+    }
 
     match parse_classfile(&bytes) {
         Ok((_, cf)) => Ok(Some(cf)),

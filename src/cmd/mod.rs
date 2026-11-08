@@ -169,6 +169,8 @@ pub(crate) fn is_stdin_request(paths: &[PathBuf]) -> bool {
 /// # Errors
 ///
 /// Returns an error if stdin cannot be read, or if it is a terminal.
+const MAX_STDIN_SIZE: usize = 256 * 1024 * 1024;
+
 pub(crate) fn read_stdin() -> Result<Stdin> {
     if io::stdin().is_terminal() {
         return Err(Error::Usage(String::from(
@@ -176,8 +178,19 @@ pub(crate) fn read_stdin() -> Result<Stdin> {
         )));
     }
 
+    read_stdin_reader(io::stdin().lock())
+}
+
+pub(crate) fn read_stdin_reader<R: Read>(reader: R) -> Result<Stdin> {
     let mut data = Vec::new();
-    io::stdin().lock().read_to_end(&mut data)?;
+    let read = reader
+        .take((MAX_STDIN_SIZE as u64) + 1)
+        .read_to_end(&mut data)?;
+    if read > MAX_STDIN_SIZE {
+        return Err(Error::Usage(String::from(
+            "stdin exceeds maximum size limit of 256 MB",
+        )));
+    }
 
     if is_zip_archive(&data) {
         return Ok(Stdin::Archive(data));
@@ -314,5 +327,12 @@ mod tests {
         assert!(is_zip_archive(b"PK\x07\x08spanned"));
         assert!(!is_zip_archive(b"a/path/to/mod.jar"));
         assert!(!is_zip_archive(b""));
+    }
+
+    #[test]
+    fn rejects_oversized_stdin() {
+        let large_stream = io::repeat(0).take((MAX_STDIN_SIZE as u64) + 10);
+        let result = read_stdin_reader(large_stream);
+        assert!(matches!(result, Err(Error::Usage(_))));
     }
 }

@@ -1,13 +1,13 @@
 //! Discovery of metadata inside embedded JARs.
 
-use std::io::{Cursor, Read, Seek};
+use std::io::{self, Cursor, ErrorKind, Read, Seek};
 
 use zipcrawl::ZipManager;
 
 use crate::core::REGISTRY;
 use crate::core::dep::find_embedded_jars;
 use crate::core::detect_mod_type::ModType;
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 /// Read the metadata of the first embedded jar that carries its own.
 ///
@@ -38,12 +38,24 @@ pub(crate) fn read_raw<R: Read + Seek>(
     Ok(None)
 }
 
+const MAX_EMBEDDED_JAR_SIZE: usize = 128 * 1024 * 1024;
+
 fn read_entry<R: Read + Seek>(
     mng: &mut ZipManager<R>,
     name: &str,
 ) -> Result<ZipManager<Cursor<Vec<u8>>>> {
     let mut data = Vec::new();
-    mng.open_file(name)?.read_to_end(&mut data)?;
+    let file = mng.open_file(name)?;
+    let read = file
+        .take((MAX_EMBEDDED_JAR_SIZE as u64) + 1)
+        .read_to_end(&mut data)
+        .map_err(Error::Io)?;
+    if read > MAX_EMBEDDED_JAR_SIZE {
+        return Err(Error::Io(io::Error::new(
+            ErrorKind::InvalidData,
+            "embedded archive entry exceeds size limit",
+        )));
+    }
 
     Ok(ZipManager::from_reader(&mut Cursor::new(data))?)
 }
