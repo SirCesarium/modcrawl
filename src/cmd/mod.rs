@@ -2,8 +2,8 @@
 
 pub mod dep;
 pub mod metadata;
-pub mod r#type;
 pub mod side;
+pub mod r#type;
 
 #[cfg(feature = "classfile")]
 pub mod classes;

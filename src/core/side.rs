@@ -43,7 +43,10 @@ impl fmt::Display for Side {
 #[must_use]
 pub fn classify(metadata: &ModMetadata) -> Side {
     match metadata {
-        ModMetadata::Fabric(m) => m.environment.as_deref().map_or(Side::Unknown, environment_side),
+        ModMetadata::Fabric(m) => m
+            .environment
+            .as_deref()
+            .map_or(Side::Unknown, environment_side),
         ModMetadata::Quilt(m) => m
             .minecraft
             .as_ref()
@@ -137,9 +140,8 @@ mod tests {
     }
 
     fn fabric_with_environment(environment: Option<&str>) -> ModMetadata {
-        let environment = environment.map_or_else(String::new, |value| {
-            format!(r#","environment":"{value}""#)
-        });
+        let environment =
+            environment.map_or_else(String::new, |value| format!(r#","environment":"{value}""#));
 
         fabric(&format!(
             r#"{{"schemaVersion":1,"id":"example","version":"1.0.0"{environment}}}"#
@@ -166,8 +168,14 @@ mod tests {
         );
         assert_eq!(classify(&fabric_with_environment(Some("*"))), Side::Both);
         assert_eq!(classify(&fabric_with_environment(Some("both"))), Side::Both);
-        assert_eq!(classify(&fabric_with_environment(Some("CLIENT"))), Side::Client);
-        assert_eq!(classify(&fabric_with_environment(Some("weird"))), Side::Unknown);
+        assert_eq!(
+            classify(&fabric_with_environment(Some("CLIENT"))),
+            Side::Client
+        );
+        assert_eq!(
+            classify(&fabric_with_environment(Some("weird"))),
+            Side::Unknown
+        );
     }
 
     #[test]
@@ -279,16 +287,13 @@ side = "SERVER"
     #[test]
     fn plugins_are_server_side() {
         let bukkit = ModMetadata::Bukkit(
-            bukkit::metadata::parse("name: Example\nversion: '1.0'\nmain: example.Main\n")
-                .unwrap(),
+            bukkit::metadata::parse("name: Example\nversion: '1.0'\nmain: example.Main\n").unwrap(),
         );
         let paper = ModMetadata::Paper(
-            paper::metadata::parse("name: Example\nversion: '1.0'\nmain: example.Main\n")
-                .unwrap(),
+            paper::metadata::parse("name: Example\nversion: '1.0'\nmain: example.Main\n").unwrap(),
         );
         let bungee = ModMetadata::Bungee(
-            bungee::metadata::parse("name: Example\nversion: '1.0'\nmain: example.Main\n")
-                .unwrap(),
+            bungee::metadata::parse("name: Example\nversion: '1.0'\nmain: example.Main\n").unwrap(),
         );
         let velocity = ModMetadata::Velocity(
             velocity::metadata::parse(r#"{"id":"example","version":"1.0"}"#).unwrap(),

@@ -20,7 +20,7 @@ pub(crate) use grep::render as render_grep;
 pub(crate) use lines::{file_error, file_header, no_results};
 pub(crate) use metadata::render as render_metadata;
 pub(crate) use mixins::render as render_mixins;
+pub(crate) use side::render as render_side;
 pub(crate) use r#type::{
     render as render_type, render_multi as render_type_multi, render_tagged as render_type_tagged,
 };
-pub(crate) use side::render as render_side;
