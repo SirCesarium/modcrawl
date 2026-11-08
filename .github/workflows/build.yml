@@ -243,12 +243,6 @@ jobs:
           fail_on_unmatched_files: true
           files: ./artifacts/*
           generate_release_notes: true
-          body: |
-            C FFI bindings and the `modcrawl.h` header were removed in this release.
-            The CLI, Rust library, and WASM package are unaffected.
-
-            AUR users: the `modcrawl` PKGBUILD must drop `cbindgen`, the header and
-            native library installs, and the `libmodcrawl` provide.
 
       - name: Setup Node.js
         uses: actions/setup-node@v7
