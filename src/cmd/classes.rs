@@ -33,6 +33,7 @@ pub struct Args {
 pub fn run(args: &Args) -> Result<()> {
     let sources = collect_sources(&args.path)?;
     let multi = sources.len() > 1;
+    let mut all_entries = Vec::new();
 
     for source in &sources {
         let entries = match source {
@@ -50,7 +51,7 @@ pub fn run(args: &Args) -> Result<()> {
         };
 
         if args.json {
-            println!("{}", to_string_pretty(&entries)?);
+            all_entries.extend(entries);
             continue;
         }
 
@@ -59,6 +60,10 @@ pub fn run(args: &Args) -> Result<()> {
         }
 
         ui::render_classes(&entries);
+    }
+
+    if args.json {
+        println!("{}", to_string_pretty(&all_entries)?);
     }
 
     Ok(())

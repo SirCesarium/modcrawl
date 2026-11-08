@@ -42,6 +42,7 @@ pub fn run(args: &Args) -> Result<()> {
     let sources = collect_sources(&args.path)?;
     let multi = sources.len() > 1;
     let mut total_entries = 0usize;
+    let mut all_entries = Vec::new();
 
     for source in &sources {
         let entries = match source {
@@ -57,7 +58,7 @@ pub fn run(args: &Args) -> Result<()> {
         };
 
         if args.json {
-            println!("{}", to_string_pretty(&entries)?);
+            all_entries.extend(entries);
             continue;
         }
 
@@ -85,7 +86,9 @@ pub fn run(args: &Args) -> Result<()> {
         }
     }
 
-    if total_entries == 0 && !sources.is_empty() && !args.json {
+    if args.json {
+        println!("{}", to_string_pretty(&all_entries)?);
+    } else if total_entries == 0 && !sources.is_empty() {
         ui::no_results("No mixins found.");
     }
 

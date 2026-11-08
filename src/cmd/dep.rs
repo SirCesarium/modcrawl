@@ -40,6 +40,7 @@ pub struct Args {
 pub fn run(args: &Args) -> Result<()> {
     let sources = collect_sources(&args.path)?;
     let multi = sources.len() > 1;
+    let mut reports = Vec::new();
 
     for source in &sources {
         let report = match source {
@@ -57,7 +58,7 @@ pub fn run(args: &Args) -> Result<()> {
         };
 
         if args.json {
-            println!("{}", to_string_pretty(&report)?);
+            reports.push(report);
             continue;
         }
 
@@ -66,6 +67,14 @@ pub fn run(args: &Args) -> Result<()> {
         }
 
         ui::render_deps(&report, args.include_jar_in_jar);
+    }
+
+    if args.json {
+        if multi {
+            println!("{}", to_string_pretty(&reports)?);
+        } else if let Some(report) = reports.first() {
+            println!("{}", to_string_pretty(report)?);
+        }
     }
 
     Ok(())

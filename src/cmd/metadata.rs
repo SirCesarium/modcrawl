@@ -4,7 +4,7 @@ use std::io::Cursor;
 use std::path::PathBuf;
 
 use clap::Args as ClapArgs;
-use serde_json::to_string;
+use serde_json::to_string_pretty;
 
 use crate::cmd::{Source, collect_sources};
 use crate::core::metadata::{read_metadata, read_metadata_reader};
@@ -14,7 +14,7 @@ use crate::ui;
 /// Arguments for the `metadata` command.
 #[derive(ClapArgs)]
 pub struct Args {
-    /// Output compact JSON (one line) instead of pretty-printed
+    /// Output as JSON instead of human-readable text
     #[arg(short, long)]
     pub json: bool,
 
@@ -30,6 +30,7 @@ pub struct Args {
 pub fn run(args: &Args) -> Result<()> {
     let sources = collect_sources(&args.path)?;
     let multi = sources.len() > 1;
+    let mut entries = Vec::new();
 
     for source in &sources {
         let meta = match source {
@@ -45,7 +46,7 @@ pub fn run(args: &Args) -> Result<()> {
         };
 
         if args.json {
-            println!("{}", to_string(&meta)?);
+            entries.push(meta);
             continue;
         }
 
@@ -54,6 +55,14 @@ pub fn run(args: &Args) -> Result<()> {
         }
 
         ui::render_metadata(&meta);
+    }
+
+    if args.json {
+        if multi {
+            println!("{}", to_string_pretty(&entries)?);
+        } else if let Some(meta) = entries.first() {
+            println!("{}", to_string_pretty(meta)?);
+        }
     }
 
     Ok(())

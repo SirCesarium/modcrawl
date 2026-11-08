@@ -44,6 +44,7 @@ pub fn run(args: &Args) -> Result<()> {
     let sources = collect_sources(&args.path)?;
     let multi = sources.len() > 1;
     let mut total_matches = 0usize;
+    let mut all_matches = Vec::new();
 
     for source in &sources {
         let matches = match source {
@@ -61,7 +62,7 @@ pub fn run(args: &Args) -> Result<()> {
         };
 
         if args.json {
-            println!("{}", to_string_pretty(&matches)?);
+            all_matches.extend(matches);
             continue;
         }
 
@@ -89,7 +90,9 @@ pub fn run(args: &Args) -> Result<()> {
         }
     }
 
-    if total_matches == 0 && !sources.is_empty() && !args.json {
+    if args.json {
+        println!("{}", to_string_pretty(&all_matches)?);
+    } else if total_matches == 0 && !sources.is_empty() {
         ui::no_results(&format!(
             "No matches found for pattern \"{}\".",
             args.pattern
