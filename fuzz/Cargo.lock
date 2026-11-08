@@ -578,7 +578,7 @@ dependencies = [
 
 [[package]]
 name = "modcrawl"
-version = "0.12.3"
+version = "0.12.4"
 dependencies = [
  "anstream",
  "anstyle",
