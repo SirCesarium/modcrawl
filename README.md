@@ -14,7 +14,7 @@ Analyze **Minecraft mods and plugins** to find out which loader they belong to, 
 
 ## What is `modcrawl`
 
-`modcrawl` is an all-in-one **Minecraft utility** as a **CLI**, a **Rust library**, and an **npm package** designed to **help modpackers** and **server admins** to inspect, organize, and debug modpacks without the headache.
+`modcrawl` is an all-in-one **Minecraft utility** as a **CLI**, a **Rust library**, and an **npm package** designed to **help modpackers** and **server admins** inspect, organize, and debug modpacks without a headache.
 
 It helps you quickly answer the everyday questions that pop up while building or fixing a modpack:
 
@@ -155,9 +155,9 @@ console.log(metadata_json(data));
 There's a **WIP** web version of `modcrawl` that aims to provide all of the features of `modcrawl` in a more user-friendly way and will work completely offline (thanks to `WASM`!). It's still in development (currently there's not even a MVP), so expect some bugs and missing features. Stay tuned in [GitHub Discussions](https://github.com/SirCesarium/modcrawl/discussions) for any major updates :).
   
 > [!NOTE]
-> There will be a structured documentation when the web version reaches a stable state.
+> There will be structured documentation when the web version reaches a stable state.
 >
-> The documentation will show a deep overview of all of the commands and the *API Reference* of the **Rust Library** and the **NPM (TypeScript) Library**
+> The documentation will provide a deep overview of all the commands and the *API Reference* of the **Rust Library** and the **NPM (TypeScript) Library**
 
 ### Web setup
 
