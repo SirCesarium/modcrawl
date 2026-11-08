@@ -19,14 +19,18 @@ pub(crate) mod ui;
 #[cfg(all(feature = "wasm", target_arch = "wasm32"))]
 pub mod wasm;
 
+pub use core::REGISTRY;
 pub use core::dep::types::DepKind;
 pub use core::dep::types::VersionRange;
 pub use core::dep::{DepEntry, DepReport, JarInJar, analyze, analyze_reader};
-pub use core::detect_mod_type::ModType;
+pub use core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
 pub use core::identify::{identify, identify_reader};
 pub use core::metadata::{ModMetadata, read_metadata, read_metadata_reader};
 pub use core::side::{Side, classify};
 pub use error::{Error, Result};
 
 #[cfg(feature = "classfile")]
-pub use core::classfile::{ClassEntry, DupEntry, GrepMatch, MixinEntry};
+pub use core::classfile::{
+    ClassEntry, DupEntry, GrepMatch, MixinEntry, grep, grep_reader, list_classes,
+    list_classes_reader, mixins, mixins_reader,
+};
