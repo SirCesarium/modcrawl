@@ -2,6 +2,7 @@
 //! and duplicate-class detection.
 
 use std::io::{Read, Seek};
+use std::panic;
 use std::path::Path;
 
 use java_class_rs::{
@@ -297,9 +298,10 @@ fn parse_class_in_jar<R: Read + Seek>(
         return Ok(None);
     }
 
-    match parse_classfile(&bytes) {
-        Ok((_, cf)) => Ok(Some(cf)),
-        Err(_) => Ok(None),
+    let parsed = panic::catch_unwind(|| parse_classfile(&bytes));
+    match parsed {
+        Ok(Ok((_, cf))) => Ok(Some(cf)),
+        _ => Ok(None),
     }
 }
 

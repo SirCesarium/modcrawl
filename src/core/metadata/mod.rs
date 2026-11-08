@@ -1,7 +1,8 @@
 //! Parsed metadata for every supported mod and plugin loader.
 
 use std::fmt;
-use std::io::{Read, Seek};
+use std::io::{self, Read, Seek};
+use std::panic;
 use std::path::Path;
 
 use serde::Serialize;
@@ -93,6 +94,26 @@ pub fn read_metadata_reader<R: Read>(reader: &mut R) -> Result<ModMetadata> {
     read_metadata_impl(&mut mng)
 }
 
+const MAX_METADATA_SIZE: usize = 10 * 1024 * 1024;
+
+pub(crate) fn read_metadata_string<R: Read + Seek>(
+    mng: &mut ZipManager<R>,
+    name: &str,
+) -> Result<String> {
+    let file = mng.open_file(name)?;
+    let mut buffer = Vec::new();
+    let read = file
+        .take((MAX_METADATA_SIZE as u64) + 1)
+        .read_to_end(&mut buffer)
+        .map_err(Error::Io)?;
+    if read > MAX_METADATA_SIZE {
+        return Err(Error::Usage(format!(
+            "metadata file \"{name}\" exceeds maximum size limit of 10 MB"
+        )));
+    }
+    String::from_utf8(buffer).map_err(|e| Error::Io(io::Error::new(io::ErrorKind::InvalidData, e)))
+}
+
 fn read_metadata_impl<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<ModMetadata> {
     let entries = mng.entries()?;
     let mod_type = REGISTRY.detect(&entries);
@@ -101,8 +122,14 @@ fn read_metadata_impl<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<ModMeta
         return read_embedded(mng);
     };
 
-    let raw = mng.read_to_string(file)?;
-    REGISTRY.read_metadata(&mod_type, &raw)
+    let raw = read_metadata_string(mng, file)?;
+    let parsed = panic::catch_unwind(|| REGISTRY.read_metadata(&mod_type, &raw));
+    match parsed {
+        Ok(res) => res,
+        Err(_) => Err(Error::UnsupportedMetadata(String::from(
+            "malformed metadata caused parser panic",
+        ))),
+    }
 }
 
 /// Metadata of a shell jar, whose real mod sits inside an embedded one.
@@ -111,5 +138,11 @@ fn read_embedded<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<ModMetadata>
         return Err(Error::UnsupportedMetadata(mng.path_name.clone()));
     };
 
-    REGISTRY.read_metadata(&mod_type, &raw)
+    let parsed = panic::catch_unwind(|| REGISTRY.read_metadata(&mod_type, &raw));
+    match parsed {
+        Ok(res) => res,
+        Err(_) => Err(Error::UnsupportedMetadata(String::from(
+            "malformed metadata caused parser panic",
+        ))),
+    }
 }

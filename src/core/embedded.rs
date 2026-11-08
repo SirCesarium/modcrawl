@@ -7,6 +7,7 @@ use zipcrawl::ZipManager;
 use crate::core::REGISTRY;
 use crate::core::dep::find_embedded_jars;
 use crate::core::detect_mod_type::ModType;
+use crate::core::metadata::read_metadata_string;
 use crate::error::{Error, Result};
 
 /// Read the metadata of the first embedded jar that carries its own.
@@ -29,7 +30,7 @@ pub(crate) fn read_raw<R: Read + Seek>(
             continue;
         };
 
-        let Ok(raw) = nested.read_to_string(file) else {
+        let Ok(raw) = read_metadata_string(&mut nested, file) else {
             continue;
         };
         return Ok(Some((mod_type, raw)));

@@ -4,6 +4,7 @@ pub mod types;
 
 use std::collections::HashMap;
 use std::io::{Read, Seek};
+use std::panic;
 use std::path::Path;
 
 use zipcrawl::{ZipEntry, ZipManager};
@@ -12,6 +13,7 @@ pub use types::{DepEntry, DepReport, JarInJar};
 
 use crate::core::REGISTRY;
 use crate::core::embedded;
+use crate::core::metadata::read_metadata_string;
 use crate::error::Result;
 
 /// Analyze dependencies of a mod/plugin JAR.
@@ -46,8 +48,12 @@ fn analyze_impl<R: Read + Seek>(mng: &mut ZipManager<R>, include_jij: bool) -> R
 
     let mut dependencies = match REGISTRY.metadata_file_path(&mod_type) {
         Some(file) => {
-            let raw = mng.read_to_string(file)?;
-            dedup_deps(REGISTRY.extract_deps(&mod_type, &raw)?)
+            let raw = read_metadata_string(mng, file)?;
+            let deps = match panic::catch_unwind(|| REGISTRY.extract_deps(&mod_type, &raw)) {
+                Ok(res) => res?,
+                Err(_) => Vec::new(),
+            };
+            dedup_deps(deps)
         }
         None => embedded_deps(mng)?,
     };
