@@ -335,4 +335,15 @@ mod tests {
         let result = read_stdin_reader(large_stream);
         assert!(matches!(result, Err(Error::Usage(_))));
     }
+
+    #[test]
+    fn command_fails_when_input_jar_fails() {
+        let missing = Path::new("/nonexistent/modcrawl-bad.jar").to_path_buf();
+        let args = dep::Args {
+            path: vec![missing],
+            include_jar_in_jar: false,
+            json: false,
+        };
+        assert!(matches!(dep::run(&args), Err(Error::Failed)));
+    }
 }

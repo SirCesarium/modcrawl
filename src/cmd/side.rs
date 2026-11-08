@@ -12,7 +12,7 @@ use crate::core::detect_mod_type::ModType;
 use crate::core::identify::{identify, identify_reader};
 use crate::core::metadata::{read_metadata, read_metadata_reader};
 use crate::core::side::{Side, classify};
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::ui;
 
 /// Arguments for the `side` command.
@@ -45,6 +45,7 @@ pub fn run(args: &Args) -> Result<()> {
     let sources = collect_sources(&args.path)?;
     let mut entries = Vec::new();
     let mut rows = Vec::new();
+    let mut failed = false;
 
     for source in &sources {
         match classify_source(source) {
@@ -59,14 +60,21 @@ pub fn run(args: &Args) -> Result<()> {
                     rows.push((source.label(), kind, side));
                 }
             }
-            Err(e) => ui::file_error(&source.label(), &e),
+            Err(e) => {
+                ui::file_error(&source.label(), &e);
+                failed = true;
+            }
         }
     }
 
     if args.json {
         println!("{}", to_string_pretty(&entries)?);
-    } else {
+    } else if !rows.is_empty() {
         ui::render_side(&rows);
+    }
+
+    if failed {
+        return Err(Error::Failed);
     }
 
     Ok(())

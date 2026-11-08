@@ -8,7 +8,7 @@ use serde_json::to_string_pretty;
 
 use crate::cmd::{Source, collect_sources};
 use crate::core::classfile;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::ui;
 
 /// Arguments for the `classes` command.
@@ -34,6 +34,7 @@ pub fn run(args: &Args) -> Result<()> {
     let sources = collect_sources(&args.path)?;
     let multi = sources.len() > 1;
     let mut all_entries = Vec::new();
+    let mut failed = false;
 
     for source in &sources {
         let entries = match source {
@@ -46,6 +47,7 @@ pub fn run(args: &Args) -> Result<()> {
             Ok(e) => e,
             Err(e) => {
                 ui::file_error(&source.label(), &e);
+                failed = true;
                 continue;
             }
         };
@@ -64,6 +66,10 @@ pub fn run(args: &Args) -> Result<()> {
 
     if args.json {
         println!("{}", to_string_pretty(&all_entries)?);
+    }
+
+    if failed {
+        return Err(Error::Failed);
     }
 
     Ok(())

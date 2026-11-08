@@ -8,7 +8,7 @@ use serde_json::to_string_pretty;
 
 use crate::cmd::{Source, collect_sources};
 use crate::core::dep;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::ui;
 
 /// Arguments for the `dep` command.
@@ -41,6 +41,7 @@ pub fn run(args: &Args) -> Result<()> {
     let sources = collect_sources(&args.path)?;
     let multi = sources.len() > 1;
     let mut reports = Vec::new();
+    let mut failed = false;
 
     for source in &sources {
         let report = match source {
@@ -53,6 +54,7 @@ pub fn run(args: &Args) -> Result<()> {
             Ok(r) => r,
             Err(e) => {
                 ui::file_error(&source.label(), &e);
+                failed = true;
                 continue;
             }
         };
@@ -75,6 +77,10 @@ pub fn run(args: &Args) -> Result<()> {
         } else if let Some(report) = reports.first() {
             println!("{}", to_string_pretty(report)?);
         }
+    }
+
+    if failed {
+        return Err(Error::Failed);
     }
 
     Ok(())

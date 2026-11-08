@@ -7,7 +7,7 @@ use clap::Args as ClapArgs;
 
 use crate::cmd::{Stdin, collect_jar_paths, is_stdin_request, read_stdin};
 use crate::core::identify::{identify, identify_reader};
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::ui;
 
 const EOCD_MAGIC: &[u8] = b"PK\x05\x06";
@@ -19,11 +19,11 @@ pub struct Args {
     pub path: Vec<PathBuf>,
 }
 
-fn process_zip_chunks(data: &[u8]) {
+fn process_zip_chunks(data: &[u8]) -> bool {
     let mut cursor = io::Cursor::new(data);
     if let Ok(mod_type) = identify_reader(&mut cursor) {
         ui::render_type(&mod_type);
-        return;
+        return false;
     }
 
     let eocd_positions: Vec<usize> = data
@@ -56,27 +56,36 @@ fn process_zip_chunks(data: &[u8]) {
 
     if n == 0 {
         eprintln!("No valid ZIPs found in concatenated stream");
+        return true;
     }
+
+    false
 }
 
 /// Render the type of each JAR, or a single file on its own when its caller
 /// named exactly that file.
-fn render(files: &[PathBuf], named_only: bool) {
+fn render(files: &[PathBuf], named_only: bool) -> bool {
+    let mut failed = false;
     let entries: Vec<(String, _)> = files
         .iter()
         .filter_map(|file| match identify(file) {
             Ok(mod_type) => Some((file.display().to_string(), mod_type)),
             Err(e) => {
                 ui::file_error(&file.display().to_string(), &e);
+                failed = true;
                 None
             }
         })
         .collect();
 
-    match (named_only, entries.as_slice()) {
-        (true, [entry]) => ui::render_type(&entry.1),
-        _ => ui::render_type_multi(&entries),
+    if !entries.is_empty() {
+        match (named_only, entries.as_slice()) {
+            (true, [entry]) => ui::render_type(&entry.1),
+            _ => ui::render_type_multi(&entries),
+        }
     }
+
+    failed
 }
 
 /// Run the `type` command: detect mod/plugin type(s) from JAR files.
@@ -85,17 +94,19 @@ fn render(files: &[PathBuf], named_only: bool) {
 ///
 /// Returns an error if I/O fails or a ZIP archive cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    if is_stdin_request(&args.path) {
+    let failed = if is_stdin_request(&args.path) {
         match read_stdin()? {
             Stdin::Archive(data) => process_zip_chunks(&data),
             Stdin::Paths(list) => render(&collect_jar_paths(&list)?, false),
         }
-        return Ok(());
+    } else {
+        let named_only = matches!(args.path.as_slice(), [one] if !one.is_dir());
+        render(&collect_jar_paths(&args.path)?, named_only)
+    };
+
+    if failed {
+        return Err(Error::Failed);
     }
-
-    let named_only = matches!(args.path.as_slice(), [one] if !one.is_dir());
-
-    render(&collect_jar_paths(&args.path)?, named_only);
 
     Ok(())
 }

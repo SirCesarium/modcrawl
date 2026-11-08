@@ -49,6 +49,9 @@ fn main() -> Result<()> {
             eprintln!("error: {msg}");
             process::exit(2);
         }
+        Err(Error::Failed) => {
+            process::exit(1);
+        }
         Err(e) => Err(e.into()),
     }
 }

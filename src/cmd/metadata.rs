@@ -8,7 +8,7 @@ use serde_json::to_string_pretty;
 
 use crate::cmd::{Source, collect_sources};
 use crate::core::metadata::{read_metadata, read_metadata_reader};
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::ui;
 
 /// Arguments for the `metadata` command.
@@ -31,6 +31,7 @@ pub fn run(args: &Args) -> Result<()> {
     let sources = collect_sources(&args.path)?;
     let multi = sources.len() > 1;
     let mut entries = Vec::new();
+    let mut failed = false;
 
     for source in &sources {
         let meta = match source {
@@ -41,6 +42,7 @@ pub fn run(args: &Args) -> Result<()> {
             Ok(m) => m,
             Err(e) => {
                 ui::file_error(&source.label(), &e);
+                failed = true;
                 continue;
             }
         };
@@ -63,6 +65,10 @@ pub fn run(args: &Args) -> Result<()> {
         } else if let Some(meta) = entries.first() {
             println!("{}", to_string_pretty(meta)?);
         }
+    }
+
+    if failed {
+        return Err(Error::Failed);
     }
 
     Ok(())

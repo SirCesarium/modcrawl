@@ -73,6 +73,11 @@ pub enum Error {
     #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::usage)))]
     Usage(String),
 
+    /// One or more inputs failed to process.
+    #[error("Failed to process one or more inputs")]
+    #[cfg_attr(feature = "cli", diagnostic(code(modcrawl::failed)))]
+    Failed,
+
     /// A class file could not be read or interpreted.
     #[cfg(feature = "classfile")]
     #[error("Class file error: {0}")]
@@ -117,6 +122,12 @@ mod tests {
     fn error_usage_shows_only_its_message() {
         let e = Error::Usage(String::from("no input: pass a JAR path"));
         assert_eq!(e.to_string(), "no input: pass a JAR path");
+    }
+
+    #[test]
+    fn error_failed_display() {
+        let e = Error::Failed;
+        assert_eq!(e.to_string(), "Failed to process one or more inputs");
     }
 
     #[cfg(feature = "cli")]

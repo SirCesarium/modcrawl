@@ -9,7 +9,7 @@ use serde_json::to_string_pretty;
 
 use crate::cmd::{Source, collect_sources};
 use crate::core::classfile;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::ui;
 
 /// Arguments for the `grep` command.
@@ -45,6 +45,7 @@ pub fn run(args: &Args) -> Result<()> {
     let multi = sources.len() > 1;
     let mut total_matches = 0usize;
     let mut all_matches = Vec::new();
+    let mut failed = false;
 
     for source in &sources {
         let matches = match source {
@@ -57,6 +58,7 @@ pub fn run(args: &Args) -> Result<()> {
             Ok(m) => m,
             Err(e) => {
                 ui::file_error(&source.label(), &e);
+                failed = true;
                 continue;
             }
         };
@@ -92,11 +94,15 @@ pub fn run(args: &Args) -> Result<()> {
 
     if args.json {
         println!("{}", to_string_pretty(&all_matches)?);
-    } else if total_matches == 0 && !sources.is_empty() {
+    } else if total_matches == 0 && !sources.is_empty() && !failed {
         ui::no_results(&format!(
             "No matches found for pattern \"{}\".",
             args.pattern
         ));
+    }
+
+    if failed {
+        return Err(Error::Failed);
     }
 
     Ok(())
