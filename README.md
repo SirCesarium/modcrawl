@@ -85,9 +85,9 @@ These are the loaders that `modcrawl` currently supports.
 | Forge (legacy `<1.12`) | ✅ | Mods |
 | Quilt | ✅ | Mods |
 | Bukkit | ✅ | Plugins |
-| Paper | Metadata, not dependencies | Plugins |
-| Bungee | Metadata, not dependencies | Plugins |
-| Velocity | Metadata, not dependencies | Plugins |
+| Paper | ✅ | Plugins |
+| Bungee | ✅ | Plugins |
+| Velocity | ✅ | Plugins |
 
 ## Installation
 
