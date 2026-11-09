@@ -44,6 +44,20 @@ pub fn extract(raw: &str) -> Result<Vec<DepEntry>> {
             VersionRange::parse(ver(range)),
         ));
     }
+    for (name, range) in meta.breaks {
+        deps.push(DepEntry::new(
+            name,
+            DepKind::Incompatible,
+            VersionRange::parse(ver(range)),
+        ));
+    }
+    for (name, range) in meta.conflicts {
+        deps.push(DepEntry::new(
+            name,
+            DepKind::Incompatible,
+            VersionRange::parse(ver(range)),
+        ));
+    }
 
     Ok(deps)
 }
@@ -100,6 +114,48 @@ mod tests {
             deps.iter()
                 .any(|d| d.name == "iris" && d.kind == DepKind::Suggested)
         );
+    }
+
+    #[test]
+    fn extract_breaks_and_conflicts() {
+        let json = r#"{
+            "schemaVersion": 1,
+            "id": "testmod",
+            "version": "1.0.0",
+            "breaks": {
+                "optifine": "*"
+            },
+            "conflicts": {
+                "anothermod": "<=1.0.0"
+            }
+        }"#;
+        let deps = extract(json).unwrap();
+        assert_eq!(deps.len(), 2);
+        assert!(
+            deps.iter()
+                .any(|d| d.name == "optifine" && d.kind == DepKind::Incompatible)
+        );
+        assert!(
+            deps.iter()
+                .any(|d| d.name == "anothermod" && d.kind == DepKind::Incompatible)
+        );
+    }
+
+    #[test]
+    fn extract_breaks_and_conflicts_with_array_version() {
+        let json = r#"{
+            "schemaVersion": 1,
+            "id": "testmod",
+            "version": "1.0.0",
+            "breaks": {
+                "badmod": ["1.0.0", "1.1.0"]
+            }
+        }"#;
+        let deps = extract(json).unwrap();
+        assert_eq!(deps.len(), 1);
+        assert_eq!(deps[0].name, "badmod");
+        assert_eq!(deps[0].kind, DepKind::Incompatible);
+        assert_eq!(deps[0].version_range.raw.as_deref(), Some("1.0.0"));
     }
 
     #[test]

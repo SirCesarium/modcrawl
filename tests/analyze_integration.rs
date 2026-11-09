@@ -29,6 +29,32 @@ fn test_analyze_fabric_dependencies() {
 }
 
 #[test]
+fn test_analyze_fabric_breaks_and_conflicts() {
+    let manifest = r#"{
+      "schemaVersion": 1,
+      "id": "fabric_breaks_test",
+      "version": "1.0.0",
+      "breaks": {
+        "optifine": "*"
+      },
+      "conflicts": {
+        "conflicting_mod": ">=2.0.0"
+      }
+    }"#;
+    let jar = common::TempJar::from_entries(&[("fabric.mod.json", manifest.as_bytes())]);
+    let report = analyze(jar.path(), false).expect("failed to analyze Fabric dependencies");
+
+    let dep_map: BTreeMap<_, _> = report
+        .dependencies
+        .iter()
+        .map(|d| (d.name.as_str(), d.kind))
+        .collect();
+
+    assert_eq!(dep_map.get("optifine"), Some(&DepKind::Incompatible));
+    assert_eq!(dep_map.get("conflicting_mod"), Some(&DepKind::Incompatible));
+}
+
+#[test]
 fn test_analyze_quilt_dependencies() {
     let jar = common::quilt_jar("quilt_dep_test", "1.0.0");
     let report = analyze(jar.path(), false).expect("failed to analyze Quilt dependencies");
