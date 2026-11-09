@@ -27,14 +27,20 @@ pub(crate) fn no_results(msg: &str) {
 }
 
 /// Report a file that could not be read: path in bold, reason in red, on
-/// stderr.
+/// stderr. The path is not repeated when the reason already names it.
 pub(crate) fn file_error(path: &str, err: &dyn fmt::Display) {
     let path_style = Style::new().bold();
     let err_style = Style::new().fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Red)));
+    let message = err.to_string();
+
+    if !path.is_empty() && message.starts_with(path) {
+        eprintln!("{}", paint(err_style, &message));
+        return;
+    }
 
     eprintln!(
         "{}: {}",
         paint(path_style, path),
-        paint(err_style, &err.to_string())
+        paint(err_style, &message)
     );
 }

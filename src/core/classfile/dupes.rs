@@ -19,15 +19,22 @@ pub struct DupEntry {
     pub files: Vec<String>,
 }
 
-/// Find duplicate class entries across multiple JARs on disk.
+/// Collects class entries across archives, one archive at a time.
 ///
-/// # Errors
-///
-/// Returns an error if any JAR cannot be read.
-pub fn find_duplicates(paths: &[&Path]) -> Result<Vec<DupEntry>> {
-    let mut acc = BTreeMap::new();
+/// An aggregating command processes several inputs, so it needs to add them
+/// individually and report which one failed instead of aborting the run.
+#[derive(Default)]
+pub(crate) struct ClassIndex {
+    classes: BTreeMap<String, Vec<String>>,
+}
 
-    for &path in paths {
+impl ClassIndex {
+    /// Add every `.class` entry in the JAR at `path`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the JAR cannot be read.
+    pub(crate) fn add_path(&mut self, path: &Path) -> Result<()> {
         let mut manager = ZipManager::new(path)?;
 
         let label = path.file_name().map_or_else(
@@ -35,10 +42,63 @@ pub fn find_duplicates(paths: &[&Path]) -> Result<Vec<DupEntry>> {
             |n| n.to_string_lossy().to_string(),
         );
 
-        collect_classes(&mut manager, &label, &mut acc)?;
+        self.add_manager(&mut manager, &label)
     }
 
-    Ok(into_dupes(acc))
+    /// Add every `.class` entry in an in-memory archive labeled by name.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the buffer is not a valid ZIP archive.
+    pub(crate) fn add_buffer(&mut self, label: &str, bytes: &[u8]) -> Result<()> {
+        let mut cursor = Cursor::new(bytes);
+        let mut manager = ZipManager::from_reader(&mut cursor)?;
+
+        self.add_manager(&mut manager, label)
+    }
+
+    fn add_manager<R: Read + Seek>(
+        &mut self,
+        manager: &mut ZipManager<R>,
+        label: &str,
+    ) -> Result<()> {
+        let entries = manager.entries()?;
+
+        for entry in &entries {
+            if is_class_entry(&entry.name) && !entry.is_dir {
+                self.classes
+                    .entry(entry.name.clone())
+                    .or_default()
+                    .push(label.to_string());
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Classes that appear in more than one archive.
+    pub(crate) fn into_duplicates(self) -> Vec<DupEntry> {
+        self.classes
+            .into_iter()
+            .filter(|(_, files)| files.len() > 1)
+            .map(|(class_name, files)| DupEntry { class_name, files })
+            .collect()
+    }
+}
+
+/// Find duplicate class entries across multiple JARs on disk.
+///
+/// # Errors
+///
+/// Returns an error if any JAR cannot be read.
+pub fn find_duplicates(paths: &[&Path]) -> Result<Vec<DupEntry>> {
+    let mut index = ClassIndex::default();
+
+    for &path in paths {
+        index.add_path(path)?;
+    }
+
+    Ok(index.into_duplicates())
 }
 
 /// Find duplicate class entries across in-memory JARs labeled by name.
@@ -47,41 +107,13 @@ pub fn find_duplicates(paths: &[&Path]) -> Result<Vec<DupEntry>> {
 ///
 /// Returns an error if any buffer is not a valid ZIP archive.
 pub fn find_duplicates_buffers(jars: &[(&str, &[u8])]) -> Result<Vec<DupEntry>> {
-    let mut acc = BTreeMap::new();
+    let mut index = ClassIndex::default();
 
     for &(label, bytes) in jars {
-        let mut cursor = Cursor::new(bytes);
-        let mut manager = ZipManager::from_reader(&mut cursor)?;
-
-        collect_classes(&mut manager, label, &mut acc)?;
+        index.add_buffer(label, bytes)?;
     }
 
-    Ok(into_dupes(acc))
-}
-
-fn collect_classes<R: Read + Seek>(
-    manager: &mut ZipManager<R>,
-    label: &str,
-    acc: &mut BTreeMap<String, Vec<String>>,
-) -> Result<()> {
-    let entries = manager.entries()?;
-
-    for entry in &entries {
-        if is_class_entry(&entry.name) && !entry.is_dir {
-            acc.entry(entry.name.clone())
-                .or_default()
-                .push(label.to_string());
-        }
-    }
-
-    Ok(())
-}
-
-fn into_dupes(acc: BTreeMap<String, Vec<String>>) -> Vec<DupEntry> {
-    acc.into_iter()
-        .filter(|(_, files)| files.len() > 1)
-        .map(|(class_name, files)| DupEntry { class_name, files })
-        .collect()
+    Ok(index.into_duplicates())
 }
 
 #[cfg(test)]

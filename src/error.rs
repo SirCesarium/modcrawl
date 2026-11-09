@@ -16,22 +16,33 @@ use toml::de;
 /// Convenience result type used throughout the crate.
 pub type Result<T> = result::Result<T, Error>;
 
-/// Deepest cause in a `zipcrawl` error's source chain.
+/// Render a `zipcrawl` error, keeping the archive path and the underlying
+/// reason together.
 ///
-/// `IoError` wraps an `io::Error`, so the leaf (`No such file or directory`)
-/// carries the reason and the wrapper only carries the path.
+/// `IoError` stores the path on the wrapper and the reason on its source, so
+/// rendering either one alone loses half the diagnostic. Other variants fall
+/// back to their full source chain.
 fn zipcrawl_reason(err: &ZipCrawlError) -> String {
-    let mut cause: &dyn StdError = err;
-    while let Some(source) = cause.source() {
-        cause = source;
+    if let ZipCrawlError::IoError { path, source } = err {
+        return format!("{path}: {source}");
     }
 
-    let reason = cause.to_string();
-    if reason.is_empty() {
-        err.to_string()
-    } else {
-        reason
+    let mut messages: Vec<String> = Vec::new();
+    let mut cause: &dyn StdError = err;
+
+    loop {
+        let message = cause.to_string();
+        if !message.is_empty() && messages.last() != Some(&message) {
+            messages.push(message);
+        }
+
+        match cause.source() {
+            Some(source) => cause = source,
+            None => break,
+        }
     }
+
+    messages.join(": ")
 }
 
 /// Errors produced while reading or parsing mod and archive data.
@@ -109,6 +120,18 @@ mod tests {
     fn error_display_unsupported_metadata() {
         let e = Error::UnsupportedMetadata("Foo.jar".to_owned());
         assert_eq!(e.to_string(), "Unsupported metadata format for Foo.jar");
+    }
+
+    #[test]
+    fn error_display_zipcrawl_keeps_the_archive_path() {
+        let e = Error::ZipCrawl(ZipCrawlError::IoError {
+            path: String::from("missing.jar"),
+            source: io::Error::new(io::ErrorKind::NotFound, "No such file or directory"),
+        });
+
+        let message = e.to_string();
+        assert!(message.contains("missing.jar"));
+        assert!(message.contains("No such file or directory"));
     }
 
     #[test]

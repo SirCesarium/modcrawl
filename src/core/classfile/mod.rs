@@ -16,6 +16,7 @@ use crate::error::{Error, Result};
 
 mod dupes;
 
+pub(crate) use dupes::ClassIndex;
 pub use dupes::{DupEntry, find_duplicates, find_duplicates_buffers};
 
 /// A class file found inside a JAR, with its Java version and access flags.

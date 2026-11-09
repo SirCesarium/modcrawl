@@ -7,7 +7,7 @@ use clap::Args as ClapArgs;
 use serde_json::{json, to_string_pretty};
 
 use crate::cmd::collect_sources;
-use crate::core::classfile;
+use crate::core::classfile::ClassIndex;
 use crate::error::{Error, Result};
 use crate::ui;
 
@@ -59,7 +59,17 @@ pub fn run(args: &Args) -> Result<()> {
         }
     }
 
-    let entries = classfile::find_duplicates(&paths)?;
+    let mut index = ClassIndex::default();
+    let mut failed = false;
+
+    for path in &paths {
+        if let Err(e) = index.add_path(path) {
+            ui::file_error(&path.display().to_string(), &e);
+            failed = true;
+        }
+    }
+
+    let entries = index.into_duplicates();
 
     if args.json && args.count {
         let total_files: usize = entries
@@ -74,15 +84,9 @@ pub fn run(args: &Args) -> Result<()> {
                 "total_files_with_dupes": total_files,
             })
         );
-        return Ok(());
-    }
-
-    if args.json {
+    } else if args.json {
         println!("{}", to_string_pretty(&entries)?);
-        return Ok(());
-    }
-
-    if args.count {
+    } else if args.count {
         let total_files: usize = entries
             .iter()
             .flat_map(|e| &e.files)
@@ -93,15 +97,17 @@ pub fn run(args: &Args) -> Result<()> {
             entries.len(),
             total_files
         );
-        return Ok(());
+    } else if entries.is_empty() {
+        if !failed {
+            ui::no_results("No duplicate classes found.");
+        }
+    } else {
+        ui::render_dupes(&entries, args.by_class);
     }
 
-    if entries.is_empty() {
-        ui::no_results("No duplicate classes found.");
-        return Ok(());
+    if failed {
+        return Err(Error::Failed);
     }
-
-    ui::render_dupes(&entries, args.by_class);
 
     Ok(())
 }
