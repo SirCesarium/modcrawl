@@ -2,6 +2,7 @@
 name = "modcrawl"
 version = "0.12.4"
 edition = "2024"
+rust-version = "1.99.1"
 description = "Detect, inspect, and analyze Minecraft mods and plugins from JAR files"
 license = "MIT"
 authors = ["Cesarium <239650612+SirCesarium@users.noreply.github.com>"]
@@ -11,6 +12,7 @@ homepage = "https://github.com/SirCesarium/modcrawl"
 documentation = "https://docs.rs/modcrawl"
 keywords = ["minecraft", "mod", "analyzer", "loaders", "forge"]
 categories = ["development-tools", "command-line-utilities"]
+include = ["src/**", "Cargo.toml", "/README.md", "/LICENSE"]
 
 [features]
 default = ["cli", "classfile"]

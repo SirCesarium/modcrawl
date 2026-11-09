@@ -24,6 +24,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --all-features
 
+  msrv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - run: cargo check --all-features --locked
+
   wasm:
     runs-on: ubuntu-latest
     steps:
