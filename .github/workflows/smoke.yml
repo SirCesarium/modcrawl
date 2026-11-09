@@ -1,0 +1,72 @@
+name: Smoke Tests
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      include_heavy:
+        description: 'Include heavy mods (e.g. Sable ~17 MB)'
+        required: false
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - '.github/workflows/smoke.yml'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Modrinth fixtures
+        uses: actions/cache@v4
+        id: cache-fixtures
+        with:
+          path: .smoke_fixtures
+          key: smoke-fixtures-${{ hashFiles('scripts/fetch_modrinth_fixtures.sh') }}-${{ github.event.inputs.include_heavy || 'false' }}
+
+      - name: Download Modrinth fixtures
+        run: |
+          if [ "${{ github.event.inputs.include_heavy }}" = "true" ]; then
+            bash scripts/fetch_modrinth_fixtures.sh --include-heavy
+          else
+            bash scripts/fetch_modrinth_fixtures.sh
+          fi
+
+      - name: Run Smoke Integration Tests
+        run: cargo test --test smoke_test --all-features -- --ignored
+
+      - name: Run CLI Smoke Verification
+        run: |
+          cargo run --quiet -- type .smoke_fixtures/appleskin-fabric-*.jar
+          cargo run --quiet -- meta .smoke_fixtures/appleskin-fabric-*.jar
+          cargo run --quiet -- dep .smoke_fixtures/appleskin-fabric-*.jar
+          cargo run --quiet -- mixins .smoke_fixtures/appleskin-fabric-*.jar
+          cargo run --quiet -- type .smoke_fixtures/ferritecore-*-neoforge.jar
+          cargo run --quiet -- type .smoke_fixtures/ferritecore-*-forge.jar
+          cargo run --quiet -- type .smoke_fixtures/quilt_loading_screen-*.jar
+          cargo run --quiet -- type .smoke_fixtures/Chunky-Bukkit-*.jar
+          cargo run --quiet -- type .smoke_fixtures/LuckPerms-Velocity-*.jar
+          cargo run --quiet -- type .smoke_fixtures/bungeeviaproxy-*.jar
+          cargo run --quiet -- type .smoke_fixtures/jei-*.jar
+          cargo run --quiet -- meta .smoke_fixtures/jei-*.jar
+          cargo run --quiet -- dep .smoke_fixtures/jei-*.jar
+          cargo run --quiet -- type .smoke_fixtures/sodium-*.jar
+          cargo run --quiet -- meta .smoke_fixtures/sodium-*.jar
+          cargo run --quiet -- side .smoke_fixtures/sodium-*.jar
+          cargo run --quiet -- type .smoke_fixtures/architectury-*.jar
+          cargo run --quiet -- meta .smoke_fixtures/architectury-*.jar
+          cargo run --quiet -- dep .smoke_fixtures/architectury-*.jar
+          for f in .smoke_fixtures/create-*.jar; do
+            [ -f "$f" ] && cargo run --quiet -- type "$f" && cargo run --quiet -- meta "$f" || true
+          done
+
