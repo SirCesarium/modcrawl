@@ -571,7 +571,7 @@ fn bungee(m: &BungeePluginMetadata) -> Vec<Block> {
     };
     push_field(&mut fields, "Authors", authors);
 
-    let depends = m
+    let mut depends: Vec<DepRow> = m
         .depends
         .iter()
         .map(|name| DepRow {
@@ -581,6 +581,13 @@ fn bungee(m: &BungeePluginMetadata) -> Vec<Block> {
             side: None,
         })
         .collect();
+
+    depends.extend(m.soft_depends.iter().map(|name| DepRow {
+        name: name.clone(),
+        version: String::new(),
+        kind: Some(DepKind::Optional),
+        side: None,
+    }));
 
     vec![Block {
         kind: ModType::Plugin(PluginType::Bungee),
@@ -622,11 +629,55 @@ fn paper(m: &PaperPluginMetadata) -> Vec<Block> {
     );
     push_field(&mut fields, "Load", m.load.clone().unwrap_or_default());
 
+    let mut depends = Vec::new();
+    if let Some(deps) = &m.dependencies {
+        for (name, entry) in &deps.bootstrap {
+            let is_after = entry
+                .as_ref()
+                .and_then(|e| e.load.as_deref())
+                .is_some_and(|s| s.eq_ignore_ascii_case("after"));
+            let is_required = entry.as_ref().and_then(|e| e.required).unwrap_or(true);
+            let kind = if is_after {
+                DepKind::LoadBefore
+            } else if is_required {
+                DepKind::Required
+            } else {
+                DepKind::Optional
+            };
+            depends.push(DepRow {
+                name: name.clone(),
+                version: String::new(),
+                kind: Some(kind),
+                side: None,
+            });
+        }
+        for (name, entry) in &deps.server {
+            let is_after = entry
+                .as_ref()
+                .and_then(|e| e.load.as_deref())
+                .is_some_and(|s| s.eq_ignore_ascii_case("after"));
+            let is_required = entry.as_ref().and_then(|e| e.required).unwrap_or(true);
+            let kind = if is_after {
+                DepKind::LoadBefore
+            } else if is_required {
+                DepKind::Required
+            } else {
+                DepKind::Optional
+            };
+            depends.push(DepRow {
+                name: name.clone(),
+                version: String::new(),
+                kind: Some(kind),
+                side: None,
+            });
+        }
+    }
+
     vec![Block {
         kind: ModType::Plugin(PluginType::Paper),
         title: m.name.clone(),
         fields,
-        depends: Vec::new(),
+        depends,
     }]
 }
 

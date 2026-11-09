@@ -104,8 +104,55 @@ fn test_analyze_paper_dependencies() {
     let jar = common::paper_jar("PaperDepTest", "1.0.0");
     let report = analyze(jar.path(), false).expect("failed to analyze Paper dependencies");
 
-    // Paper handler currently does not extract dependencies from paper-plugin.yml
-    assert_eq!(report.dependencies.len(), 0);
+    assert_eq!(report.dependencies.len(), 1);
+    assert_eq!(report.dependencies[0].name, "WorldEdit");
+    assert_eq!(report.dependencies[0].kind, DepKind::Required);
+}
+
+#[test]
+fn test_analyze_velocity_dependencies() {
+    let manifest = r#"{
+      "id": "velocity_dep_test",
+      "version": "1.0.0",
+      "main": "org.example.VelocityTestPlugin",
+      "dependencies": [
+        { "id": "luckperms", "optional": false },
+        { "id": "viaversion", "optional": true }
+      ]
+    }"#;
+    let jar = common::TempJar::from_entries(&[("velocity-plugin.json", manifest.as_bytes())]);
+    let report = analyze(jar.path(), false).expect("failed to analyze Velocity dependencies");
+
+    let dep_map: BTreeMap<_, _> = report
+        .dependencies
+        .iter()
+        .map(|d| (d.name.as_str(), d.kind))
+        .collect();
+
+    assert_eq!(dep_map.get("luckperms"), Some(&DepKind::Required));
+    assert_eq!(dep_map.get("viaversion"), Some(&DepKind::Optional));
+}
+
+#[test]
+fn test_analyze_bungee_dependencies() {
+    let manifest = r"
+name: BungeeDepTest
+version: 1.0.0
+main: org.example.BungeeTestPlugin
+depends: [BungeeAdminTools]
+softDepends: [LuckPerms]
+";
+    let jar = common::TempJar::from_entries(&[("bungee.yml", manifest.as_bytes())]);
+    let report = analyze(jar.path(), false).expect("failed to analyze Bungee dependencies");
+
+    let dep_map: BTreeMap<_, _> = report
+        .dependencies
+        .iter()
+        .map(|d| (d.name.as_str(), d.kind))
+        .collect();
+
+    assert_eq!(dep_map.get("BungeeAdminTools"), Some(&DepKind::Required));
+    assert_eq!(dep_map.get("LuckPerms"), Some(&DepKind::Optional));
 }
 
 #[test]

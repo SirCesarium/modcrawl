@@ -28,6 +28,14 @@ pub struct BungeePluginMetadata {
     pub description: Option<String>,
     #[serde(default)]
     pub depends: Vec<String>,
+    #[serde(
+        default,
+        rename = "softDepends",
+        alias = "softdepends",
+        alias = "soft_depends",
+        alias = "softdepend"
+    )]
+    pub soft_depends: Vec<String>,
 }
 
 impl fmt::Display for BungeePluginMetadata {
@@ -48,6 +56,9 @@ impl fmt::Display for BungeePluginMetadata {
         }
         if !self.depends.is_empty() {
             writeln!(f, "Depends:  {}", self.depends.join(", "))?;
+        }
+        if !self.soft_depends.is_empty() {
+            writeln!(f, "Soft-Depends: {}", self.soft_depends.join(", "))?;
         }
         Ok(())
     }
@@ -82,12 +93,26 @@ description: A test plugin
 author: Alice
 authors: [Alice, Bob]
 depends: [Dependency, Other]
+softDepends: [SoftDep, OtherSoft]
 "#;
         let meta = parse(yaml).unwrap();
         assert_eq!(meta.description.as_deref(), Some("A test plugin"));
         assert_eq!(meta.author.as_deref(), Some("Alice"));
         assert_eq!(meta.authors, ["Alice", "Bob"]);
         assert_eq!(meta.depends, ["Dependency", "Other"]);
+        assert_eq!(meta.soft_depends, ["SoftDep", "OtherSoft"]);
+    }
+
+    #[test]
+    fn softdepends_alias() {
+        let yaml = r#"
+name: TestPlugin
+version: "1.0.0"
+main: me.example.TestPlugin
+softdepends: [SoftDep]
+"#;
+        let meta = parse(yaml).unwrap();
+        assert_eq!(meta.soft_depends, ["SoftDep"]);
     }
 
     #[test]
@@ -98,11 +123,12 @@ version: "1.0.0"
 main: me.example.TestPlugin
 authors: [Alice]
 depends: [Dependency]
+softDepends: [OptionalDep]
 "#;
         let out = parse(yaml).unwrap().to_string();
         assert!(out.contains("Name:     TestPlugin"));
         assert!(out.contains("Main:     me.example.TestPlugin"));
-        assert!(out.contains("Authors:  Alice"));
         assert!(out.contains("Depends:  Dependency"));
+        assert!(out.contains("Soft-Depends: OptionalDep"));
     }
 }

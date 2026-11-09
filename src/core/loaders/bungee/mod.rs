@@ -1,14 +1,15 @@
 //! `BungeeCord` proxy plugin support.
 
+pub mod dep;
 pub mod metadata;
 
+use crate::core::dep::types::DepEntry;
 use crate::core::detect_mod_type::{ModType, PluginType};
 use crate::core::metadata::ModMetadata;
 use crate::core::registry::ModHandler;
 use crate::error::Result;
 
-/// `BungeeCord` proxy plugins (`bungee.yml`). Metadata only; dependency
-/// extraction is left to the trait default.
+/// Handles `BungeeCord` proxy plugins detected through `bungee.yml`.
 pub struct BungeeHandler;
 
 impl ModHandler for BungeeHandler {
@@ -20,18 +21,11 @@ impl ModHandler for BungeeHandler {
         &["bungee.yml"]
     }
 
+    fn extract_deps(&self, raw: &str) -> Result<Vec<DepEntry>> {
+        dep::extract(raw)
+    }
+
     fn read_metadata(&self, raw: &str) -> Result<ModMetadata> {
         Ok(ModMetadata::Bungee(metadata::parse(raw)?))
-    }
-}
-
-#[cfg(test)]
-#[allow(clippy::unwrap_used)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn no_dep_extraction() {
-        assert_eq!(BungeeHandler.extract_deps("").unwrap(), []);
     }
 }

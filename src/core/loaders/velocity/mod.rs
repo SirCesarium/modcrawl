@@ -1,14 +1,15 @@
 //! Velocity proxy plugin support (`velocity-plugin.json`).
 
+pub mod dep;
 pub mod metadata;
 
+use crate::core::dep::types::DepEntry;
 use crate::core::detect_mod_type::{ModType, PluginType};
 use crate::core::metadata::ModMetadata;
 use crate::core::registry::ModHandler;
 use crate::error::Result;
 
-/// Velocity proxy plugins (`velocity-plugin.json`). Metadata only; dependency
-/// extraction is left to the trait default.
+/// Handles Velocity proxy plugins detected through `velocity-plugin.json`.
 pub struct VelocityHandler;
 
 impl ModHandler for VelocityHandler {
@@ -20,18 +21,11 @@ impl ModHandler for VelocityHandler {
         &["velocity-plugin.json"]
     }
 
+    fn extract_deps(&self, raw: &str) -> Result<Vec<DepEntry>> {
+        dep::extract(raw)
+    }
+
     fn read_metadata(&self, raw: &str) -> Result<ModMetadata> {
         Ok(ModMetadata::Velocity(metadata::parse(raw)?))
-    }
-}
-
-#[cfg(test)]
-#[allow(clippy::unwrap_used)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn no_dep_extraction() {
-        assert_eq!(VelocityHandler.extract_deps("{}").unwrap(), []);
     }
 }
