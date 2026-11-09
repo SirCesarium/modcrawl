@@ -75,6 +75,10 @@ fn group_conflicts(entries: &[DupEntry]) -> BTreeMap<(String, String), Vec<Strin
                     (entry.files[j].clone(), entry.files[i].clone())
                 };
 
+                if a == b {
+                    continue;
+                }
+
                 conflicts
                     .entry((a, b))
                     .or_default()
@@ -84,4 +88,19 @@ fn group_conflicts(entries: &[DupEntry]) -> BTreeMap<(String, String), Vec<Strin
     }
 
     conflicts
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn conflicts_never_pair_a_file_with_itself() {
+        let entry = DupEntry {
+            class_name: String::from("com/example/Shared.class"),
+            files: vec![String::from("foo.jar"), String::from("foo.jar")],
+        };
+
+        assert!(group_conflicts(&[entry]).is_empty());
+    }
 }

@@ -37,10 +37,7 @@ impl ClassIndex {
     pub(crate) fn add_path(&mut self, path: &Path) -> Result<()> {
         let mut manager = ZipManager::new(path)?;
 
-        let label = path.file_name().map_or_else(
-            || path.to_string_lossy().to_string(),
-            |n| n.to_string_lossy().to_string(),
-        );
+        let label = path.to_string_lossy().to_string();
 
         self.add_manager(&mut manager, &label)
     }
@@ -66,10 +63,10 @@ impl ClassIndex {
 
         for entry in &entries {
             if is_class_entry(&entry.name) && !entry.is_dir {
-                self.classes
-                    .entry(entry.name.clone())
-                    .or_default()
-                    .push(label.to_string());
+                let files = self.classes.entry(entry.name.clone()).or_default();
+                if !files.iter().any(|existing| existing == label) {
+                    files.push(label.to_string());
+                }
             }
         }
 
@@ -119,7 +116,10 @@ pub fn find_duplicates_buffers(jars: &[(&str, &[u8])]) -> Result<Vec<DupEntry>> 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use std::env;
+    use std::fs;
     use std::io::Write;
+    use std::process;
 
     use zip::ZipWriter;
     use zip::write::SimpleFileOptions;
@@ -171,5 +171,47 @@ mod tests {
     #[test]
     fn buffers_empty_input_yields_no_dupes() {
         assert!(find_duplicates_buffers(&[]).unwrap().is_empty());
+    }
+
+    #[test]
+    fn paths_with_same_file_name_stay_distinct() {
+        let pid = process::id();
+        let root = env::temp_dir().join(format!("modcrawl_dupes_same_name_{pid}"));
+        let client = root.join("client");
+        let server = root.join("server");
+        fs::create_dir_all(&client).unwrap();
+        fs::create_dir_all(&server).unwrap();
+
+        let bytes = jar(&[("com/example/Shared.class", FAKE_CLASS)]);
+        let client_jar = client.join("foo.jar");
+        let server_jar = server.join("foo.jar");
+        fs::write(&client_jar, &bytes).unwrap();
+        fs::write(&server_jar, &bytes).unwrap();
+
+        let entries = find_duplicates(&[&client_jar, &server_jar]).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(
+            entries[0].files,
+            [
+                client_jar.to_string_lossy().to_string(),
+                server_jar.to_string_lossy().to_string()
+            ]
+        );
+
+        fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[test]
+    fn adding_the_same_archive_twice_does_not_duplicate_its_label() {
+        let pid = process::id();
+        let path = env::temp_dir().join(format!("modcrawl_dupes_same_archive_{pid}.jar"));
+        fs::write(&path, jar(&[("com/example/Only.class", FAKE_CLASS)])).unwrap();
+
+        let entries = find_duplicates(&[&path, &path]).unwrap();
+
+        assert!(entries.is_empty());
+
+        fs::remove_file(&path).unwrap();
     }
 }
