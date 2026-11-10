@@ -1,6 +1,7 @@
 //! Dependency extraction from `neoforge.mods.toml`.
 
-use super::super::super::dep::types::{DepEntry, DepKind, VersionRange};
+use super::super::super::dep::types::{DepEntry, VersionRange};
+use super::super::forge_modern::dep::forge_dep_kind;
 use super::super::forge_modern::metadata::parse;
 use crate::error::Result;
 
@@ -15,12 +16,11 @@ pub fn extract(raw: &str) -> Result<Vec<DepEntry>> {
 
     for deps_vec in meta.dependencies.values() {
         for dep in deps_vec {
-            let kind = match dep.dep_type.as_deref() {
-                Some("optional") => DepKind::Optional,
-                Some("incompatible") => DepKind::Incompatible,
-                Some("discouraged") => DepKind::Discouraged,
-                _ => DepKind::Required,
-            };
+            let kind = forge_dep_kind(
+                dep.dep_type.as_deref(),
+                dep.mandatory,
+                dep.ordering.as_deref(),
+            );
             if kind.is_excluded() {
                 continue;
             }
@@ -69,6 +69,38 @@ versionRange = ">=3.0"
             deps.iter()
                 .any(|d| d.name == "opt-lib" && d.kind == DepKind::Optional)
         );
+    }
+
+    #[test]
+    fn extract_mandatory_false_without_type() {
+        let toml = r#"
+[[mods]]
+modId = "testmod"
+
+[[dependencies.testmod]]
+modId = "soft-dep"
+mandatory = false
+"#;
+        let deps = extract(toml).unwrap();
+        assert_eq!(deps.len(), 1);
+        assert_eq!(deps[0].name, "soft-dep");
+        assert_eq!(deps[0].kind, DepKind::Optional);
+    }
+
+    #[test]
+    fn extract_ordering_before() {
+        let toml = r#"
+[[mods]]
+modId = "testmod"
+
+[[dependencies.testmod]]
+modId = "other-mod"
+ordering = "BEFORE"
+"#;
+        let deps = extract(toml).unwrap();
+        assert_eq!(deps.len(), 1);
+        assert_eq!(deps[0].name, "other-mod");
+        assert_eq!(deps[0].kind, DepKind::LoadBefore);
     }
 
     #[test]

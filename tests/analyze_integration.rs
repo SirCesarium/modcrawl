@@ -75,6 +75,37 @@ fn test_analyze_forge_modern_dependencies() {
 }
 
 #[test]
+fn test_analyze_forge_modern_mandatory_and_ordering() {
+    let manifest = r#"modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="testmod"
+version="1.0.0"
+
+[[dependencies.testmod]]
+modId="soft_mod"
+mandatory=false
+
+[[dependencies.testmod]]
+modId="order_mod"
+ordering="BEFORE"
+"#;
+    let jar = common::TempJar::from_entries(&[("META-INF/mods.toml", manifest.as_bytes())]);
+    let report = analyze(jar.path(), false).expect("failed to analyze Forge dependencies");
+
+    let dep_map: BTreeMap<_, _> = report
+        .dependencies
+        .iter()
+        .map(|d| (d.name.as_str(), d.kind))
+        .collect();
+
+    assert_eq!(dep_map.get("soft_mod"), Some(&DepKind::Optional));
+    assert_eq!(dep_map.get("order_mod"), Some(&DepKind::LoadBefore));
+}
+
+#[test]
 fn test_analyze_neoforge_dependencies() {
     let jar = common::neoforge_jar("neoforge_dep_test", "1.0.0");
     let report = analyze(jar.path(), false).expect("failed to analyze NeoForge dependencies");
@@ -82,6 +113,38 @@ fn test_analyze_neoforge_dependencies() {
     assert_eq!(report.dependencies.len(), 1);
     assert_eq!(report.dependencies[0].name, "neoforge");
     assert_eq!(report.dependencies[0].kind, DepKind::Required);
+}
+
+#[test]
+fn test_analyze_neoforge_mandatory_and_ordering() {
+    let manifest = r#"modLoader="javafml"
+loaderVersion="[1,)"
+license="MIT"
+
+[[mods]]
+modId="testmod"
+version="1.0.0"
+
+[[dependencies.testmod]]
+modId="soft_mod"
+mandatory=false
+
+[[dependencies.testmod]]
+modId="order_mod"
+ordering="BEFORE"
+"#;
+    let jar =
+        common::TempJar::from_entries(&[("META-INF/neoforge.mods.toml", manifest.as_bytes())]);
+    let report = analyze(jar.path(), false).expect("failed to analyze NeoForge dependencies");
+
+    let dep_map: BTreeMap<_, _> = report
+        .dependencies
+        .iter()
+        .map(|d| (d.name.as_str(), d.kind))
+        .collect();
+
+    assert_eq!(dep_map.get("soft_mod"), Some(&DepKind::Optional));
+    assert_eq!(dep_map.get("order_mod"), Some(&DepKind::LoadBefore));
 }
 
 #[test]

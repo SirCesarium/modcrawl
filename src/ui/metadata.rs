@@ -444,7 +444,11 @@ fn forge_modern_depends(m: &ModsTomlMetadata) -> Vec<DepRow> {
             deps.iter().map(|d| DepRow {
                 name: d.mod_id.clone(),
                 version: d.version_range.clone().unwrap_or_default(),
-                kind: Some(forge_dep_kind(d.dep_type.as_deref())),
+                kind: Some(forge_dep_kind(
+                    d.dep_type.as_deref(),
+                    d.mandatory,
+                    d.ordering.as_deref(),
+                )),
                 side: d.side.as_ref().map(|s| s.to_lowercase()),
             })
         })
