@@ -110,7 +110,7 @@ Explain what you need, why you need it, and which platform or tool it involves. 
 
 Add `[🤖]` at the end of the pull request title, for example `feat(cli): add --json to the type command [🤖]`. The marker belongs only in the pull request title, never in commit messages. Whoever opens the pull request, a person or a bot running `gh pr create`, decides whether to add it.
 
-A maintainer will add the `ai-assisted` label. The label helps reviewers look for the mistakes that generated code tends to make, such as ignored formatting rules or thinking-out-loud comments like `// Wait, this won't work`.
+A maintainer will add the `ai-assisted` label. The label helps reviewers look for the mistakes that generated code tends to make, such as ignored formatting rules, hasty fixes or thinking-out-loud comments like `// Wait, this won't work`.
 
 ### Saving tokens with TOON
 
