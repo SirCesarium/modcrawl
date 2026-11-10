@@ -33,6 +33,12 @@ pub struct Args {
         help = "Output as JSON instead of human-readable text"
     )]
     pub json: bool,
+
+    #[arg(
+        long,
+        help = "Fail if any class file cannot be parsed instead of skipping it"
+    )]
+    pub strict: bool,
 }
 
 /// Run the `grep` command.
@@ -45,23 +51,30 @@ pub fn run(args: &Args) -> Result<()> {
     let multi = sources.len() > 1;
     let mut total_matches = 0usize;
     let mut all_matches = Vec::new();
+    let mut skipped = 0usize;
     let mut failed = false;
 
     for source in &sources {
-        let matches = match source {
-            Source::Path(path) => classfile::grep(path, &args.pattern),
+        let scan = match source {
+            Source::Path(path) => classfile::scan_grep(path, &args.pattern),
             Source::Archive(data) => {
-                classfile::grep_reader(&mut Cursor::new(data.as_slice()), &args.pattern)
+                classfile::scan_grep_reader(&mut Cursor::new(data.as_slice()), &args.pattern)
             }
         };
-        let matches = match matches {
-            Ok(m) => m,
+        let scan = match scan {
+            Ok(scan) => scan,
             Err(e) => {
                 ui::file_error(&source.label(), &e);
                 failed = true;
                 continue;
             }
         };
+
+        if !scan.skipped.is_empty() {
+            ui::skipped_classes(&source.label(), &scan.skipped);
+            skipped += scan.skipped.len();
+        }
+        let matches = scan.items;
 
         if args.json {
             all_matches.extend(matches);
@@ -103,6 +116,12 @@ pub fn run(args: &Args) -> Result<()> {
 
     if failed {
         return Err(Error::Failed);
+    }
+
+    if args.strict && skipped > 0 {
+        return Err(Error::ClassFile(format!(
+            "{skipped} class file(s) could not be parsed"
+        )));
     }
 
     Ok(())

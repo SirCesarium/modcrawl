@@ -2,6 +2,8 @@
 
 use std::fmt;
 
+#[cfg(feature = "classfile")]
+use crate::core::classfile::SkippedClass;
 use anstream::{eprintln, println};
 use anstyle::Style;
 
@@ -24,6 +26,34 @@ pub(crate) fn no_results(msg: &str) {
         .dimmed();
 
     eprintln!("{}", paint(style, msg));
+}
+
+/// Report class files that were skipped while scanning a JAR. On stderr, so
+/// piped stdout (including `--json`) stays clean.
+#[cfg(feature = "classfile")]
+pub(crate) fn skipped_classes(path: &str, skipped: &[SkippedClass]) {
+    if skipped.is_empty() {
+        return;
+    }
+
+    let style = Style::new()
+        .fg_color(Some(anstyle::Color::Ansi(anstyle::AnsiColor::Yellow)))
+        .dimmed();
+
+    eprintln!(
+        "{}",
+        paint(
+            style,
+            &format!(
+                "warning: {path}: {} class file(s) could not be parsed",
+                skipped.len()
+            )
+        )
+    );
+
+    for class in skipped {
+        eprintln!("  {}: {}", paint(dim(), &class.name), class.reason);
+    }
 }
 
 /// Report a file that could not be read: path in bold, reason in red, on

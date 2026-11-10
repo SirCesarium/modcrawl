@@ -17,6 +17,8 @@ pub(crate) use classes::render as render_classes;
 pub(crate) use deps::render as render_deps;
 pub(crate) use dupes::render as render_dupes;
 pub(crate) use grep::render as render_grep;
+#[cfg(feature = "classfile")]
+pub(crate) use lines::skipped_classes;
 pub(crate) use lines::{file_error, file_header, no_results};
 pub(crate) use metadata::render as render_metadata;
 pub(crate) use mixins::render as render_mixins;

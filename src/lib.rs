@@ -31,6 +31,7 @@ pub use error::{Error, Result};
 
 #[cfg(feature = "classfile")]
 pub use core::classfile::{
-    ClassEntry, DupEntry, GrepMatch, MixinEntry, grep, grep_reader, list_classes,
-    list_classes_reader, mixins, mixins_reader,
+    ClassEntry, ClassScan, DupEntry, GrepMatch, MixinEntry, SkippedClass, grep, grep_reader,
+    list_classes, list_classes_reader, mixins, mixins_reader, scan_classes, scan_classes_reader,
+    scan_grep, scan_grep_reader, scan_mixins, scan_mixins_reader,
 };

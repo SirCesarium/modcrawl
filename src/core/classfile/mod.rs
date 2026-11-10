@@ -1,6 +1,7 @@
 //! Class-file inspection: class listings, constant-pool search, mixin targets,
 //! and duplicate-class detection.
 
+use std::any::Any;
 use std::io::{Read, Seek};
 use std::panic;
 use std::path::Path;
@@ -30,6 +31,24 @@ pub struct ClassEntry {
     pub access_flags: Vec<String>,
 }
 
+/// Result of scanning the class files in a JAR.
+#[derive(Debug, Clone, Serialize)]
+pub struct ClassScan<T> {
+    /// Entries collected from class files that parsed successfully.
+    pub items: Vec<T>,
+    /// Class files that could not be parsed and were skipped.
+    pub skipped: Vec<SkippedClass>,
+}
+
+/// A class file that was skipped during a scan.
+#[derive(Debug, Clone, Serialize)]
+pub struct SkippedClass {
+    /// Archive-relative path of the `.class` entry.
+    pub name: String,
+    /// Why the class file could not be parsed.
+    pub reason: String,
+}
+
 /// A constant-pool value that matched a `grep` pattern.
 #[derive(Debug, Clone, Serialize)]
 pub struct GrepMatch {
@@ -56,8 +75,7 @@ pub struct MixinEntry {
 ///
 /// Returns an error if the JAR cannot be read.
 pub fn list_classes(path: &Path) -> Result<Vec<ClassEntry>> {
-    let mut manager = ZipManager::new(path)?;
-    list_classes_impl(&mut manager)
+    Ok(scan_classes(path)?.items)
 }
 
 /// List all `.class` files in a JAR supplied by a `Read` source.
@@ -66,34 +84,38 @@ pub fn list_classes(path: &Path) -> Result<Vec<ClassEntry>> {
 ///
 /// Returns an error if the JAR cannot be read.
 pub fn list_classes_reader<R: Read>(reader: &mut R) -> Result<Vec<ClassEntry>> {
+    Ok(scan_classes_reader(reader)?.items)
+}
+
+/// List all `.class` files in a JAR and report the ones that were skipped.
+///
+/// # Errors
+///
+/// Returns an error if the JAR cannot be read.
+pub fn scan_classes(path: &Path) -> Result<ClassScan<ClassEntry>> {
+    let mut manager = ZipManager::new(path)?;
+    list_classes_impl(&mut manager)
+}
+
+/// List all `.class` files in a JAR supplied by a `Read` source and report the
+/// ones that were skipped.
+///
+/// # Errors
+///
+/// Returns an error if the JAR cannot be read.
+pub fn scan_classes_reader<R: Read>(reader: &mut R) -> Result<ClassScan<ClassEntry>> {
     let mut manager = ZipManager::from_reader(reader)?;
     list_classes_impl(&mut manager)
 }
 
-fn list_classes_impl<R: Read + Seek>(manager: &mut ZipManager<R>) -> Result<Vec<ClassEntry>> {
-    let entries = manager.entries()?;
-    let mut classes = Vec::new();
-
-    for entry in &entries {
-        if !is_class_entry(&entry.name) || entry.is_dir {
-            continue;
-        }
-
-        let Ok(Some(cf)) = parse_class_in_jar(manager, &entry.name) else {
-            continue;
-        };
-
-        let version = java_version_string(cf.major_version, cf.minor_version);
-        let flags = format_class_access_flags(cf.access_flags);
-
-        classes.push(ClassEntry {
-            name: entry.name.clone(),
-            java_version: version,
-            access_flags: flags,
-        });
-    }
-
-    Ok(classes)
+fn list_classes_impl<R: Read + Seek>(manager: &mut ZipManager<R>) -> Result<ClassScan<ClassEntry>> {
+    scan_jar(manager, |cf, name| {
+        vec![ClassEntry {
+            name: name.to_string(),
+            java_version: java_version_string(cf.major_version, cf.minor_version),
+            access_flags: format_class_access_flags(cf.access_flags),
+        }]
+    })
 }
 
 /// Search the constant pool of all `.class` files in a JAR for a pattern.
@@ -102,8 +124,7 @@ fn list_classes_impl<R: Read + Seek>(manager: &mut ZipManager<R>) -> Result<Vec<
 ///
 /// Returns an error if the JAR cannot be read.
 pub fn grep(path: &Path, pattern: &str) -> Result<Vec<GrepMatch>> {
-    let mut manager = ZipManager::new(path)?;
-    grep_impl(&mut manager, pattern)
+    Ok(scan_grep(path, pattern)?.items)
 }
 
 /// Search the constant pool of all `.class` files in a JAR supplied by a
@@ -113,28 +134,36 @@ pub fn grep(path: &Path, pattern: &str) -> Result<Vec<GrepMatch>> {
 ///
 /// Returns an error if the JAR cannot be read.
 pub fn grep_reader<R: Read>(reader: &mut R, pattern: &str) -> Result<Vec<GrepMatch>> {
+    Ok(scan_grep_reader(reader, pattern)?.items)
+}
+
+/// Search the constant pool of all `.class` files in a JAR and report the ones
+/// that were skipped.
+///
+/// # Errors
+///
+/// Returns an error if the JAR cannot be read.
+pub fn scan_grep(path: &Path, pattern: &str) -> Result<ClassScan<GrepMatch>> {
+    let mut manager = ZipManager::new(path)?;
+    grep_impl(&mut manager, pattern)
+}
+
+/// Search the constant pool of all `.class` files in a JAR supplied by a
+/// `Read` source and report the ones that were skipped.
+///
+/// # Errors
+///
+/// Returns an error if the JAR cannot be read.
+pub fn scan_grep_reader<R: Read>(reader: &mut R, pattern: &str) -> Result<ClassScan<GrepMatch>> {
     let mut manager = ZipManager::from_reader(reader)?;
     grep_impl(&mut manager, pattern)
 }
 
-fn grep_impl<R: Read + Seek>(manager: &mut ZipManager<R>, pattern: &str) -> Result<Vec<GrepMatch>> {
-    let entries = manager.entries()?;
-    let mut matches = Vec::new();
-
-    for entry in &entries {
-        if !is_class_entry(&entry.name) || entry.is_dir {
-            continue;
-        }
-
-        let Ok(Some(cf)) = parse_class_in_jar(manager, &entry.name) else {
-            continue;
-        };
-
-        let class_matches = search_constant_pool(&cf, &entry.name, pattern);
-        matches.extend(class_matches);
-    }
-
-    Ok(matches)
+fn grep_impl<R: Read + Seek>(
+    manager: &mut ZipManager<R>,
+    pattern: &str,
+) -> Result<ClassScan<GrepMatch>> {
+    scan_jar(manager, |cf, name| search_constant_pool(cf, name, pattern))
 }
 
 /// Extract mixin targets from all `.class` files in a JAR.
@@ -145,8 +174,7 @@ fn grep_impl<R: Read + Seek>(manager: &mut ZipManager<R>, pattern: &str) -> Resu
 ///
 /// Returns an error if the JAR cannot be read.
 pub fn mixins(path: &Path) -> Result<Vec<MixinEntry>> {
-    let mut manager = ZipManager::new(path)?;
-    mixins_impl(&mut manager)
+    Ok(scan_mixins(path)?.items)
 }
 
 /// Extract mixin targets from a JAR supplied by a `Read` source.
@@ -157,28 +185,37 @@ pub fn mixins(path: &Path) -> Result<Vec<MixinEntry>> {
 ///
 /// Returns an error if the JAR cannot be read.
 pub fn mixins_reader<R: Read>(reader: &mut R) -> Result<Vec<MixinEntry>> {
+    Ok(scan_mixins_reader(reader)?.items)
+}
+
+/// Extract mixin targets from a JAR and report the class files that were
+/// skipped.
+///
+/// Looks for `@Mixin` (`SpongePowered`) annotations at the class level.
+///
+/// # Errors
+///
+/// Returns an error if the JAR cannot be read.
+pub fn scan_mixins(path: &Path) -> Result<ClassScan<MixinEntry>> {
+    let mut manager = ZipManager::new(path)?;
+    mixins_impl(&mut manager)
+}
+
+/// Extract mixin targets from a JAR supplied by a `Read` source and report the
+/// class files that were skipped.
+///
+/// Looks for `@Mixin` (`SpongePowered`) annotations at the class level.
+///
+/// # Errors
+///
+/// Returns an error if the JAR cannot be read.
+pub fn scan_mixins_reader<R: Read>(reader: &mut R) -> Result<ClassScan<MixinEntry>> {
     let mut manager = ZipManager::from_reader(reader)?;
     mixins_impl(&mut manager)
 }
 
-fn mixins_impl<R: Read + Seek>(manager: &mut ZipManager<R>) -> Result<Vec<MixinEntry>> {
-    let entries = manager.entries()?;
-    let mut results = Vec::new();
-
-    for entry in &entries {
-        if !is_class_entry(&entry.name) || entry.is_dir {
-            continue;
-        }
-
-        let Ok(Some(cf)) = parse_class_in_jar(manager, &entry.name) else {
-            continue;
-        };
-
-        let targets = extract_mixin_targets(&cf, &entry.name);
-        results.extend(targets);
-    }
-
-    Ok(results)
+fn mixins_impl<R: Read + Seek>(manager: &mut ZipManager<R>) -> Result<ClassScan<MixinEntry>> {
+    scan_jar(manager, extract_mixin_targets)
 }
 
 fn extract_mixin_targets(cf: &ClassFile, class_name: &str) -> Vec<MixinEntry> {
@@ -285,10 +322,44 @@ fn is_class_entry(name: &str) -> bool {
 
 const MAX_CLASS_SIZE: usize = 32 * 1024 * 1024;
 
+/// Whether a class entry was parsed or deliberately skipped.
+enum ClassParse {
+    Parsed(ClassFile),
+    Skipped(String),
+}
+
+/// Scan every `.class` entry in `manager`, collecting what `collect` returns
+/// for each parsed class and recording every class that was skipped.
+fn scan_jar<R, T, F>(manager: &mut ZipManager<R>, mut collect: F) -> Result<ClassScan<T>>
+where
+    R: Read + Seek,
+    F: FnMut(&ClassFile, &str) -> Vec<T>,
+{
+    let entries = manager.entries()?;
+    let mut items = Vec::new();
+    let mut skipped = Vec::new();
+
+    for entry in &entries {
+        if !is_class_entry(&entry.name) || entry.is_dir {
+            continue;
+        }
+
+        match parse_class_in_jar(manager, &entry.name)? {
+            ClassParse::Parsed(cf) => items.extend(collect(&cf, &entry.name)),
+            ClassParse::Skipped(reason) => skipped.push(SkippedClass {
+                name: entry.name.clone(),
+                reason,
+            }),
+        }
+    }
+
+    Ok(ClassScan { items, skipped })
+}
+
 fn parse_class_in_jar<R: Read + Seek>(
     manager: &mut ZipManager<R>,
     name: &str,
-) -> Result<Option<ClassFile>> {
+) -> Result<ClassParse> {
     let file = manager.open_file(name)?;
     let mut bytes = Vec::new();
     let read = file
@@ -296,13 +367,29 @@ fn parse_class_in_jar<R: Read + Seek>(
         .read_to_end(&mut bytes)
         .map_err(Error::Io)?;
     if read > MAX_CLASS_SIZE {
-        return Ok(None);
+        return Ok(ClassParse::Skipped(format!(
+            "exceeds the maximum class size of {MAX_CLASS_SIZE} bytes"
+        )));
     }
 
-    let parsed = panic::catch_unwind(|| parse_classfile(&bytes));
-    match parsed {
-        Ok(Ok((_, cf))) => Ok(Some(cf)),
-        _ => Ok(None),
+    match panic::catch_unwind(|| parse_classfile(&bytes)) {
+        Ok(Ok((_, cf))) => Ok(ClassParse::Parsed(cf)),
+        Ok(Err(err)) => Ok(ClassParse::Skipped(err.to_string())),
+        Err(payload) => Ok(ClassParse::Skipped(format!(
+            "class parser panicked: {}",
+            panic_message(payload.as_ref())
+        ))),
+    }
+}
+
+/// Best-effort text from a caught panic payload.
+fn panic_message(payload: &(dyn Any + Send)) -> String {
+    if let Some(message) = payload.downcast_ref::<&str>() {
+        (*message).to_string()
+    } else if let Some(message) = payload.downcast_ref::<String>() {
+        message.clone()
+    } else {
+        String::from("unknown panic")
     }
 }
 
@@ -463,4 +550,83 @@ fn format_class_access_flags(flags: ClassAccessFlags) -> Vec<String> {
         result.push("module".to_string());
     }
     result
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use std::io::{Cursor, Write};
+
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    use super::*;
+
+    /// Minimal valid class file: one `Utf8` and one `Class` entry named `A`.
+    const VALID_CLASS: &[u8] = &[
+        0xca, 0xfe, 0xba, 0xbe, // magic
+        0x00, 0x00, // minor version
+        0x00, 0x34, // major version (Java 8)
+        0x00, 0x03, // constant pool count
+        0x01, 0x00, 0x01, b'A', // Utf8 "A"
+        0x07, 0x00, 0x01, // Class #1
+        0x00, 0x21, // access flags: public | super
+        0x00, 0x02, // this class
+        0x00, 0x00, // super class
+        0x00, 0x00, // interfaces
+        0x00, 0x00, // fields
+        0x00, 0x00, // methods
+        0x00, 0x00, // attributes
+    ];
+
+    const BROKEN_CLASS: &[u8] = b"not a class file";
+
+    fn jar(entries: &[(&str, &[u8])]) -> Vec<u8> {
+        let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+
+        for (name, contents) in entries {
+            zip.start_file(*name, SimpleFileOptions::default()).unwrap();
+            zip.write_all(contents).unwrap();
+        }
+
+        zip.finish().unwrap().into_inner()
+    }
+
+    fn mixed_jar() -> Vec<u8> {
+        jar(&[
+            ("com/example/Valid.class", VALID_CLASS),
+            ("com/example/Broken.class", BROKEN_CLASS),
+        ])
+    }
+
+    #[test]
+    fn scan_reports_classes_that_could_not_be_parsed() {
+        let scan = scan_classes_reader(&mut Cursor::new(mixed_jar())).unwrap();
+
+        assert_eq!(scan.items.len(), 1);
+        assert_eq!(scan.items[0].name, "com/example/Valid.class");
+
+        assert_eq!(scan.skipped.len(), 1);
+        assert_eq!(scan.skipped[0].name, "com/example/Broken.class");
+        assert_ne!(scan.skipped[0].reason, "");
+    }
+
+    #[test]
+    fn list_classes_still_returns_only_parsed_classes() {
+        let entries = list_classes_reader(&mut Cursor::new(mixed_jar())).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].name, "com/example/Valid.class");
+    }
+
+    #[test]
+    fn grep_and_mixins_report_the_same_skips() {
+        let mut cursor = Cursor::new(mixed_jar());
+        let grep = scan_grep_reader(&mut cursor, "java/lang/Object").unwrap();
+        assert_eq!(grep.skipped.len(), 1);
+
+        let mut cursor = Cursor::new(mixed_jar());
+        let mixins = scan_mixins_reader(&mut cursor).unwrap();
+        assert_eq!(mixins.skipped.len(), 1);
+    }
 }

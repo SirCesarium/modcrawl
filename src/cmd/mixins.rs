@@ -31,6 +31,12 @@ pub struct Args {
         help = "Output as JSON instead of human-readable text"
     )]
     pub json: bool,
+
+    #[arg(
+        long,
+        help = "Fail if any class file cannot be parsed instead of skipping it"
+    )]
+    pub strict: bool,
 }
 
 /// Run the `mixins` command.
@@ -43,21 +49,30 @@ pub fn run(args: &Args) -> Result<()> {
     let multi = sources.len() > 1;
     let mut total_entries = 0usize;
     let mut all_entries = Vec::new();
+    let mut skipped = 0usize;
     let mut failed = false;
 
     for source in &sources {
-        let entries = match source {
-            Source::Path(path) => classfile::mixins(path),
-            Source::Archive(data) => classfile::mixins_reader(&mut Cursor::new(data.as_slice())),
+        let scan = match source {
+            Source::Path(path) => classfile::scan_mixins(path),
+            Source::Archive(data) => {
+                classfile::scan_mixins_reader(&mut Cursor::new(data.as_slice()))
+            }
         };
-        let entries = match entries {
-            Ok(e) => e,
+        let scan = match scan {
+            Ok(scan) => scan,
             Err(e) => {
                 ui::file_error(&source.label(), &e);
                 failed = true;
                 continue;
             }
         };
+
+        if !scan.skipped.is_empty() {
+            ui::skipped_classes(&source.label(), &scan.skipped);
+            skipped += scan.skipped.len();
+        }
+        let entries = scan.items;
 
         if args.json {
             all_entries.extend(entries);
@@ -96,6 +111,12 @@ pub fn run(args: &Args) -> Result<()> {
 
     if failed {
         return Err(Error::Failed);
+    }
+
+    if args.strict && skipped > 0 {
+        return Err(Error::ClassFile(format!(
+            "{skipped} class file(s) could not be parsed"
+        )));
     }
 
     Ok(())

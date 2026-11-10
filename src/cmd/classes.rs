@@ -23,6 +23,12 @@ pub struct Args {
         help = "Output as JSON instead of human-readable text"
     )]
     pub json: bool,
+
+    #[arg(
+        long,
+        help = "Fail if any class file cannot be parsed instead of skipping it"
+    )]
+    pub strict: bool,
 }
 
 /// Run the `classes` command.
@@ -34,23 +40,30 @@ pub fn run(args: &Args) -> Result<()> {
     let sources = collect_sources(&args.path)?;
     let multi = sources.len() > 1;
     let mut all_entries = Vec::new();
+    let mut skipped = 0usize;
     let mut failed = false;
 
     for source in &sources {
-        let entries = match source {
-            Source::Path(path) => classfile::list_classes(path),
+        let scan = match source {
+            Source::Path(path) => classfile::scan_classes(path),
             Source::Archive(data) => {
-                classfile::list_classes_reader(&mut Cursor::new(data.as_slice()))
+                classfile::scan_classes_reader(&mut Cursor::new(data.as_slice()))
             }
         };
-        let entries = match entries {
-            Ok(e) => e,
+        let scan = match scan {
+            Ok(scan) => scan,
             Err(e) => {
                 ui::file_error(&source.label(), &e);
                 failed = true;
                 continue;
             }
         };
+
+        if !scan.skipped.is_empty() {
+            ui::skipped_classes(&source.label(), &scan.skipped);
+            skipped += scan.skipped.len();
+        }
+        let entries = scan.items;
 
         if args.json {
             all_entries.extend(entries);
@@ -72,5 +85,50 @@ pub fn run(args: &Args) -> Result<()> {
         return Err(Error::Failed);
     }
 
+    if args.strict && skipped > 0 {
+        return Err(Error::ClassFile(format!(
+            "{skipped} class file(s) could not be parsed"
+        )));
+    }
+
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use std::env;
+    use std::fs;
+    use std::io::{Cursor, Write};
+    use std::process;
+
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    use super::*;
+
+    fn malformed_jar() -> Vec<u8> {
+        let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+        zip.start_file("com/example/Broken.class", SimpleFileOptions::default())
+            .unwrap();
+        zip.write_all(b"not a class file").unwrap();
+        zip.finish().unwrap().into_inner()
+    }
+
+    #[test]
+    fn strict_mode_fails_when_a_class_cannot_be_parsed() {
+        let path = env::temp_dir().join(format!("modcrawl-strict-{}.jar", process::id()));
+        fs::write(&path, malformed_jar()).unwrap();
+
+        let args = Args {
+            path: vec![path.clone()],
+            json: false,
+            strict: true,
+        };
+        let result = run(&args);
+
+        fs::remove_file(&path).unwrap();
+
+        assert!(matches!(result, Err(Error::ClassFile(_))));
+    }
 }
