@@ -166,7 +166,9 @@ fn test_identify_json_multi() {
     assert!(output.status.success());
     let v: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("output is not valid JSON");
-    let arr = v.as_array().expect("expected JSON array for multi-file output");
+    let arr = v
+        .as_array()
+        .expect("expected JSON array for multi-file output");
     assert_eq!(arr.len(), 2);
     let types: Vec<&str> = arr
         .iter()
