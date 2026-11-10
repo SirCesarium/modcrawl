@@ -3,6 +3,7 @@
 mod common;
 
 use std::fs::File;
+use std::process::Command;
 
 use modcrawl::{ForgeModFormat, ModType, PluginType, identify, identify_reader};
 
@@ -139,7 +140,7 @@ fn test_identify_invalid_zip_error() {
 fn test_identify_json_single() {
     let jar = common::fabric_jar("json_single", "1.0.0");
     let path = jar.path().to_str().unwrap();
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_modcrawl"))
+    let output = Command::new(env!("CARGO_BIN_EXE_modcrawl"))
         .args(["type", "--json", path])
         .output()
         .expect("failed to run modcrawl");
@@ -154,7 +155,7 @@ fn test_identify_json_single() {
 fn test_identify_json_multi() {
     let jar1 = common::fabric_jar("json_multi_a", "1.0.0");
     let jar2 = common::forge_modern_jar("json_multi_b", "1.0.0");
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_modcrawl"))
+    let output = Command::new(env!("CARGO_BIN_EXE_modcrawl"))
         .args([
             "type",
             "--json",
