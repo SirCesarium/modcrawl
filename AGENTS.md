@@ -89,7 +89,7 @@ request. Do not run it after every prompt.
   invariant, a non-obvious decision, or a rejected alternative. If it restates
   the line below it, delete it.
 
-### Comments that get a pull request rejected
+#### Examples of **forbidden** thinking-out-loud comments:
 
 ```rust
 // Wait, this won't work
