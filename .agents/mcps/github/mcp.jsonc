@@ -1,0 +1,18 @@
+// Requires Docker and a fine-grained token with read-only access.
+// Read-only mode: the server exposes no write tools.
+// opencode mcp add github --env GITHUB_READ_ONLY=1 --env 'GITHUB_PERSONAL_ACCESS_TOKEN={env:GITHUB_PERSONAL_ACCESS_TOKEN}' -- docker run -i --rm -e GITHUB_PERSONAL_ACCESS_TOKEN -e GITHUB_READ_ONLY ghcr.io/github/github-mcp-server
+{
+  "github": {
+    "type": "local",
+    "command": [
+      "docker", "run", "-i", "--rm",
+      "-e", "GITHUB_PERSONAL_ACCESS_TOKEN",
+      "-e", "GITHUB_READ_ONLY",
+      "ghcr.io/github/github-mcp-server"
+    ],
+    "environment": {
+      "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_PERSONAL_ACCESS_TOKEN}",
+      "GITHUB_READ_ONLY": "1"
+    }
+  }
+}
