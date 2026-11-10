@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use clap::Args as ClapArgs;
 use serde_json::to_string_pretty;
 
-use crate::cmd::{Source, collect_sources};
+use crate::cmd::{ScanArgs, Source, collect_sources};
 use crate::core::dep;
 use crate::error::{Error, Result};
 use crate::ui;
@@ -30,6 +30,9 @@ pub struct Args {
         help = "Output dependencies as JSON instead of human-readable text"
     )]
     pub json: bool,
+
+    #[command(flatten)]
+    pub scan: ScanArgs,
 }
 
 /// Run the `dep` command.
@@ -38,7 +41,7 @@ pub struct Args {
 ///
 /// Returns an error if an archive cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let sources = collect_sources(&args.path)?;
+    let sources = collect_sources(&args.path, &args.scan.options())?;
     let multi = sources.len() > 1;
     let mut reports = Vec::new();
     let mut failed = false;

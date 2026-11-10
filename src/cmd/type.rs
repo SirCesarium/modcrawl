@@ -7,7 +7,7 @@ use clap::Args as ClapArgs;
 use serde::Serialize;
 use serde_json::to_string_pretty;
 
-use crate::cmd::{Stdin, collect_jar_paths, is_stdin_request, read_stdin};
+use crate::cmd::{ScanArgs, Stdin, collect_jar_paths, is_stdin_request, read_stdin};
 use crate::core::detect_mod_type::ModType;
 use crate::core::identify::{identify, identify_reader};
 use crate::error::{Error, Result};
@@ -27,6 +27,9 @@ pub struct Args {
         help = "Output type as JSON instead of human-readable text"
     )]
     pub json: bool,
+
+    #[command(flatten)]
+    pub scan: ScanArgs,
 }
 
 /// A single entry in the JSON output of the `type` command.
@@ -153,14 +156,19 @@ fn render(files: &[PathBuf], named_only: bool, json: bool) -> Result<bool> {
 ///
 /// Returns an error if I/O fails or a ZIP archive cannot be read.
 pub fn run(args: &Args) -> Result<()> {
+    let options = args.scan.options();
     let failed = if is_stdin_request(&args.path) {
         match read_stdin()? {
             Stdin::Archive(data) => process_zip_chunks(&data, args.json)?,
-            Stdin::Paths(list) => render(&collect_jar_paths(&list)?, false, args.json)?,
+            Stdin::Paths(list) => render(&collect_jar_paths(&list, &options)?, false, args.json)?,
         }
     } else {
         let named_only = matches!(args.path.as_slice(), [one] if !one.is_dir());
-        render(&collect_jar_paths(&args.path)?, named_only, args.json)?
+        render(
+            &collect_jar_paths(&args.path, &options)?,
+            named_only,
+            args.json,
+        )?
     };
 
     if failed {

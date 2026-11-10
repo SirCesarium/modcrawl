@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use clap::Args as ClapArgs;
 use serde_json::to_string_pretty;
 
-use crate::cmd::{Source, collect_sources};
+use crate::cmd::{ScanArgs, Source, collect_sources};
 use crate::core::classfile;
 use crate::error::{Error, Result};
 use crate::ui;
@@ -29,6 +29,9 @@ pub struct Args {
         help = "Fail if any class file cannot be parsed instead of skipping it"
     )]
     pub strict: bool,
+
+    #[command(flatten)]
+    pub scan: ScanArgs,
 }
 
 /// Run the `classes` command.
@@ -37,7 +40,7 @@ pub struct Args {
 ///
 /// Returns an error if a JAR cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let sources = collect_sources(&args.path)?;
+    let sources = collect_sources(&args.path, &args.scan.options())?;
     let multi = sources.len() > 1;
     let mut all_entries = Vec::new();
     let mut skipped = 0usize;
@@ -124,6 +127,7 @@ mod tests {
             path: vec![path.clone()],
             json: false,
             strict: true,
+            scan: ScanArgs::default(),
         };
         let result = run(&args);
 

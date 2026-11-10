@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use clap::Args as ClapArgs;
 use serde_json::to_string_pretty;
 
-use crate::cmd::{Source, collect_sources};
+use crate::cmd::{ScanArgs, Source, collect_sources};
 use crate::core::metadata::{read_metadata, read_metadata_reader};
 use crate::error::{Error, Result};
 use crate::ui;
@@ -20,6 +20,9 @@ pub struct Args {
 
     /// Path of JAR file or directory containing JAR files
     pub path: Vec<PathBuf>,
+
+    #[command(flatten)]
+    pub scan: ScanArgs,
 }
 
 /// Run the `metadata` command.
@@ -28,7 +31,7 @@ pub struct Args {
 ///
 /// Returns an error if an archive cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let sources = collect_sources(&args.path)?;
+    let sources = collect_sources(&args.path, &args.scan.options())?;
     let multi = sources.len() > 1;
     let mut entries = Vec::new();
     let mut failed = false;

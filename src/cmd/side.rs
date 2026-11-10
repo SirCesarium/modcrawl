@@ -7,7 +7,7 @@ use clap::Args as ClapArgs;
 use serde::Serialize;
 use serde_json::to_string_pretty;
 
-use crate::cmd::{Source, collect_sources};
+use crate::cmd::{ScanArgs, Source, collect_sources};
 use crate::core::detect_mod_type::ModType;
 use crate::core::side::{Side, SideReport, side_report, side_report_reader};
 use crate::error::{Error, Result};
@@ -22,6 +22,9 @@ pub struct Args {
 
     /// Path of JAR file or directory containing JAR files
     pub path: Vec<PathBuf>,
+
+    #[command(flatten)]
+    pub scan: ScanArgs,
 }
 
 /// One JSON entry: `{ "file", "type", "side" }`.
@@ -40,7 +43,7 @@ struct Entry {
 /// Returns an error if an archive cannot be read or the report cannot be
 /// serialized.
 pub fn run(args: &Args) -> Result<()> {
-    let sources = collect_sources(&args.path)?;
+    let sources = collect_sources(&args.path, &args.scan.options())?;
     let mut entries = Vec::new();
     let mut rows = Vec::new();
     let mut failed = false;

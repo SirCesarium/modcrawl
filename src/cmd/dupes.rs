@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use clap::Args as ClapArgs;
 use serde_json::{json, to_string_pretty};
 
-use crate::cmd::collect_sources;
+use crate::cmd::{ScanArgs, collect_sources};
 use crate::core::classfile::{ClassIndex, group_conflicts};
 use crate::error::{Error, Result};
 use crate::ui;
@@ -37,6 +37,9 @@ pub struct Args {
         help = "Output as JSON instead of human-readable text"
     )]
     pub json: bool,
+
+    #[command(flatten)]
+    pub scan: ScanArgs,
 }
 
 /// Run the `dupes` command.
@@ -45,7 +48,7 @@ pub struct Args {
 ///
 /// Returns an error if any JAR cannot be read.
 pub fn run(args: &Args) -> Result<()> {
-    let sources = collect_sources(&args.path)?;
+    let sources = collect_sources(&args.path, &args.scan.options())?;
 
     let mut paths = Vec::with_capacity(sources.len());
     for source in &sources {
