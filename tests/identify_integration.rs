@@ -134,3 +134,44 @@ fn test_identify_invalid_zip_error() {
         "expected ZipCrawl error, got {err:?}"
     );
 }
+
+#[test]
+fn test_identify_json_single() {
+    let jar = common::fabric_jar("json_single", "1.0.0");
+    let path = jar.path().to_str().unwrap();
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_modcrawl"))
+        .args(["type", "--json", path])
+        .output()
+        .expect("failed to run modcrawl");
+    assert!(output.status.success());
+    let v: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("output is not valid JSON");
+    assert_eq!(v.get("type").and_then(|t| t.as_str()), Some("Fabric"));
+    assert!(v.get("file").is_some());
+}
+
+#[test]
+fn test_identify_json_multi() {
+    let jar1 = common::fabric_jar("json_multi_a", "1.0.0");
+    let jar2 = common::forge_modern_jar("json_multi_b", "1.0.0");
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_modcrawl"))
+        .args([
+            "type",
+            "--json",
+            jar1.path().to_str().unwrap(),
+            jar2.path().to_str().unwrap(),
+        ])
+        .output()
+        .expect("failed to run modcrawl");
+    assert!(output.status.success());
+    let v: serde_json::Value =
+        serde_json::from_slice(&output.stdout).expect("output is not valid JSON");
+    let arr = v.as_array().expect("expected JSON array for multi-file output");
+    assert_eq!(arr.len(), 2);
+    let types: Vec<&str> = arr
+        .iter()
+        .filter_map(|e| e.get("type").and_then(|t| t.as_str()))
+        .collect();
+    assert!(types.contains(&"Fabric"));
+    assert!(types.contains(&"Forge (mods.toml)"));
+}

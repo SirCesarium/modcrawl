@@ -4,8 +4,11 @@ use std::io;
 use std::path::PathBuf;
 
 use clap::Args as ClapArgs;
+use serde::Serialize;
+use serde_json::to_string_pretty;
 
 use crate::cmd::{Stdin, collect_jar_paths, is_stdin_request, read_stdin};
+use crate::core::detect_mod_type::ModType;
 use crate::core::identify::{identify, identify_reader};
 use crate::error::{Error, Result};
 use crate::ui;
@@ -17,13 +20,38 @@ const EOCD_MAGIC: &[u8] = b"PK\x05\x06";
 pub struct Args {
     /// Path of JAR file or directory containing JAR files
     pub path: Vec<PathBuf>,
+
+    #[arg(
+        short = 'j',
+        long,
+        help = "Output type as JSON instead of human-readable text"
+    )]
+    pub json: bool,
 }
 
-fn process_zip_chunks(data: &[u8]) -> bool {
+/// A single entry in the JSON output of the `type` command.
+#[derive(Serialize)]
+struct TypeEntry {
+    file: String,
+    #[serde(rename = "type")]
+    mod_type: ModType,
+}
+
+fn process_zip_chunks(data: &[u8], json: bool) -> Result<bool> {
     let mut cursor = io::Cursor::new(data);
     if let Ok(mod_type) = identify_reader(&mut cursor) {
-        ui::render_type(&mod_type);
-        return false;
+        if json {
+            println!(
+                "{}",
+                to_string_pretty(&TypeEntry {
+                    file: "<stdin>".to_owned(),
+                    mod_type,
+                })?
+            );
+        } else {
+            ui::render_type(&mod_type);
+        }
+        return Ok(false);
     }
 
     let eocd_positions: Vec<usize> = data
@@ -33,7 +61,8 @@ fn process_zip_chunks(data: &[u8]) -> bool {
         .map(|(i, _)| i)
         .collect();
 
-    let mut n = 0;
+    let mut entries: Vec<TypeEntry> = Vec::new();
+    let mut n = 0usize;
     let mut prev = 0;
 
     for &eocd in &eocd_positions {
@@ -49,27 +78,40 @@ fn process_zip_chunks(data: &[u8]) -> bool {
         let mut cursor = io::Cursor::new(chunk);
         if let Ok(mod_type) = identify_reader(&mut cursor) {
             n += 1;
-            ui::render_type_tagged(n, &mod_type);
+            if json {
+                entries.push(TypeEntry {
+                    file: format!("<stdin:{n}>"),
+                    mod_type,
+                });
+            } else {
+                ui::render_type_tagged(n, &mod_type);
+            }
         }
         prev = chunk_end;
     }
 
     if n == 0 {
         eprintln!("No valid ZIPs found in concatenated stream");
-        return true;
+        return Ok(true);
     }
 
-    false
+    if json {
+        println!("{}", to_string_pretty(&entries)?);
+    }
+
+    Ok(false)
 }
 
-/// Render the type of each JAR, or a single file on its own when its caller
-/// named exactly that file.
-fn render(files: &[PathBuf], named_only: bool) -> bool {
+/// Collect and identify types for each JAR, returning entries or signalling failure.
+fn collect_entries(files: &[PathBuf]) -> (Vec<TypeEntry>, bool) {
     let mut failed = false;
-    let entries: Vec<(String, _)> = files
+    let entries = files
         .iter()
         .filter_map(|file| match identify(file) {
-            Ok(mod_type) => Some((file.display().to_string(), mod_type)),
+            Ok(mod_type) => Some(TypeEntry {
+                file: file.display().to_string(),
+                mod_type,
+            }),
             Err(e) => {
                 ui::file_error(&file.display().to_string(), &e);
                 failed = true;
@@ -77,15 +119,32 @@ fn render(files: &[PathBuf], named_only: bool) -> bool {
             }
         })
         .collect();
+    (entries, failed)
+}
+
+/// Render the type of each JAR, or a single file on its own when its caller
+/// named exactly that file.
+fn render(files: &[PathBuf], named_only: bool, json: bool) -> Result<bool> {
+    let (entries, failed) = collect_entries(files);
 
     if !entries.is_empty() {
-        match (named_only, entries.as_slice()) {
-            (true, [entry]) => ui::render_type(&entry.1),
-            _ => ui::render_type_multi(&entries),
+        if json {
+            if named_only && entries.len() == 1 {
+                println!("{}", to_string_pretty(&entries[0])?);
+            } else {
+                println!("{}", to_string_pretty(&entries)?);
+            }
+        } else {
+            let pairs: Vec<(String, _)> =
+                entries.into_iter().map(|e| (e.file, e.mod_type)).collect();
+            match (named_only, pairs.as_slice()) {
+                (true, [entry]) => ui::render_type(&entry.1),
+                _ => ui::render_type_multi(&pairs),
+            }
         }
     }
 
-    failed
+    Ok(failed)
 }
 
 /// Run the `type` command: detect mod/plugin type(s) from JAR files.
@@ -96,12 +155,12 @@ fn render(files: &[PathBuf], named_only: bool) -> bool {
 pub fn run(args: &Args) -> Result<()> {
     let failed = if is_stdin_request(&args.path) {
         match read_stdin()? {
-            Stdin::Archive(data) => process_zip_chunks(&data),
-            Stdin::Paths(list) => render(&collect_jar_paths(&list)?, false),
+            Stdin::Archive(data) => process_zip_chunks(&data, args.json)?,
+            Stdin::Paths(list) => render(&collect_jar_paths(&list)?, false, args.json)?,
         }
     } else {
         let named_only = matches!(args.path.as_slice(), [one] if !one.is_dir());
-        render(&collect_jar_paths(&args.path)?, named_only)
+        render(&collect_jar_paths(&args.path)?, named_only, args.json)?
     };
 
     if failed {
