@@ -4,8 +4,10 @@ use std::fmt;
 use std::io::{self, Read, Seek};
 use std::panic;
 use std::path::Path;
+use std::result::Result as StdResult;
 
 use serde::Serialize;
+use serde::ser::{SerializeMap, Serializer};
 use zipcrawl::ZipManager;
 
 use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
@@ -16,7 +18,14 @@ use super::embedded;
 use super::loaders::{bukkit, bungee, fabric, forge_legacy, forge_modern, paper, quilt, velocity};
 
 /// Parsed mod/plugin metadata from a JAR file.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+///
+/// Serializes as a flat JSON object with a `"type"` field that identifies the
+/// loader, followed by the loader-specific fields at the top level.
+/// For example: `{"type": "Fabric", "id": "my-mod", ...}`.
+///
+/// `ForgeLegacy` is an exception: its inner value is a list of mod entries, so
+/// it serializes as `{"type": "ForgeLegacy", "mods": [...]}`.
+#[derive(Debug, Clone, PartialEq)]
 pub enum ModMetadata {
     Fabric(Box<fabric::metadata::FabricModMetadata>),
     Quilt(Box<quilt::metadata::QuiltModMetadata>),
@@ -27,6 +36,54 @@ pub enum ModMetadata {
     Bungee(bungee::metadata::BungeePluginMetadata),
     Paper(paper::metadata::PaperPluginMetadata),
     Velocity(velocity::metadata::VelocityPluginMetadata),
+}
+
+impl Serialize for ModMetadata {
+    fn serialize<S: Serializer>(&self, serializer: S) -> StdResult<S::Ok, S::Error> {
+        /// Merge a `"type"` key with the fields of a serializable struct into a
+        /// single flat map.  The inner value must serialize as a JSON object.
+        fn flatten_with_type<S, T>(
+            type_name: &'static str,
+            inner: &T,
+            serializer: S,
+        ) -> StdResult<S::Ok, S::Error>
+        where
+            S: Serializer,
+            T: Serialize,
+        {
+            use serde::ser::Error as _;
+            let inner_val =
+                serde_json::to_value(inner).map_err(|e| S::Error::custom(e.to_string()))?;
+            let obj = inner_val
+                .as_object()
+                .ok_or_else(|| S::Error::custom("inner metadata did not serialize as an object"))?;
+            let mut map = serializer.serialize_map(Some(obj.len() + 1))?;
+            map.serialize_entry("type", type_name)?;
+            for (k, v) in obj {
+                map.serialize_entry(k, v)?;
+            }
+            map.end()
+        }
+
+        match self {
+            Self::Fabric(m) => flatten_with_type("Fabric", m, serializer),
+            Self::Quilt(m) => flatten_with_type("Quilt", m, serializer),
+            Self::ForgeModern(m) => flatten_with_type("ForgeModern", m, serializer),
+            Self::NeoForge(m) => flatten_with_type("NeoForge", m, serializer),
+            Self::Bukkit(m) => flatten_with_type("Bukkit", m, serializer),
+            Self::Bungee(m) => flatten_with_type("Bungee", m, serializer),
+            Self::Paper(m) => flatten_with_type("Paper", m, serializer),
+            Self::Velocity(m) => flatten_with_type("Velocity", m, serializer),
+            // ForgeLegacy inner value is a Vec, not a struct, so it cannot be
+            // flattened field-by-field; wrap it under a "mods" key instead.
+            Self::ForgeLegacy(entries) => {
+                let mut map = serializer.serialize_map(Some(2))?;
+                map.serialize_entry("type", "ForgeLegacy")?;
+                map.serialize_entry("mods", entries)?;
+                map.end()
+            }
+        }
+    }
 }
 
 impl ModMetadata {

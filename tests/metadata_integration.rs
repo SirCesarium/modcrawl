@@ -5,6 +5,7 @@ mod common;
 use std::fs::File;
 
 use modcrawl::{ModMetadata, read_metadata, read_metadata_reader};
+use serde_json::Value;
 
 #[test]
 fn test_metadata_fabric() {
@@ -188,5 +189,48 @@ fn test_metadata_missing_file_error() {
     assert!(
         matches!(err, modcrawl::Error::UnsupportedMetadata(_)),
         "expected UnsupportedMetadata error, got {err:?}"
+    );
+}
+
+/// Verify that `ModMetadata` serializes as a flat object with a `"type"` field
+/// rather than the serde default of external enum tagging.
+#[test]
+fn test_metadata_json_is_flat() {
+    // Fabric: flat object with "type": "Fabric" and top-level mod fields.
+    let jar = common::fabric_jar("flat_test", "1.0.0");
+    let meta = read_metadata(jar.path()).expect("failed to read Fabric metadata");
+    let json: Value = serde_json::to_value(&meta).expect("serialization failed");
+    let obj = json.as_object().expect("expected a JSON object");
+    assert_eq!(
+        obj.get("type").and_then(Value::as_str),
+        Some("Fabric"),
+        "\"type\" field must be \"Fabric\", got: {json}"
+    );
+    assert!(
+        obj.contains_key("id"),
+        "\"id\" must be a top-level field, got: {json}"
+    );
+    assert!(
+        !obj.contains_key("Fabric"),
+        "must not use external enum tagging, got: {json}"
+    );
+
+    // ForgeLegacy: flat object with "type": "ForgeLegacy" and "mods" array.
+    let jar = common::forge_legacy_jar("flat_legacy", "1.12-1.0");
+    let meta = read_metadata(jar.path()).expect("failed to read ForgeLegacy metadata");
+    let json: Value = serde_json::to_value(&meta).expect("serialization failed");
+    let obj = json.as_object().expect("expected a JSON object");
+    assert_eq!(
+        obj.get("type").and_then(Value::as_str),
+        Some("ForgeLegacy"),
+        "\"type\" field must be \"ForgeLegacy\", got: {json}"
+    );
+    assert!(
+        obj.get("mods").and_then(Value::as_array).is_some(),
+        "\"mods\" must be a top-level array, got: {json}"
+    );
+    assert!(
+        !obj.contains_key("ForgeLegacy"),
+        "must not use external enum tagging, got: {json}"
     );
 }
