@@ -36,24 +36,61 @@ It helps you quickly answer the everyday questions that pop up while building or
 ## Quickstart
 
 ```bash
-# Detect mod loader
+# Detect mod loader (NeoForge, Fabric, Forge, Paper, Velocity, etc.)
 modcrawl type MyMod.jar
 
-# Classify client-only, server-only, both, or unknown mods
+# Read mod metadata (ID, version, authors, license, etc.)
+modcrawl metadata MyMod.jar
+
+# Analyze dependencies and find hidden or missing requirements
+modcrawl dep MyMod.jar
+
+# Classify mods and plugins as client, server, both, or unknown
 modcrawl side mods/
 
-# Inspect metadata and dependencies
-modcrawl deps MyMod.jar
+# List all .class files inside a JAR with Java version and access flags
+modcrawl classes MyMod.jar
 
-# Find duplicate classes causing conflicts
-modcrawl dupes *.jar
+# Search constant pools for references to classes, methods, fields, or strings
+modcrawl grep "net/minecraft/world" *.jar --quiet
 
-# Detect overlapping mixin targets across multiple mods
+# Extract mixin targets or detect overlapping mixin conflicts across mods
+modcrawl mixins MyMod.jar
 modcrawl mixins --overlaps mods/
 
-# Search for obfuscated method references across all JARs
-modcrawl grep "net/minecraft/world" *.jar --quiet
+# Find duplicate .class entries across multiple JARs causing classpath conflicts
+modcrawl dupes *.jar
+
+# Scan recursively, limit depth, or exclude folders/files on any command
+modcrawl dep -r --exclude disabled mods/
+modcrawl dupes -r --depth 2 mods/
+
+# Output machine-readable JSON for scripting or piping
+modcrawl side mods/ --json | jq '.[] | select(.side == "client")'
 ```
+
+## CLI Commands
+
+| Command | Aliases | Description | Key Options |
+| --- | --- | --- | --- |
+| `dep` | `d`, `deps`, `dependencies` | Analyze mod dependencies and find embedded or missing requirements | `--include-jar-in-jar` (`--jij`), `-j`, `--json` |
+| `metadata` | `meta`, `md` | Extract mod and plugin metadata (name, ID, version, authors, etc.) | `-j`, `--json` |
+| `type` | `t`, `ty` | Detect mod loader or server plugin platform | `-j`, `--json` |
+| `side` | `sd` | Classify mods and plugins as `client`, `server`, `both`, or `unknown` | `-j`, `--json` |
+| `classes` | `c`, `cls` | List all `.class` files with Java classfile version and access flags | `--strict`, `-j`, `--json` |
+| `grep` | `g`, `search` | Search strings in constant pools of `.class` files | `-q`, `--quiet`, `--strict`, `-j`, `--json` |
+| `mixins` | `m`, `mixin` | Extract `@Mixin` targets or detect overlapping conflicts across JARs | `-o`, `--overlaps`, `-q`, `--quiet`, `--strict`, `-j`, `--json` |
+| `dupes` | `dp`, `duplicate` | Detect duplicate classes and classpath collisions across multiple JARs | `-b`, `--by-class`, `-c`, `--count`, `-j`, `--json` |
+
+### Common Options
+
+All commands accept files, directories, or standard input (`-`), and share directory scanning options:
+
+- **`-r, --recursive`**: Recursively scan subdirectories for JAR files.
+- **`--depth <N>`**: Limit recursion depth (implies `--recursive`; `1` = direct children only).
+- **`--exclude <PATTERN>`**: Skip files or directories matching a glob pattern (`*` matches any characters; repeatable).
+- **`-j, --json`**: Output structured JSON instead of human-readable tables.
+- **Piping / stdin**: Stream a JAR archive directly or pass newline-separated paths (`cat mod.jar | modcrawl type -` or `find mods/ -name "*.jar" | modcrawl dep`).
 
 ## TL;DR - Shut up and let me download
 
