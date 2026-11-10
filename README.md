@@ -48,6 +48,9 @@ modcrawl deps MyMod.jar
 # Find duplicate classes causing conflicts
 modcrawl dupes *.jar
 
+# Detect overlapping mixin targets across multiple mods
+modcrawl mixins --overlaps mods/
+
 # Search for obfuscated method references across all JARs
 modcrawl grep "net/minecraft/world" *.jar --quiet
 ```

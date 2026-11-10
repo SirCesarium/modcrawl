@@ -161,6 +161,42 @@ pub fn mixins_json(data: &[u8]) -> StdResult<String, JsError> {
     )
 }
 
+/// Find overlapping mixin targets across multiple in-memory JARs and return JSON.
+///
+/// `names` and `jars` are parallel arrays: `names[i]` labels `jars[i]`.
+///
+/// Returns a JSON array of `MixinOverlap` objects.
+///
+/// # Errors
+///
+/// Returns a JS exception when any buffer is not a valid ZIP archive, or
+/// when the arrays differ in length.
+#[cfg(feature = "classfile")]
+#[wasm_bindgen]
+#[allow(clippy::needless_pass_by_value)]
+pub fn mixin_overlaps_json(names: Vec<String>, jars: &js_sys::Array) -> StdResult<String, JsError> {
+    let mut decoded: Vec<Vec<u8>> = Vec::with_capacity(jars.length() as usize);
+    for jar in jars.iter() {
+        let bytes = js_sys::Uint8Array::new(&jar).to_vec();
+        decoded.push(bytes);
+    }
+
+    if names.len() != decoded.len() {
+        return Err(JsError::new("names and jars must have the same length"));
+    }
+
+    let pairs: Vec<(&str, &[u8])> = names
+        .iter()
+        .zip(decoded.iter())
+        .map(|(name, data)| (name.as_str(), data.as_slice()))
+        .collect();
+
+    to_js(
+        classfile::find_mixin_overlaps_buffers(&pairs)
+            .and_then(|overlaps| serde_json::to_string(&overlaps).map_err(Into::into)),
+    )
+}
+
 /// Find duplicate class entries across multiple ZIP/JAR byte buffers,
 /// Find duplicate classes across multiple in-memory JARs and return JSON.
 ///

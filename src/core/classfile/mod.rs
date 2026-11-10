@@ -2,7 +2,7 @@
 //! and duplicate-class detection.
 
 use std::any::Any;
-use std::io::{Read, Seek};
+use std::io::{Cursor, Read, Seek};
 use std::panic;
 use std::path::Path;
 
@@ -70,6 +70,63 @@ pub struct MixinEntry {
     pub mixin_class: String,
     /// Internal name of the class being mixed into.
     pub target: String,
+}
+
+/// A mixin target class that is mixed into by classes from more than one JAR.
+#[derive(Debug, Clone, Serialize)]
+pub struct MixinOverlap {
+    /// Internal name of the targeted class.
+    pub target: String,
+    /// Every `(jar_label, mixin_class)` pair that targets this class.
+    pub mixins: Vec<OverlapEntry>,
+}
+
+/// One `(jar, mixin_class)` contributor to a [`MixinOverlap`].
+#[derive(Debug, Clone, Serialize)]
+pub struct OverlapEntry {
+    /// Label of the JAR that contains the mixin class.
+    pub jar: String,
+    /// Internal name of the mixin class inside that JAR.
+    pub mixin_class: String,
+}
+
+/// Group `(jar_label, MixinEntry)` pairs by target and return only those
+/// targets that are mixed into by classes from more than one JAR.
+///
+/// Results are sorted by target name; within each target, contributors are
+/// sorted by JAR label then by mixin class name.
+#[must_use]
+pub fn group_mixin_overlaps(entries: &[(String, MixinEntry)]) -> Vec<MixinOverlap> {
+    use std::collections::BTreeMap;
+
+    let mut by_target: BTreeMap<&str, Vec<OverlapEntry>> = BTreeMap::new();
+
+    for (jar, entry) in entries {
+        by_target
+            .entry(entry.target.as_str())
+            .or_default()
+            .push(OverlapEntry {
+                jar: jar.clone(),
+                mixin_class: entry.mixin_class.clone(),
+            });
+    }
+
+    by_target
+        .into_iter()
+        .filter(|(_, mixins)| {
+            let mut jars: Vec<&str> = mixins.iter().map(|e| e.jar.as_str()).collect();
+            jars.sort_unstable();
+            jars.dedup();
+            jars.len() > 1
+        })
+        .map(|(target, mut mixins)| {
+            mixins.sort_by(|a, b| a.jar.cmp(&b.jar).then(a.mixin_class.cmp(&b.mixin_class)));
+            MixinOverlap {
+                target: target.to_owned(),
+                mixins,
+            }
+        })
+        .collect()
 }
 
 /// List all `.class` files in a JAR with basic metadata.
@@ -215,6 +272,42 @@ pub fn scan_mixins(path: &Path) -> Result<ClassScan<MixinEntry>> {
 pub fn scan_mixins_reader<R: Read>(reader: &mut R) -> Result<ClassScan<MixinEntry>> {
     let mut manager = ZipManager::from_reader(reader)?;
     mixins_impl(&mut manager)
+}
+
+/// Find overlapping mixin targets across multiple JARs on disk.
+///
+/// Looks for `@Mixin` targets that appear in more than one JAR.
+///
+/// # Errors
+///
+/// Returns an error if any JAR cannot be read.
+pub fn find_mixin_overlaps(paths: &[&Path]) -> Result<Vec<MixinOverlap>> {
+    let mut entries = Vec::new();
+    for &path in paths {
+        let label = path.to_string_lossy().into_owned();
+        for mixin in mixins(path)? {
+            entries.push((label.clone(), mixin));
+        }
+    }
+    Ok(group_mixin_overlaps(&entries))
+}
+
+/// Find overlapping mixin targets across in-memory JARs labeled by name.
+///
+/// Looks for `@Mixin` targets that appear in more than one JAR.
+///
+/// # Errors
+///
+/// Returns an error if any buffer is not a valid ZIP archive.
+pub fn find_mixin_overlaps_buffers(jars: &[(&str, &[u8])]) -> Result<Vec<MixinOverlap>> {
+    let mut entries = Vec::new();
+    for &(label, bytes) in jars {
+        let mut cursor = Cursor::new(bytes);
+        for mixin in mixins_reader(&mut cursor)? {
+            entries.push((label.to_owned(), mixin));
+        }
+    }
+    Ok(group_mixin_overlaps(&entries))
 }
 
 fn mixins_impl<R: Read + Seek>(manager: &mut ZipManager<R>) -> Result<ClassScan<MixinEntry>> {
@@ -631,5 +724,70 @@ mod tests {
         let mut cursor = Cursor::new(mixed_jar());
         let mixins = scan_mixins_reader(&mut cursor).unwrap();
         assert_eq!(mixins.skipped.len(), 1);
+    }
+
+    #[test]
+    fn group_mixin_overlaps_returns_targets_in_multiple_jars() {
+        let entries = vec![
+            (
+                "a.jar".to_owned(),
+                MixinEntry {
+                    mixin_class: "MixA".to_owned(),
+                    target: "net/minecraft/Foo".to_owned(),
+                },
+            ),
+            (
+                "b.jar".to_owned(),
+                MixinEntry {
+                    mixin_class: "MixB".to_owned(),
+                    target: "net/minecraft/Foo".to_owned(),
+                },
+            ),
+            (
+                "a.jar".to_owned(),
+                MixinEntry {
+                    mixin_class: "MixC".to_owned(),
+                    target: "net/minecraft/Bar".to_owned(),
+                },
+            ),
+        ];
+
+        let overlaps = group_mixin_overlaps(&entries);
+
+        assert_eq!(overlaps.len(), 1, "only Foo is targeted by multiple JARs");
+        assert_eq!(overlaps[0].target, "net/minecraft/Foo");
+        assert_eq!(overlaps[0].mixins.len(), 2);
+        assert_eq!(overlaps[0].mixins[0].jar, "a.jar");
+        assert_eq!(overlaps[0].mixins[0].mixin_class, "MixA");
+        assert_eq!(overlaps[0].mixins[1].jar, "b.jar");
+        assert_eq!(overlaps[0].mixins[1].mixin_class, "MixB");
+    }
+
+    #[test]
+    fn group_mixin_overlaps_ignores_single_jar_targets() {
+        let entries = vec![
+            (
+                "a.jar".to_owned(),
+                MixinEntry {
+                    mixin_class: "MixA".to_owned(),
+                    target: "net/minecraft/Foo".to_owned(),
+                },
+            ),
+            (
+                "a.jar".to_owned(),
+                MixinEntry {
+                    mixin_class: "MixB".to_owned(),
+                    target: "net/minecraft/Foo".to_owned(),
+                },
+            ),
+        ];
+
+        // Both mixins are from the same JAR, so no overlap.
+        assert!(group_mixin_overlaps(&entries).is_empty());
+    }
+
+    #[test]
+    fn find_mixin_overlaps_buffers_empty() {
+        assert!(find_mixin_overlaps_buffers(&[]).unwrap().is_empty());
     }
 }

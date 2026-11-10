@@ -72,7 +72,8 @@ pub enum Commands {
     /// Extract `@Mixin` targets from class-level annotations.
     ///
     /// Looks for `SpongePowered` `@Mixin` annotations to find which classes
-    /// are being mixed into by each class in the JAR.
+    /// are being mixed into by each class in the JAR, or detects overlapping
+    /// targets across multiple JARs with `--overlaps`.
     #[cfg(feature = "classfile")]
     #[command(aliases = &["m", "mixin"])]
     Mixins(mixins::Args),

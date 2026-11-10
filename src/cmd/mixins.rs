@@ -8,12 +8,13 @@ use clap::Args as ClapArgs;
 use serde_json::to_string_pretty;
 
 use crate::cmd::{ScanArgs, Source, collect_sources};
-use crate::core::classfile;
+use crate::core::classfile::{self, group_mixin_overlaps};
 use crate::error::{Error, Result};
 use crate::ui;
 
 /// Arguments for the `mixins` command.
 #[derive(ClapArgs)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Args {
     /// Path of JAR file or directory containing JAR files
     pub path: Vec<PathBuf>,
@@ -31,6 +32,13 @@ pub struct Args {
         help = "Output as JSON instead of human-readable text"
     )]
     pub json: bool,
+
+    #[arg(
+        short = 'o',
+        long,
+        help = "Report targets mixed into by more than one JAR (requires multiple JARs)"
+    )]
+    pub overlaps: bool,
 
     #[arg(
         long,
@@ -51,6 +59,8 @@ pub fn run(args: &Args) -> Result<()> {
     let sources = collect_sources(&args.path, &args.scan.options())?;
     let multi = sources.len() > 1;
     let mut total_entries = 0usize;
+    // (jar_label, MixinEntry) pairs accumulated for overlap detection.
+    let mut all_labelled: Vec<(String, classfile::MixinEntry)> = Vec::new();
     let mut all_entries = Vec::new();
     let mut skipped = 0usize;
     let mut failed = false;
@@ -77,7 +87,13 @@ pub fn run(args: &Args) -> Result<()> {
         }
         let entries = scan.items;
 
-        if args.json {
+        if args.overlaps || args.json {
+            for entry in &entries {
+                all_labelled.push((source.label(), entry.clone()));
+            }
+        }
+
+        if args.json || args.overlaps {
             all_entries.extend(entries);
             continue;
         }
@@ -106,7 +122,18 @@ pub fn run(args: &Args) -> Result<()> {
         }
     }
 
-    if args.json {
+    if args.overlaps {
+        let overlaps = group_mixin_overlaps(&all_labelled);
+        if args.json {
+            println!("{}", to_string_pretty(&overlaps)?);
+        } else if args.quiet {
+            for o in &overlaps {
+                println!("{}", o.target);
+            }
+        } else {
+            ui::render_mixin_overlaps(&overlaps);
+        }
+    } else if args.json {
         println!("{}", to_string_pretty(&all_entries)?);
     } else if total_entries == 0 && !sources.is_empty() && !failed {
         ui::no_results("No mixins found.");
@@ -123,4 +150,66 @@ pub fn run(args: &Args) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use std::env;
+    use std::fs;
+    use std::io::Write;
+    use std::process;
+
+    use zip::ZipWriter;
+    use zip::write::SimpleFileOptions;
+
+    use super::*;
+
+    fn malformed_jar() -> Vec<u8> {
+        let mut zip = ZipWriter::new(Cursor::new(Vec::new()));
+        zip.start_file("com/example/Broken.class", SimpleFileOptions::default())
+            .unwrap();
+        zip.write_all(b"not a class file").unwrap();
+        zip.finish().unwrap().into_inner()
+    }
+
+    #[test]
+    fn strict_mode_fails_when_a_class_cannot_be_parsed() {
+        let path = env::temp_dir().join(format!("modcrawl-mixins-strict-{}.jar", process::id()));
+        fs::write(&path, malformed_jar()).unwrap();
+
+        let args = Args {
+            path: vec![path.clone()],
+            quiet: false,
+            json: false,
+            overlaps: false,
+            strict: true,
+            scan: ScanArgs::default(),
+        };
+        let result = run(&args);
+
+        fs::remove_file(&path).unwrap();
+
+        assert!(matches!(result, Err(Error::ClassFile(_))));
+    }
+
+    #[test]
+    fn overlaps_flag_succeeds_with_empty_results() {
+        let path = env::temp_dir().join(format!("modcrawl-mixins-empty-{}.jar", process::id()));
+        let zip = ZipWriter::new(Cursor::new(Vec::new()));
+        let bytes = zip.finish().unwrap().into_inner();
+        fs::write(&path, bytes).unwrap();
+
+        let args = Args {
+            path: vec![path.clone()],
+            quiet: false,
+            json: true,
+            overlaps: true,
+            strict: false,
+            scan: ScanArgs::default(),
+        };
+        assert!(run(&args).is_ok());
+
+        fs::remove_file(&path).unwrap();
+    }
 }

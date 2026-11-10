@@ -141,3 +141,39 @@ fn test_group_conflicts_reexported() {
         .expect("expected a jar1<->jar2 conflict entry");
     assert_eq!(jar1_jar2.classes.len(), 2);
 }
+
+#[cfg(feature = "classfile")]
+#[test]
+fn test_mixin_overlaps_reexported() {
+    use modcrawl::{
+        MixinEntry, MixinOverlap, OverlapEntry, find_mixin_overlaps_buffers, group_mixin_overlaps,
+    };
+
+    let entries = vec![
+        (
+            "mod1.jar".to_string(),
+            MixinEntry {
+                mixin_class: "net/example/Mix1".to_string(),
+                target: "net/minecraft/world/Level".to_string(),
+            },
+        ),
+        (
+            "mod2.jar".to_string(),
+            MixinEntry {
+                mixin_class: "net/example/Mix2".to_string(),
+                target: "net/minecraft/world/Level".to_string(),
+            },
+        ),
+    ];
+
+    let overlaps: Vec<MixinOverlap> = group_mixin_overlaps(&entries);
+    assert_eq!(overlaps.len(), 1);
+    assert_eq!(overlaps[0].target, "net/minecraft/world/Level");
+    assert_eq!(overlaps[0].mixins.len(), 2);
+
+    let empty: Vec<OverlapEntry> = vec![];
+    assert!(empty.is_empty());
+
+    let from_buffers = find_mixin_overlaps_buffers(&[]).expect("buffer overlap search works");
+    assert!(from_buffers.is_empty());
+}
