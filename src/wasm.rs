@@ -162,9 +162,14 @@ pub fn mixins_json(data: &[u8]) -> StdResult<String, JsError> {
 }
 
 /// Find duplicate class entries across multiple ZIP/JAR byte buffers,
-/// returning JSON.
+/// Find duplicate classes across multiple in-memory JARs and return JSON.
 ///
 /// `names` and `jars` are parallel arrays: `names[i]` labels `jars[i]`.
+///
+/// When `by_class` is `false` (the default) the output is an array of conflict
+/// pairs `{file_a, file_b, classes}`, mirroring `dupes --json`.  When `true`
+/// the output is an array of `{class_name, files}` entries, mirroring
+/// `dupes --json --by-class`.
 ///
 /// # Errors
 ///
@@ -173,7 +178,11 @@ pub fn mixins_json(data: &[u8]) -> StdResult<String, JsError> {
 #[cfg(feature = "classfile")]
 #[wasm_bindgen]
 #[allow(clippy::needless_pass_by_value)]
-pub fn dupes_json(names: Vec<String>, jars: &js_sys::Array) -> StdResult<String, JsError> {
+pub fn dupes_json(
+    names: Vec<String>,
+    jars: &js_sys::Array,
+    by_class: bool,
+) -> StdResult<String, JsError> {
     let mut decoded: Vec<Vec<u8>> = Vec::with_capacity(jars.length() as usize);
     for jar in jars.iter() {
         let bytes = js_sys::Uint8Array::new(&jar).to_vec();
@@ -191,7 +200,12 @@ pub fn dupes_json(names: Vec<String>, jars: &js_sys::Array) -> StdResult<String,
         .collect();
 
     to_js(
-        classfile::find_duplicates_buffers(&pairs)
-            .and_then(|entries| serde_json::to_string(&entries).map_err(Into::into)),
+        classfile::find_duplicates_buffers(&pairs).and_then(|entries| {
+            if by_class {
+                serde_json::to_string(&entries).map_err(Into::into)
+            } else {
+                serde_json::to_string(&classfile::group_conflicts(&entries)).map_err(Into::into)
+            }
+        }),
     )
 }
