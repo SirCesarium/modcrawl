@@ -49,6 +49,11 @@ bun run build
 Run the full set when you finish a task or when the user asks for a pull
 request. Do not run it after every prompt.
 
+**Before declaring a task done, you must run every applicable command above and
+confirm it exits with code 0.** Fix any failure before responding. If a check
+cannot be run (e.g., missing fixtures or WASM toolchain), say so explicitly and
+explain why CI may still pass.
+
 ## CLI commands
 
 | Subcommand | Module | WASM export |
@@ -88,6 +93,9 @@ request. Do not run it after every prompt.
 - **No thinking-out-loud comments.** A comment exists for a constraint, an
   invariant, a non-obvious decision, or a rejected alternative. If it restates
   the line below it, delete it.
+- **Use `use` imports, not fully qualified names.** Write `use std::collections::HashMap;`
+  and then `HashMap`, not `std::collections::HashMap` inline. Exception: a single
+  disambiguation in the same module where the short name would collide.
 
 #### Examples of **forbidden** thinking-out-loud comments:
 
