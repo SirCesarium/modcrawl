@@ -1,11 +1,17 @@
 //! Client/server side classification for mods and plugins.
 
 use std::fmt;
+use std::io::{Read, Seek};
+use std::path::Path;
 
 use serde::Serialize;
+use zipcrawl::ZipManager;
 
+use crate::core::detect_mod_type::ModType;
+use crate::core::identify::identify_impl;
 use crate::core::loaders::forge_modern::metadata::ModsTomlMetadata;
-use crate::core::metadata::ModMetadata;
+use crate::core::metadata::{ModMetadata, read_metadata_impl};
+use crate::error::Result;
 
 /// Where a mod or plugin is meant to run.
 ///
@@ -32,6 +38,72 @@ impl fmt::Display for Side {
 
         f.write_str(label)
     }
+}
+
+/// Classification report containing the detected mod/plugin type and its side.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct SideReport {
+    /// Detected mod or plugin type.
+    #[serde(rename = "type")]
+    pub mod_type: ModType,
+    /// Classified side.
+    pub side: Side,
+}
+
+/// Classify the side and mod type from a JAR file on disk.
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be read, is not a valid ZIP archive,
+/// or contains malformed metadata.
+pub fn side_report(path: &Path) -> Result<SideReport> {
+    let mut mng = ZipManager::new(path)?;
+    side_report_impl(&mut mng)
+}
+
+/// Classify the side and mod type from a ZIP archive read via a `Read + Seek` impl.
+///
+/// # Errors
+///
+/// Returns an error if the data cannot be read, is not a valid ZIP archive,
+/// or contains malformed metadata.
+pub fn side_report_reader<R: Read + Seek>(reader: &mut R) -> Result<SideReport> {
+    let mut mng = ZipManager::from_reader(reader)?;
+    side_report_impl(&mut mng)
+}
+
+/// Classify where a mod or plugin runs from a JAR file on disk.
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be read, is not a valid ZIP archive,
+/// or contains malformed metadata.
+pub fn side(path: &Path) -> Result<Side> {
+    side_report(path).map(|r| r.side)
+}
+
+/// Classify where a mod or plugin runs from a ZIP archive read via a `Read + Seek` impl.
+///
+/// # Errors
+///
+/// Returns an error if the data cannot be read, is not a valid ZIP archive,
+/// or contains malformed metadata.
+pub fn side_reader<R: Read + Seek>(reader: &mut R) -> Result<Side> {
+    side_report_reader(reader).map(|r| r.side)
+}
+
+fn side_report_impl<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<SideReport> {
+    let mod_type = identify_impl(mng)?;
+    if mod_type == ModType::Unknown {
+        return Ok(SideReport {
+            mod_type: ModType::Unknown,
+            side: Side::Unknown,
+        });
+    }
+
+    let metadata = read_metadata_impl(mng)?;
+    let side = classify(&metadata);
+    Ok(SideReport { mod_type, side })
 }
 
 /// Classify where `metadata` says the mod or plugin runs.

@@ -30,7 +30,7 @@ pub fn identify_reader<R: Read>(reader: &mut R) -> Result<ModType> {
     identify_impl(&mut mng)
 }
 
-fn identify_impl<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<ModType> {
+pub(crate) fn identify_impl<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<ModType> {
     let mod_type = REGISTRY.detect_archive(mng)?;
 
     if mod_type != ModType::Unknown {

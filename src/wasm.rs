@@ -11,6 +11,7 @@ use wasm_bindgen::prelude::*;
 use crate::core::dep;
 use crate::core::identify::identify_reader;
 use crate::core::metadata;
+use crate::core::side;
 use crate::error::Result as CoreResult;
 
 #[cfg(feature = "classfile")]
@@ -30,6 +31,51 @@ pub fn identify(data: &[u8]) -> StdResult<String, JsError> {
     let mut cursor = Cursor::new(data);
 
     to_js(identify_reader(&mut cursor).map(|m| m.to_string()))
+}
+
+/// Detect the mod/plugin type from a ZIP/JAR byte buffer, returning JSON.
+///
+/// # Errors
+///
+/// Returns a JS exception when the data is not a valid ZIP archive.
+#[wasm_bindgen]
+pub fn identify_json(data: &[u8]) -> StdResult<String, JsError> {
+    let mut cursor = Cursor::new(data);
+
+    to_js(identify_reader(&mut cursor).and_then(|m| serde_json::to_string(&m).map_err(Into::into)))
+}
+
+/// Classify where a mod or plugin runs from a ZIP/JAR byte buffer.
+///
+/// Returns `"client"`, `"server"`, `"both"`, or `"unknown"`.
+///
+/// # Errors
+///
+/// Returns a JS exception when the data is not a valid ZIP archive or
+/// metadata is invalid.
+#[wasm_bindgen]
+pub fn side(data: &[u8]) -> StdResult<String, JsError> {
+    let mut cursor = Cursor::new(data);
+
+    to_js(side::side_reader(&mut cursor).map(|s| s.to_string()))
+}
+
+/// Classify the side from a ZIP/JAR byte buffer, returning JSON.
+///
+/// Returns a JSON object with `"type"` and `"side"` fields.
+///
+/// # Errors
+///
+/// Returns a JS exception when the data is not a valid ZIP archive or
+/// metadata is invalid.
+#[wasm_bindgen]
+pub fn side_json(data: &[u8]) -> StdResult<String, JsError> {
+    let mut cursor = Cursor::new(data);
+
+    to_js(
+        side::side_report_reader(&mut cursor)
+            .and_then(|r| serde_json::to_string(&r).map_err(Into::into)),
+    )
 }
 
 /// Read and parse metadata from a ZIP/JAR byte buffer, returning JSON.

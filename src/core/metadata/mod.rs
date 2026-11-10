@@ -8,6 +8,7 @@ use std::path::Path;
 use serde::Serialize;
 use zipcrawl::ZipManager;
 
+use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
 use crate::error::{Error, Result};
 
 use super::REGISTRY;
@@ -26,6 +27,24 @@ pub enum ModMetadata {
     Bungee(bungee::metadata::BungeePluginMetadata),
     Paper(paper::metadata::PaperPluginMetadata),
     Velocity(velocity::metadata::VelocityPluginMetadata),
+}
+
+impl ModMetadata {
+    /// Returns the mod or plugin loader type for this metadata.
+    #[must_use]
+    pub fn mod_type(&self) -> ModType {
+        match self {
+            Self::Fabric(_) => ModType::Fabric,
+            Self::Quilt(_) => ModType::Quilt,
+            Self::ForgeLegacy(_) => ModType::Forge(ForgeModFormat::McmodInfo),
+            Self::ForgeModern(_) => ModType::Forge(ForgeModFormat::ModsToml),
+            Self::NeoForge(_) => ModType::NeoForge,
+            Self::Bukkit(_) => ModType::Plugin(PluginType::Bukkit),
+            Self::Bungee(_) => ModType::Plugin(PluginType::Bungee),
+            Self::Paper(_) => ModType::Plugin(PluginType::Paper),
+            Self::Velocity(_) => ModType::Plugin(PluginType::Velocity),
+        }
+    }
 }
 
 impl fmt::Display for ModMetadata {
@@ -114,7 +133,7 @@ pub(crate) fn read_metadata_string<R: Read + Seek>(
     String::from_utf8(buffer).map_err(|e| Error::Io(io::Error::new(io::ErrorKind::InvalidData, e)))
 }
 
-fn read_metadata_impl<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<ModMetadata> {
+pub(crate) fn read_metadata_impl<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<ModMetadata> {
     let entries = mng.entries()?;
     let mod_type = REGISTRY.detect_archive(mng)?;
 

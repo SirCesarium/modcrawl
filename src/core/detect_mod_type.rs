@@ -2,6 +2,8 @@
 
 use std::fmt;
 
+use serde::Serialize;
+
 /// Metadata format used by a Forge mod.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ForgeModFormat {
@@ -17,6 +19,15 @@ impl fmt::Display for ForgeModFormat {
             Self::ModsToml => write!(f, "mods.toml"),
             Self::McmodInfo => write!(f, "mcmod.info"),
         }
+    }
+}
+
+impl Serialize for ForgeModFormat {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(self)
     }
 }
 
@@ -41,6 +52,15 @@ impl fmt::Display for PluginType {
             Self::Bungee => write!(f, "BungeeCord"),
             Self::Velocity => write!(f, "Velocity"),
         }
+    }
+}
+
+impl Serialize for PluginType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(self)
     }
 }
 
@@ -71,6 +91,15 @@ impl fmt::Display for ModType {
             Self::Forge(fmt) => write!(f, "Forge ({fmt})"),
             Self::Plugin(ty) => write!(f, "Plugin ({ty})"),
         }
+    }
+}
+
+impl Serialize for ModType {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(self)
     }
 }
 
@@ -157,6 +186,27 @@ mod tests {
         assert_eq!(
             ModType::Plugin(PluginType::Velocity).to_string(),
             "Plugin (Velocity)"
+        );
+    }
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn mod_type_serialization() {
+        assert_eq!(
+            serde_json::to_string(&ModType::Fabric).unwrap(),
+            "\"Fabric\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ModType::Forge(ForgeModFormat::ModsToml)).unwrap(),
+            "\"Forge (mods.toml)\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ModType::Plugin(PluginType::Paper)).unwrap(),
+            "\"Plugin (Paper)\""
+        );
+        assert_eq!(
+            serde_json::to_string(&ModType::Unknown).unwrap(),
+            "\"Unknown\""
         );
     }
 }

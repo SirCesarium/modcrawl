@@ -9,9 +9,7 @@ use serde_json::to_string_pretty;
 
 use crate::cmd::{Source, collect_sources};
 use crate::core::detect_mod_type::ModType;
-use crate::core::identify::{identify, identify_reader};
-use crate::core::metadata::{read_metadata, read_metadata_reader};
-use crate::core::side::{Side, classify};
+use crate::core::side::{Side, SideReport, side_report, side_report_reader};
 use crate::error::{Error, Result};
 use crate::ui;
 
@@ -31,7 +29,7 @@ pub struct Args {
 struct Entry {
     file: String,
     #[serde(rename = "type")]
-    kind: String,
+    kind: ModType,
     side: Side,
 }
 
@@ -49,15 +47,15 @@ pub fn run(args: &Args) -> Result<()> {
 
     for source in &sources {
         match classify_source(source) {
-            Ok((kind, side)) => {
+            Ok(report) => {
                 if args.json {
                     entries.push(Entry {
                         file: source.label(),
-                        kind: kind.to_string(),
-                        side,
+                        kind: report.mod_type,
+                        side: report.side,
                     });
                 } else {
-                    rows.push((source.label(), kind, side));
+                    rows.push((source.label(), report.mod_type, report.side));
                 }
             }
             Err(e) => {
@@ -81,27 +79,12 @@ pub fn run(args: &Args) -> Result<()> {
 }
 
 /// Detect a source's type and classify its side.
-fn classify_source(source: &Source) -> Result<(ModType, Side)> {
+fn classify_source(source: &Source) -> Result<SideReport> {
     match source {
-        Source::Path(path) => {
-            let kind = identify(path)?;
-            if kind == ModType::Unknown {
-                return Ok((kind, Side::Unknown));
-            }
-
-            let metadata = read_metadata(path)?;
-            Ok((kind, classify(&metadata)))
-        }
+        Source::Path(path) => side_report(path),
         Source::Archive(data) => {
             let mut cursor = Cursor::new(data.as_slice());
-            let kind = identify_reader(&mut cursor)?;
-            if kind == ModType::Unknown {
-                return Ok((kind, Side::Unknown));
-            }
-
-            let mut cursor = Cursor::new(data.as_slice());
-            let metadata = read_metadata_reader(&mut cursor)?;
-            Ok((kind, classify(&metadata)))
+            side_report_reader(&mut cursor)
         }
     }
 }

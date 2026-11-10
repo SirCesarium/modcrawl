@@ -17,6 +17,7 @@ use crate::error::{Error, Result};
 
 mod dupes;
 
+#[cfg(feature = "cli")]
 pub(crate) use dupes::ClassIndex;
 pub use dupes::{DupEntry, find_duplicates, find_duplicates_buffers};
 
