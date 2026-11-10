@@ -753,6 +753,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "toml",
+ "unicode-width 0.2.3",
  "wasm-bindgen",
  "zip",
  "zipcrawl",
