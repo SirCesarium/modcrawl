@@ -108,7 +108,30 @@ Explain what you need, why you need it, and which platform or tool it involves. 
 
 **You can use AI tools.** The person who opens the pull request is responsible for the code, including the tests and the edge cases.
 
-Add `[🤖]` at the end of the pull request title, for example `feat(cli): add --json to the type command [🤖]`. A maintainer will add the `ai-assisted` label. The label helps reviewers look for the mistakes that generated code tends to make, such as ignored formatting rules or thinking-out-loud comments like `// Wait, this won't work`.
+Add `[🤖]` at the end of the pull request title, for example `feat(cli): add --json to the type command [🤖]`. The marker belongs only in the pull request title, never in commit messages. Whoever opens the pull request, a person or a bot running `gh pr create`, decides whether to add it.
+
+A maintainer will add the `ai-assisted` label. The label helps reviewers look for the mistakes that generated code tends to make, such as ignored formatting rules or thinking-out-loud comments like `// Wait, this won't work`.
+
+### Saving tokens with TOON
+
+[TOON](https://toonformat.dev/) is a compact encoding of JSON for model input. It pays off on uniform data, which is most of what an AI tool reads: issue lists, metadata dumps, command output.
+
+```sh
+npx @toon-format/cli file.json
+gh issue list --json number,title,body | npx @toon-format/cli
+```
+
+`npm install -g @toon-format/cli` adds the shorter `toon` command. The encoding is lossless, so the same tool decodes it back to JSON when you need that.
+
+### MCP servers
+
+Ready-to-copy snippets live in [`.agents/mcps`](./.agents/mcps), one directory per server. Nothing loads them automatically; add a server to your own configuration when you need it:
+
+- OpenCode: `opencode.jsonc`, under `mcp.servers`. `opencode mcp add <name> --url <remote-url>` writes the entry.
+- Claude Code: `.mcp.json` at the project root, under `mcpServers`. `claude mcp add --transport http <name> --scope project <url>` writes it.
+- Antigravity CLI: `.agents/mcp_config.json` for the workspace, or `~/.gemini/config/mcp_config.json` globally, under `mcpServers`.
+
+[`.agents/mcps/README.md`](./.agents/mcps/README.md) has the exact shape for each client. Keep credentials out of committed files: environment variables where the client expands them, and the global config where it does not.
 
 Fully automated bots must contact the maintainer before opening pull requests. Do not send bulk or unreviewed PRs. Do not paste secrets, private code, or third-party code without a compatible license.
 
