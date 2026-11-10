@@ -140,9 +140,15 @@ Keep tool output small. Context you do not need costs as much as context you do.
 - Request only the JSON fields you need instead of every field, as in
   `gh issue list --json number,title`.
 - Encode JSON as TOON before reading it into context; it carries the same data in
-  fewer tokens for uniform arrays.
+  fewer tokens for uniform arrays. Use `toon` if it is installed globally,
+  otherwise fall back to `npx @toon-format/cli`.
 
 ```sh
+# preferred (toon installed globally)
+toon file.json
+gh issue list --json number,title,body | toon
+
+# fallback
 npx @toon-format/cli file.json
 gh issue list --json number,title,body | npx @toon-format/cli
 ```
