@@ -36,13 +36,13 @@
 	>
 		<div class="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
 			<div
-				class="absolute top-1/2 left-1/2 h-96 w-[85vw] -translate-x-1/2 -translate-y-1/2 animate-fog bg-[radial-gradient(ellipse_at_center,rgba(179,92,255,0.16)_0%,rgba(179,92,255,0.05)_38%,transparent_70%)] sm:h-144 sm:w-xl lg:left-[10%] lg:translate-x-0"
+				class="absolute top-1/2 left-1/2 h-96 w-[85vw] -translate-1/2 animate-fog bg-[radial-gradient(ellipse_at_center,rgba(179,92,255,0.16)_0%,rgba(179,92,255,0.05)_38%,transparent_70%)] sm:h-144 sm:w-xl lg:left-[10%] lg:translate-x-0"
 			></div>
 			<div
 				class="absolute top-[20%] left-1/2 h-96 w-[90vw] -translate-x-1/2 animate-fog bg-[radial-gradient(ellipse_at_center,rgba(179,92,255,0.1)_0%,rgba(179,92,255,0.03)_40%,transparent_70%)] [animation-delay:-8s] sm:h-120 sm:w-2xl lg:left-[34%] lg:translate-x-0"
 			></div>
 			<div
-				class="absolute right-0 -bottom-24 h-96 w-96 animate-fog bg-[radial-gradient(ellipse_at_center,rgba(254,128,25,0.1)_0%,rgba(254,128,25,0.03)_40%,transparent_70%)] [animation-delay:-14s] sm:right-[4%] sm:-bottom-40 sm:h-120 sm:w-120"
+				class="absolute right-0 -bottom-24 size-96 animate-fog bg-[radial-gradient(ellipse_at_center,rgba(254,128,25,0.1)_0%,rgba(254,128,25,0.03)_40%,transparent_70%)] [animation-delay:-14s] sm:right-[4%] sm:-bottom-40 sm:size-120"
 			></div>
 		</div>
 

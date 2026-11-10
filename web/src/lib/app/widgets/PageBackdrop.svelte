@@ -16,12 +16,12 @@
 <div class="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
 	<canvas
 		bind:this={canvas}
-		class="block h-full w-full transition-opacity duration-1000 ease-out [image-rendering:pixelated] {ready
+		class="block size-full transition-opacity duration-1000 ease-out [image-rendering:pixelated] {ready
 			? 'opacity-100'
 			: 'opacity-0'}"
 	></canvas>
 
 	<div
-		class="absolute -inset-24 bg-[url('/noise.png')] bg-size-[128px_128px] bg-repeat opacity-[0.045] [image-rendering:pixelated]"
+		class="opacity-0.045 absolute -inset-24 bg-[url('/noise.png')] bg-size-[128px_128px] bg-repeat [image-rendering:pixelated]"
 	></div>
 </div>

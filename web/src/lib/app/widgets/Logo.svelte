@@ -34,10 +34,10 @@
 
 <div class="relative isolate aspect-[0.54] h-24 sm:h-32 {className}" aria-hidden="true">
 	<div class="absolute inset-y-0 left-1/2 aspect-square -translate-x-1/2">
-		<div bind:this={container} class="h-full w-full">
+		<div bind:this={container} class="size-full">
 			<canvas
 				bind:this={canvas}
-				class="block h-full w-full transition-opacity duration-700 ease-out {ready
+				class="block size-full transition-opacity duration-700 ease-out {ready
 					? 'opacity-100'
 					: 'opacity-0'}"
 			></canvas>

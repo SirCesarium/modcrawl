@@ -195,7 +195,7 @@
 
 	<div
 		class={twMerge(
-			'group relative inline-flex items-center border border-neutral-700 bg-neutral-900/80 font-medium text-neutral-100 transition duration-150 ease-out focus-within:border-purple-400 focus-within:ring-1 focus-within:ring-purple-400/50 hover:border-neutral-500 active:scale-[0.99] motion-reduce:transform-none motion-reduce:transition-none',
+			'group active:scale-0.99 relative inline-flex items-center border border-neutral-700 bg-neutral-900/80 font-medium text-neutral-100 transition duration-150 ease-out focus-within:border-purple-400 focus-within:ring-1 focus-within:ring-purple-400/50 hover:border-neutral-500 motion-reduce:transform-none motion-reduce:transition-none',
 			sizeClasses[size],
 			pixel && 'font-pixel',
 			full && 'w-full',

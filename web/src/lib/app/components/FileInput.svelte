@@ -237,10 +237,10 @@
 
 	const zoneClass = $derived(
 		twMerge(
-			'group/zone relative flex flex-col items-center justify-center rounded-none border border-dashed bg-neutral-900/50 p-4 text-center select-none transition-[top,background-color,border-color,color] duration-150 ease-out motion-reduce:transform-none motion-reduce:transition-none',
+			'group/zone relative flex flex-col items-center justify-center rounded-none border border-dashed bg-neutral-900/50 p-4 text-center transition-[top,background-color,border-color,color] duration-150 ease-out select-none motion-reduce:transform-none motion-reduce:transition-none',
 			height,
 			files.length === 0 &&
-				'hover:-top-0.5 hover:border-solid hover:border-purple-300/60 hover:bg-neutral-900/70 active:translate-x-0.75 active:translate-y-0.75 active:scale-[0.98]',
+				'active:scale-0.98 hover:-top-0.5 hover:border-solid hover:border-purple-300/60 hover:bg-neutral-900/70 active:translate-0.75',
 			isDragOver
 				? '-top-0.5 border-solid border-purple-300 bg-purple-900/25'
 				: 'border-neutral-500',
