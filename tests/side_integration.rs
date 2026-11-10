@@ -10,7 +10,7 @@ use modcrawl::{
 };
 
 #[cfg(feature = "classfile")]
-use modcrawl::{find_duplicates, find_duplicates_buffers};
+use modcrawl::{find_duplicates, find_duplicates_buffers, group_conflicts};
 
 #[test]
 fn test_side_fabric_both() {
@@ -110,4 +110,34 @@ fn test_find_duplicates_reexported() {
     let buf_dupes = find_duplicates_buffers(&[("jar1", &b1), ("jar2", &b2)])
         .expect("failed to find duplicates in buffers");
     assert_eq!(buf_dupes.len(), 1);
+}
+
+#[cfg(feature = "classfile")]
+#[test]
+fn test_group_conflicts_reexported() {
+    let b1 = common::build_jar(&[
+        ("com/example/A.class", common::FAKE_CLASS_BYTES),
+        ("com/example/B.class", common::FAKE_CLASS_BYTES),
+    ]);
+    let b2 = common::build_jar(&[
+        ("com/example/A.class", common::FAKE_CLASS_BYTES),
+        ("com/example/B.class", common::FAKE_CLASS_BYTES),
+    ]);
+    let b3 = common::build_jar(&[("com/example/A.class", common::FAKE_CLASS_BYTES)]);
+
+    let dupes = find_duplicates_buffers(&[("jar1", &b1), ("jar2", &b2), ("jar3", &b3)])
+        .expect("failed to find duplicates");
+
+    let conflicts = group_conflicts(&dupes);
+
+    // jar1<->jar2 share A and B; jar1<->jar3 and jar2<->jar3 share only A.
+    assert_eq!(conflicts.len(), 3);
+
+    let jar1_jar2 = conflicts
+        .iter()
+        .find(|e| {
+            (e.file_a == "jar1" && e.file_b == "jar2") || (e.file_a == "jar2" && e.file_b == "jar1")
+        })
+        .expect("expected a jar1<->jar2 conflict entry");
+    assert_eq!(jar1_jar2.classes.len(), 2);
 }

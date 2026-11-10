@@ -19,7 +19,9 @@ mod dupes;
 
 #[cfg(feature = "cli")]
 pub(crate) use dupes::ClassIndex;
-pub use dupes::{DupEntry, find_duplicates, find_duplicates_buffers};
+pub use dupes::{
+    ConflictEntry, DupEntry, find_duplicates, find_duplicates_buffers, group_conflicts,
+};
 
 /// A class file found inside a JAR, with its Java version and access flags.
 #[derive(Debug, Clone, Serialize)]

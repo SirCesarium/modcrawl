@@ -19,6 +19,55 @@ pub struct DupEntry {
     pub files: Vec<String>,
 }
 
+/// A pair of JARs that share one or more classes, with the list of shared classes.
+#[derive(Debug, Clone, Serialize)]
+pub struct ConflictEntry {
+    /// Label of the first JAR (lexicographically smaller).
+    pub file_a: String,
+    /// Label of the second JAR.
+    pub file_b: String,
+    /// Classes shared by both JARs.
+    pub classes: Vec<String>,
+}
+
+/// Group duplicate entries by conflicting JAR pair.
+///
+/// Each `ConflictEntry` names two JARs (`file_a` ≤ `file_b` lexicographically)
+/// and the classes they share.  Pairs where both labels are identical are
+/// excluded.
+#[must_use]
+pub fn group_conflicts(entries: &[DupEntry]) -> Vec<ConflictEntry> {
+    let mut map: BTreeMap<(String, String), Vec<String>> = BTreeMap::new();
+
+    for entry in entries {
+        for i in 0..entry.files.len() {
+            for j in (i + 1)..entry.files.len() {
+                let (a, b) = if entry.files[i] <= entry.files[j] {
+                    (entry.files[i].clone(), entry.files[j].clone())
+                } else {
+                    (entry.files[j].clone(), entry.files[i].clone())
+                };
+
+                if a == b {
+                    continue;
+                }
+
+                map.entry((a, b))
+                    .or_default()
+                    .push(entry.class_name.clone());
+            }
+        }
+    }
+
+    map.into_iter()
+        .map(|((file_a, file_b), classes)| ConflictEntry {
+            file_a,
+            file_b,
+            classes,
+        })
+        .collect()
+}
+
 /// Collects class entries across archives, one archive at a time.
 ///
 /// An aggregating command processes several inputs, so it needs to add them

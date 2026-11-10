@@ -7,7 +7,7 @@ use clap::Args as ClapArgs;
 use serde_json::{json, to_string_pretty};
 
 use crate::cmd::collect_sources;
-use crate::core::classfile::ClassIndex;
+use crate::core::classfile::{ClassIndex, group_conflicts};
 use crate::error::{Error, Result};
 use crate::ui;
 
@@ -84,8 +84,10 @@ pub fn run(args: &Args) -> Result<()> {
                 "total_files_with_dupes": total_files,
             })
         );
-    } else if args.json {
+    } else if args.json && args.by_class {
         println!("{}", to_string_pretty(&entries)?);
+    } else if args.json {
+        println!("{}", to_string_pretty(&group_conflicts(&entries))?);
     } else if args.count {
         let total_files: usize = entries
             .iter()
