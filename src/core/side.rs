@@ -43,8 +43,9 @@ impl fmt::Display for Side {
 /// Classification report containing the detected mod/plugin type and its side.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct SideReport {
-    /// Detected mod or plugin type.
-    #[serde(rename = "type")]
+    /// Detected mod or plugin type. Kept for Rust callers; only the side is
+    /// serialized, because side output carries the side alone.
+    #[serde(skip_serializing)]
     pub mod_type: ModType,
     /// Classified side.
     pub side: Side,

@@ -80,7 +80,7 @@ fn test_side_report_json_serialization() {
         side: Side::Both,
     };
     let json = serde_json::to_string(&report).expect("failed to serialize SideReport");
-    assert_eq!(json, r#"{"type":"Fabric","side":"both"}"#);
+    assert_eq!(json, r#"{"side":"both"}"#);
 }
 
 #[test]
