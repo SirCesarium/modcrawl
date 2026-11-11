@@ -59,6 +59,45 @@ pub fn build_jar(entries: &[(&str, &[u8])]) -> Vec<u8> {
 /// Fake Java class file header for bytecode inspections.
 pub const FAKE_CLASS_BYTES: &[u8] = b"\xca\xfe\xba\xbe\x00\x00\x00\x34\x00\x05\x01\x00\x04Test";
 
+/// A minimal valid class file: `com/example/DemoClass.class`, whose constant
+/// pool holds the `Utf8` entries `Test`, `java/lang/Object`, and
+/// `net/example/DemoClass`.
+pub fn demo_class_bytes() -> Vec<u8> {
+    fn utf8(text: &str) -> Vec<u8> {
+        let mut entry = vec![0x01];
+        entry.extend_from_slice(&u16::try_from(text.len()).expect("fits a u16").to_be_bytes());
+        entry.extend_from_slice(text.as_bytes());
+        entry
+    }
+
+    let mut bytes = vec![0xca, 0xfe, 0xba, 0xbe, 0x00, 0x00, 0x00, 0x34];
+
+    bytes.extend_from_slice(&7u16.to_be_bytes()); // constant_pool_count
+    bytes.extend(utf8("Test")); // #1
+    bytes.extend([0x07, 0x00, 0x01]); // #2 Class #1
+    bytes.extend(utf8("java/lang/Object")); // #3
+    bytes.extend([0x07, 0x00, 0x03]); // #4 Class #3
+    bytes.extend(utf8("net/example/DemoClass")); // #5
+    bytes.extend([0x07, 0x00, 0x05]); // #6 Class #5
+
+    bytes.extend_from_slice(&0x0021u16.to_be_bytes()); // access_flags
+    bytes.extend_from_slice(&2u16.to_be_bytes()); // this_class
+    bytes.extend_from_slice(&4u16.to_be_bytes()); // super_class
+    bytes.extend_from_slice(&0u16.to_be_bytes()); // interfaces
+    bytes.extend_from_slice(&0u16.to_be_bytes()); // fields
+    bytes.extend_from_slice(&0u16.to_be_bytes()); // methods
+    bytes.extend_from_slice(&0u16.to_be_bytes()); // attributes
+
+    bytes
+}
+
+/// A JAR holding [`demo_class_bytes`] as its only class file.
+pub fn demo_class_jar() -> TempJar {
+    let bytes = demo_class_bytes();
+
+    TempJar::from_entries(&[("com/example/DemoClass.class", bytes.as_slice())])
+}
+
 /// Create a minimal Fabric mod fixture.
 pub fn fabric_jar(id: &str, version: &str) -> TempJar {
     let manifest = format!(

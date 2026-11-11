@@ -11,12 +11,13 @@ pub(crate) mod mixins;
 pub(crate) mod side;
 pub(crate) mod style;
 pub(crate) mod table;
+pub(crate) mod text;
 pub(crate) mod r#type;
 
 pub(crate) use classes::render as render_classes;
 pub(crate) use deps::render as render_deps;
 pub(crate) use dupes::render as render_dupes;
-pub(crate) use grep::render as render_grep;
+pub(crate) use grep::{more_matches, render as render_grep};
 #[cfg(feature = "classfile")]
 pub(crate) use lines::skipped_classes;
 pub(crate) use lines::{file_error, file_header, no_results};

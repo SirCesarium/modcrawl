@@ -36,6 +36,13 @@ pub struct Args {
 
     #[arg(
         long,
+        value_name = "N",
+        help = "Show at most N matches per JAR; --json still returns every match"
+    )]
+    pub limit: Option<usize>,
+
+    #[arg(
+        long,
         help = "Fail if any class file cannot be parsed instead of skipping it"
     )]
     pub strict: bool,
@@ -89,22 +96,31 @@ pub fn run(args: &Args) -> Result<()> {
         }
 
         total_matches += matches.len();
+        let shown = args
+            .limit
+            .map_or(matches.len(), |limit| limit.min(matches.len()));
 
         if multi {
             ui::file_header(&source.label());
         }
 
-        if args.quiet {
-            let mut seen: BTreeSet<&str> = BTreeSet::new();
-            for m in &matches {
-                seen.insert(m.class_file.as_str());
-            }
+        if shown > 0 {
+            if args.quiet {
+                let mut seen: BTreeSet<&str> = BTreeSet::new();
+                for m in &matches[..shown] {
+                    seen.insert(m.class_file.as_str());
+                }
 
-            for class_file in seen {
-                println!("{class_file}");
+                for class_file in seen {
+                    println!("{class_file}");
+                }
+            } else {
+                ui::render_grep(&matches[..shown]);
             }
-        } else {
-            ui::render_grep(&matches);
+        }
+
+        if shown < matches.len() {
+            ui::more_matches(matches.len() - shown);
         }
     }
 

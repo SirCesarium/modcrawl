@@ -78,7 +78,7 @@ modcrawl side mods/ --json | jq '.[] | select(.side == "client")'
 | `loader` | `t`, `ty` | Detect mod loader or server plugin platform | `-j`, `--json` |
 | `side` | `sd` | Classify mods and plugins as `client`, `server`, `both`, or `unknown` | `-j`, `--json` |
 | `classes` | `c`, `cls` | List all `.class` files with Java classfile version and access flags | `--strict`, `-j`, `--json` |
-| `grep` | `g`, `search` | Search strings in constant pools of `.class` files | `-q`, `--quiet`, `--strict`, `-j`, `--json` |
+| `grep` | `g`, `search` | Search strings in constant pools of `.class` files | `-q`, `--quiet`, `--limit <N>`, `--strict`, `-j`, `--json` |
 | `mixins` | `m`, `mixin` | Extract `@Mixin` targets or detect overlapping conflicts across JARs | `-o`, `--overlaps`, `-q`, `--quiet`, `--strict`, `-j`, `--json` |
 | `dupes` | `dp`, `duplicate` | Detect duplicate classes and classpath collisions across multiple JARs | `-b`, `--by-class`, `-c`, `--count`, `-j`, `--json` |
 

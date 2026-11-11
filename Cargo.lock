@@ -751,6 +751,7 @@ dependencies = [
  "serde",
  "serde-saphyr",
  "serde_json",
+ "terminal_size",
  "thiserror",
  "toml",
  "unicode-width 0.2.3",
