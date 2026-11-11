@@ -37,7 +37,7 @@ It helps you quickly answer the everyday questions that pop up while building or
 
 ```bash
 # Detect mod loader (NeoForge, Fabric, Forge, Paper, Velocity, etc.)
-modcrawl type MyMod.jar
+modcrawl loader MyMod.jar
 
 # Read mod metadata (ID, version, authors, license, etc.)
 modcrawl metadata MyMod.jar
@@ -75,7 +75,7 @@ modcrawl side mods/ --json | jq '.[] | select(.side == "client")'
 | --- | --- | --- | --- |
 | `dep` | `d`, `deps`, `dependencies` | Analyze mod dependencies and find embedded or missing requirements | `--include-jar-in-jar` (`--jij`), `-j`, `--json` |
 | `metadata` | `meta`, `md` | Extract mod and plugin metadata (name, ID, version, authors, etc.) | `-j`, `--json` |
-| `type` | `t`, `ty` | Detect mod loader or server plugin platform | `-j`, `--json` |
+| `loader` | `t`, `ty` | Detect mod loader or server plugin platform | `-j`, `--json` |
 | `side` | `sd` | Classify mods and plugins as `client`, `server`, `both`, or `unknown` | `-j`, `--json` |
 | `classes` | `c`, `cls` | List all `.class` files with Java classfile version and access flags | `--strict`, `-j`, `--json` |
 | `grep` | `g`, `search` | Search strings in constant pools of `.class` files | `-q`, `--quiet`, `--strict`, `-j`, `--json` |
@@ -90,7 +90,7 @@ All commands accept files, directories, or standard input (`-`), and share direc
 - **`--depth <N>`**: Limit recursion depth (implies `--recursive`; `1` = direct children only).
 - **`--exclude <PATTERN>`**: Skip files or directories matching a glob pattern (`*` matches any characters; repeatable).
 - **`-j, --json`**: Output structured JSON instead of human-readable tables.
-- **Piping / stdin**: Stream a JAR archive directly or pass newline-separated paths (`cat mod.jar | modcrawl type -` or `find mods/ -name "*.jar" | modcrawl dep`).
+- **Piping / stdin**: Stream a JAR archive directly or pass newline-separated paths (`cat mod.jar | modcrawl loader -` or `find mods/ -name "*.jar" | modcrawl dep`).
 
 ## TL;DR - Shut up and let me download
 

@@ -50,7 +50,7 @@ pub enum Commands {
     Metadata(metadata::Args),
 
     /// Get mod type. (eg. `NeoForge` mod, `Fabric` mod, ...)
-    #[command(name = "type", aliases = &["t", "ty"])]
+    #[command(name = "type", aliases = &["t", "ty", "loader"])]
     Type(r#type::Args),
 
     /// Classify mods and plugins as client, server, both, or unknown.

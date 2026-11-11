@@ -8,7 +8,6 @@ use serde::Serialize;
 use serde_json::to_string_pretty;
 
 use crate::cmd::{ScanArgs, Source, collect_sources};
-use crate::core::detect_mod_type::ModType;
 use crate::core::side::{Side, SideReport, side_report, side_report_reader};
 use crate::error::{Error, Result};
 use crate::ui;
@@ -27,16 +26,17 @@ pub struct Args {
     pub scan: ScanArgs,
 }
 
-/// One JSON entry: `{ "file", "type", "side" }`.
+/// One JSON entry: `{ "file", "side" }`.
 #[derive(Serialize)]
 struct Entry {
     file: String,
-    #[serde(rename = "type")]
-    kind: ModType,
     side: Side,
 }
 
 /// Run the `side` command.
+///
+/// A run that addressed exactly one JAR prints its side alone; a directory or
+/// a longer list prints a `FILE / SIDE` table.
 ///
 /// # Errors
 ///
@@ -44,6 +44,7 @@ struct Entry {
 /// serialized.
 pub fn run(args: &Args) -> Result<()> {
     let sources = collect_sources(&args.path, &args.scan.options())?;
+    let names_a_listing = matches!(args.path.as_slice(), [one] if one.is_dir());
     let mut entries = Vec::new();
     let mut rows = Vec::new();
     let mut failed = false;
@@ -54,11 +55,10 @@ pub fn run(args: &Args) -> Result<()> {
                 if args.json {
                     entries.push(Entry {
                         file: source.label(),
-                        kind: report.mod_type,
                         side: report.side,
                     });
                 } else {
-                    rows.push((source.label(), report.mod_type, report.side));
+                    rows.push((source.label(), report.side));
                 }
             }
             Err(e) => {
@@ -70,6 +70,10 @@ pub fn run(args: &Args) -> Result<()> {
 
     if args.json {
         println!("{}", to_string_pretty(&entries)?);
+    } else if let [single] = rows.as_slice()
+        && !names_a_listing
+    {
+        ui::render_side_one(single.1);
     } else if !rows.is_empty() {
         ui::render_side(&rows);
     }

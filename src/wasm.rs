@@ -62,7 +62,7 @@ pub fn side(data: &[u8]) -> StdResult<String, JsError> {
 
 /// Classify the side from a ZIP/JAR byte buffer, returning JSON.
 ///
-/// Returns a JSON object with `"type"` and `"side"` fields.
+/// Returns the side as a JSON string, e.g. `"client"`.
 ///
 /// # Errors
 ///
@@ -73,8 +73,7 @@ pub fn side_json(data: &[u8]) -> StdResult<String, JsError> {
     let mut cursor = Cursor::new(data);
 
     to_js(
-        side::side_report_reader(&mut cursor)
-            .and_then(|r| serde_json::to_string(&r).map_err(Into::into)),
+        side::side_reader(&mut cursor).and_then(|s| serde_json::to_string(&s).map_err(Into::into)),
     )
 }
 
