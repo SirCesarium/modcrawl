@@ -8,6 +8,7 @@ use serde::Serialize;
 use zipcrawl::ZipManager;
 
 use super::is_class_entry;
+use crate::core::embedded::visit_embedded;
 use crate::error::Result;
 
 /// A class entry that appears in more than one JAR.
@@ -78,7 +79,7 @@ pub(crate) struct ClassIndex {
 }
 
 impl ClassIndex {
-    /// Add every `.class` entry in the JAR at `path`.
+    /// Add every `.class` entry in the JAR at `path`, embedded jars included.
     ///
     /// # Errors
     ///
@@ -104,6 +105,20 @@ impl ClassIndex {
     }
 
     fn add_manager<R: Read + Seek>(
+        &mut self,
+        manager: &mut ZipManager<R>,
+        label: &str,
+    ) -> Result<()> {
+        self.add_entries(manager, label)?;
+
+        // The nested jar is a second holder of the same class names, so it
+        // needs its own label to be told apart from the outer file.
+        visit_embedded(manager, |path, nested| {
+            self.add_entries(nested, &format!("{label}!/{path}"))
+        })
+    }
+
+    fn add_entries<R: Read + Seek>(
         &mut self,
         manager: &mut ZipManager<R>,
         label: &str,
@@ -220,6 +235,36 @@ mod tests {
     #[test]
     fn buffers_empty_input_yields_no_dupes() {
         assert!(find_duplicates_buffers(&[]).unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_class_in_both_the_outer_and_an_embedded_jar_is_reported() {
+        let nested = jar(&[("com/example/Shared.class", FAKE_CLASS)]);
+        let outer = jar(&[
+            ("com/example/Shared.class", FAKE_CLASS),
+            ("META-INF/jarjar/inner.jar", &nested),
+        ]);
+
+        let entries = find_duplicates_buffers(&[("a.jar", &outer)]).unwrap();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].class_name, "com/example/Shared.class");
+        assert_eq!(
+            entries[0].files,
+            ["a.jar", "a.jar!/META-INF/jarjar/inner.jar"]
+        );
+    }
+
+    #[test]
+    fn an_embedded_jar_on_its_own_is_not_a_duplicate() {
+        let nested = jar(&[("com/example/Only.class", FAKE_CLASS)]);
+        let outer = jar(&[("META-INF/jarjar/inner.jar", &nested)]);
+
+        assert!(
+            find_duplicates_buffers(&[("a.jar", &outer)])
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]

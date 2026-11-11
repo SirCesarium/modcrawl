@@ -1,5 +1,8 @@
 //! Class-file inspection: class listings, constant-pool search, mixin targets,
 //! and duplicate-class detection.
+//!
+//! The jars embedded in an archive are part of it: their classes are included
+//! too, and every report points at them as `<jar>!/<entry>`.
 
 use std::any::Any;
 use std::io::{Cursor, Read, Seek};
@@ -13,6 +16,7 @@ use java_class_rs::{
 use serde::Serialize;
 use zipcrawl::ZipManager;
 
+use crate::core::embedded::visit_embedded;
 use crate::error::{Error, Result};
 
 mod dupes;
@@ -169,7 +173,7 @@ pub fn scan_classes_reader<R: Read>(reader: &mut R) -> Result<ClassScan<ClassEnt
 }
 
 fn list_classes_impl<R: Read + Seek>(manager: &mut ZipManager<R>) -> Result<ClassScan<ClassEntry>> {
-    scan_jar(manager, |cf, name| {
+    scan_jar(manager, "", &mut |cf, name| {
         vec![ClassEntry {
             name: name.to_string(),
             java_version: java_version_string(cf.major_version, cf.minor_version),
@@ -223,7 +227,9 @@ fn grep_impl<R: Read + Seek>(
     manager: &mut ZipManager<R>,
     pattern: &str,
 ) -> Result<ClassScan<GrepMatch>> {
-    scan_jar(manager, |cf, name| search_constant_pool(cf, name, pattern))
+    scan_jar(manager, "", &mut |cf, name| {
+        search_constant_pool(cf, name, pattern)
+    })
 }
 
 /// Extract mixin targets from all `.class` files in a JAR.
@@ -311,7 +317,7 @@ pub fn find_mixin_overlaps_buffers(jars: &[(&str, &[u8])]) -> Result<Vec<MixinOv
 }
 
 fn mixins_impl<R: Read + Seek>(manager: &mut ZipManager<R>) -> Result<ClassScan<MixinEntry>> {
-    scan_jar(manager, extract_mixin_targets)
+    scan_jar(manager, "", &mut extract_mixin_targets)
 }
 
 fn extract_mixin_targets(cf: &ClassFile, class_name: &str) -> Vec<MixinEntry> {
@@ -424,9 +430,40 @@ enum ClassParse {
     Skipped(String),
 }
 
-/// Scan every `.class` entry in `manager`, collecting what `collect` returns
-/// for each parsed class and recording every class that was skipped.
-fn scan_jar<R, T, F>(manager: &mut ZipManager<R>, mut collect: F) -> Result<ClassScan<T>>
+/// Scan every `.class` entry in `manager` and in the jars embedded in it,
+/// collecting what `collect` returns for each parsed class and recording every
+/// class that was skipped.
+///
+/// A class found in an embedded jar is labeled `<jar>!/<entry>` so it stays
+/// traceable to the artifact that ships it.
+fn scan_jar<R, T, F>(
+    manager: &mut ZipManager<R>,
+    prefix: &str,
+    collect: &mut F,
+) -> Result<ClassScan<T>>
+where
+    R: Read + Seek,
+    F: FnMut(&ClassFile, &str) -> Vec<T>,
+{
+    let mut scan = scan_entries(manager, prefix, collect)?;
+
+    visit_embedded(manager, |path, nested| {
+        let embedded = scan_entries(nested, &format!("{prefix}{path}!/"), collect)?;
+        scan.items.extend(embedded.items);
+        scan.skipped.extend(embedded.skipped);
+
+        Ok(())
+    })?;
+
+    Ok(scan)
+}
+
+/// Scan the `.class` entries of a single archive level.
+fn scan_entries<R, T, F>(
+    manager: &mut ZipManager<R>,
+    prefix: &str,
+    collect: &mut F,
+) -> Result<ClassScan<T>>
 where
     R: Read + Seek,
     F: FnMut(&ClassFile, &str) -> Vec<T>,
@@ -440,10 +477,12 @@ where
             continue;
         }
 
+        let label = format!("{prefix}{}", entry.name);
+
         match parse_class_in_jar(manager, &entry.name)? {
-            ClassParse::Parsed(cf) => items.extend(collect(&cf, &entry.name)),
+            ClassParse::Parsed(cf) => items.extend(collect(&cf, &label)),
             ClassParse::Skipped(reason) => skipped.push(SkippedClass {
-                name: entry.name.clone(),
+                name: label,
                 reason,
             }),
         }
@@ -713,6 +752,25 @@ mod tests {
 
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].name, "com/example/Valid.class");
+    }
+
+    #[test]
+    fn classes_in_embedded_jars_are_labeled_with_their_jar() {
+        let nested = jar(&[("com/example/Inner.class", VALID_CLASS)]);
+        let outer = jar(&[
+            ("com/example/Outer.class", VALID_CLASS),
+            ("META-INF/jarjar/inner.jar", &nested),
+        ]);
+
+        let entries = list_classes_reader(&mut Cursor::new(outer)).unwrap();
+        let names: Vec<&str> = entries.iter().map(|entry| entry.name.as_str()).collect();
+
+        assert_eq!(names.len(), 2);
+        assert!(names.contains(&"com/example/Outer.class"));
+        assert!(
+            names.contains(&"META-INF/jarjar/inner.jar!/com/example/Inner.class"),
+            "nested class keeps its jar as a prefix, got {names:?}"
+        );
     }
 
     #[test]
