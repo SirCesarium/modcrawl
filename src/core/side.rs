@@ -5,12 +5,14 @@ use std::io::{Read, Seek};
 use std::path::Path;
 
 use serde::Serialize;
+use serde_json::Value;
 use zipcrawl::ZipManager;
 
 use crate::core::detect_mod_type::ModType;
+use crate::core::embedded::visit_embedded;
 use crate::core::identify::identify_impl;
-use crate::core::loaders::forge_modern::metadata::ModsTomlMetadata;
-use crate::core::metadata::{ModMetadata, read_metadata_impl};
+use crate::core::loaders::forge_modern::metadata::{ModsTomlDependency, ModsTomlMetadata};
+use crate::core::metadata::{ModMetadata, read_metadata_impl, read_metadata_string};
 use crate::error::Result;
 
 /// Where a mod or plugin is meant to run.
@@ -103,7 +105,11 @@ fn side_report_impl<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<SideRepor
     }
 
     let metadata = read_metadata_impl(mng)?;
-    let side = classify(&metadata);
+    let side = match classify(&metadata) {
+        Side::Unknown => mixin_side(mng)?,
+        side => side,
+    };
+
     Ok(SideReport { mod_type, side })
 }
 
@@ -113,6 +119,9 @@ fn side_report_impl<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<SideRepor
 /// `clientSideOnly`, falling back to the sides declared by their dependencies.
 /// Server plugins are always [`Side::Server`]. Legacy Forge metadata does not
 /// declare a side, so it is [`Side::Unknown`].
+///
+/// Metadata alone cannot say more than this: `side` refines [`Side::Unknown`]
+/// with the mixin configs of the artifact, which this function cannot see.
 #[must_use]
 pub fn classify(metadata: &ModMetadata) -> Side {
     match metadata {
@@ -155,33 +164,148 @@ fn forge_side(metadata: &ModsTomlMetadata) -> Side {
     }
 }
 
-/// Conservative fallback: infer a side only when every declared dependency side
-/// agrees. Mixed or unrecognized sides stay unknown.
+/// Infer a side from the sides declared by the dependencies.
+///
+/// The platform dependencies — `minecraft`, `neoforge`, `forge` — decide when
+/// they declare one: a mod that needs the game on a single side only runs
+/// there, while optional integrations routinely pull in the other side and
+/// would otherwise drown that out. Without a platform dependency, a side is
+/// reported only when every declared dependency agrees; mixed or unrecognized
+/// sides stay [`Side::Unknown`].
 fn dependency_side(metadata: &ModsTomlMetadata) -> Side {
-    let mut client = false;
-    let mut server = false;
-    let mut both = false;
+    let dependencies: Vec<&ModsTomlDependency> = metadata.dependencies.values().flatten().collect();
 
-    for side in metadata
-        .dependencies
-        .values()
-        .flatten()
-        .filter_map(|dep| dep.side.as_deref())
-    {
-        match side.trim().to_ascii_uppercase().as_str() {
-            "CLIENT" => client = true,
-            "SERVER" => server = true,
-            "BOTH" => both = true,
-            _ => {}
+    let platform: Vec<Side> = dependencies
+        .iter()
+        .filter(|dep| is_platform(&dep.mod_id))
+        .filter_map(|dep| declared_side(dep))
+        .collect();
+
+    if !platform.is_empty() {
+        return unanimous(platform);
+    }
+
+    unanimous(dependencies.iter().filter_map(|dep| declared_side(dep)))
+}
+
+/// Dependencies that describe the platform itself rather than an integration.
+const PLATFORM_DEPS: [&str; 3] = ["minecraft", "neoforge", "forge"];
+
+/// Whether `mod_id` names one of the platform dependencies.
+fn is_platform(mod_id: &str) -> bool {
+    PLATFORM_DEPS
+        .iter()
+        .any(|id| mod_id.eq_ignore_ascii_case(id))
+}
+
+/// Map a declared dependency side, ignoring values that name no side.
+fn declared_side(dependency: &ModsTomlDependency) -> Option<Side> {
+    let declared = dependency.side.as_deref()?.trim().to_ascii_uppercase();
+
+    match declared.as_str() {
+        "CLIENT" => Some(Side::Client),
+        "SERVER" => Some(Side::Server),
+        "BOTH" => Some(Side::Both),
+        _ => None,
+    }
+}
+
+/// The side every entry agrees on, or [`Side::Unknown`] when they differ or
+/// none declares one.
+fn unanimous(sides: impl IntoIterator<Item = Side>) -> Side {
+    let mut sides = sides.into_iter();
+
+    let Some(first) = sides.next() else {
+        return Side::Unknown;
+    };
+
+    if sides.all(|side| side == first) {
+        first
+    } else {
+        Side::Unknown
+    }
+}
+
+/// Side implied by the mixin configs shipped in the artifact.
+///
+/// This only runs when the metadata declared no side. A `*.mixins.json` sorts
+/// its mixins into `client` and `server` sections, while the `mixins` section
+/// applies to both sides, so a mod whose mixins all sit in one sided section
+/// runs there. Common mixins, mixins on both sides, or no mixin at all stay
+/// [`Side::Unknown`]. Configs that cannot be read or parsed are ignored, so a
+/// broken one never fails classification.
+fn mixin_side<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<Side> {
+    let mut counts = MixinCounts::default();
+
+    for name in mixin_configs(mng)? {
+        if let Ok(raw) = read_metadata_string(mng, &name) {
+            counts.add(&raw);
         }
     }
 
-    match (client, server, both) {
-        (true, false, false) => Side::Client,
-        (false, true, false) => Side::Server,
-        (false, false, true) => Side::Both,
-        _ => Side::Unknown,
+    visit_embedded(mng, |_path, nested| {
+        for name in mixin_configs(nested)? {
+            if let Ok(raw) = read_metadata_string(nested, &name) {
+                counts.add(&raw);
+            }
+        }
+
+        Ok(())
+    })?;
+
+    Ok(counts.side())
+}
+
+/// Names of the mixin configs at the root of one archive.
+fn mixin_configs<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<Vec<String>> {
+    Ok(mng
+        .entries()?
+        .iter()
+        .filter(|entry| !entry.is_dir && is_mixin_config(&entry.name))
+        .map(|entry| entry.name.clone())
+        .collect())
+}
+
+fn is_mixin_config(name: &str) -> bool {
+    name.to_ascii_lowercase().ends_with(".mixins.json")
+}
+
+/// Mixin entries counted across every `*.mixins.json` of an archive.
+#[derive(Default)]
+struct MixinCounts {
+    client: usize,
+    server: usize,
+    common: usize,
+}
+
+impl MixinCounts {
+    /// Count the `client`, `server`, and `mixins` sections of one config.
+    fn add(&mut self, raw: &str) {
+        let Ok(config) = serde_json::from_str::<Value>(raw) else {
+            return;
+        };
+
+        self.client += section_len(&config, "client");
+        self.server += section_len(&config, "server");
+        self.common += section_len(&config, "mixins");
     }
+
+    /// The sided section every counted mixin belongs to.
+    fn side(&self) -> Side {
+        match (self.client, self.server, self.common) {
+            (client, 0, 0) if client > 0 => Side::Client,
+            (0, server, 0) if server > 0 => Side::Server,
+            _ => Side::Unknown,
+        }
+    }
+}
+
+/// Number of mixins listed under `key`.
+fn section_len(config: &Value, key: &str) -> usize {
+    config
+        .get(key)
+        .and_then(Value::as_array)
+        .map_or(0, Vec::len)
 }
 
 #[cfg(test)]
@@ -346,15 +470,104 @@ side = "BOTH"
         let mixed = modern(&format!(
             r#"{MODS}
 [[dependencies.example]]
-modId = "minecraft"
+modId = "other"
 side = "CLIENT"
 
 [[dependencies.example]]
-modId = "other"
+modId = "another"
 side = "SERVER"
 "#
         ));
         assert_eq!(classify(&mixed), Side::Unknown);
+    }
+
+    #[test]
+    fn forge_platform_dependency_decides_the_side() {
+        // Create's shape: the game runs on both sides while optional
+        // integrations are client-only.
+        let both = modern(&format!(
+            r#"{MODS}
+[[dependencies.example]]
+modId = "neoforge"
+side = "BOTH"
+
+[[dependencies.example]]
+modId = "minecraft"
+side = "BOTH"
+
+[[dependencies.example]]
+modId = "ponder"
+side = "BOTH"
+
+[[dependencies.example]]
+modId = "sodium"
+side = "CLIENT"
+"#
+        ));
+        assert_eq!(classify(&both), Side::Both);
+
+        let client = modern(&format!(
+            r#"{MODS}
+[[dependencies.example]]
+modId = "minecraft"
+side = "CLIENT"
+
+[[dependencies.example]]
+modId = "neoforge"
+side = "CLIENT"
+
+[[dependencies.example]]
+modId = "another"
+side = "SERVER"
+"#
+        ));
+        assert_eq!(classify(&client), Side::Client);
+
+        let server = modern(&format!(
+            r#"{MODS}
+[[dependencies.example]]
+modId = "minecraft"
+side = "SERVER"
+
+[[dependencies.example]]
+modId = "another"
+side = "BOTH"
+"#
+        ));
+        assert_eq!(classify(&server), Side::Server);
+    }
+
+    #[test]
+    fn forge_platform_dependencies_that_contradict_are_unknown() {
+        let contradictory = modern(&format!(
+            r#"{MODS}
+[[dependencies.example]]
+modId = "minecraft"
+side = "CLIENT"
+
+[[dependencies.example]]
+modId = "forge"
+side = "SERVER"
+"#
+        ));
+        assert_eq!(classify(&contradictory), Side::Unknown);
+
+        // A platform dependency without a side carries no information.
+        let unsided = modern(&format!(
+            r#"{MODS}
+[[dependencies.example]]
+modId = "minecraft"
+
+[[dependencies.example]]
+modId = "other"
+side = "CLIENT"
+
+[[dependencies.example]]
+modId = "another"
+side = "SERVER"
+"#
+        ));
+        assert_eq!(classify(&unsided), Side::Unknown);
     }
 
     #[test]

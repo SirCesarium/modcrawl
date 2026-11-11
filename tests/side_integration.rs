@@ -73,6 +73,108 @@ fn test_side_unknown_jar() {
     assert_eq!(s, Side::Unknown);
 }
 
+/// A Fabric mod whose metadata declares no `environment`, so only the mixin
+/// configs can say where it runs.
+fn fabric_without_environment(extra: &[(&str, &[u8])]) -> common::TempJar {
+    const FABRIC_MOD: &[u8] = br#"{"schemaVersion":1,"id":"side_test","version":"1.0.0"}"#;
+
+    let mut entries = vec![("fabric.mod.json", FABRIC_MOD)];
+    entries.extend_from_slice(extra);
+
+    common::TempJar::from_entries(&entries)
+}
+
+#[test]
+fn test_side_from_root_mixin_config() {
+    let jar = fabric_without_environment(&[(
+        "side_test.mixins.json",
+        br#"{"package":"com.example.mixin","client":["com.example.client.Mixin"]}"#,
+    )]);
+
+    let report = side_report(jar.path()).expect("failed to classify");
+    assert_eq!(report.mod_type, ModType::Fabric);
+    assert_eq!(report.side, Side::Client);
+
+    let jar = fabric_without_environment(&[(
+        "side_test.mixins.json",
+        br#"{"package":"com.example.mixin","server":["com.example.server.Mixin"]}"#,
+    )]);
+    assert_eq!(side(jar.path()).expect("failed to classify"), Side::Server);
+}
+
+#[test]
+fn test_side_from_nested_mixin_config() {
+    let inner = common::build_jar(&[
+        (
+            "fabric.mod.json",
+            br#"{"schemaVersion":1,"id":"inner_side","version":"1.0.0"}"#,
+        ),
+        (
+            "inner.mixins.json",
+            br#"{"package":"com.example.mixin","client":["com.example.client.Mixin"]}"#,
+        ),
+    ]);
+
+    let jar = common::TempJar::from_entries(&[
+        ("META-INF/MANIFEST.MF", b"Manifest-Version: 1.0\n"),
+        ("META-INF/jarjar/inner-1.0.0.jar", &inner),
+    ]);
+
+    let report = side_report(jar.path()).expect("failed to classify shell jar");
+    assert_eq!(report.mod_type, ModType::Fabric);
+    assert_eq!(report.side, Side::Client);
+}
+
+#[test]
+fn test_mixin_sections_that_disagree_stay_unknown() {
+    let mixed = fabric_without_environment(&[(
+        "side_test.mixins.json",
+        br#"{"package":"com.example.mixin","client":["a.Client"],"server":["b.Server"]}"#,
+    )]);
+    assert_eq!(
+        side(mixed.path()).expect("failed to classify"),
+        Side::Unknown
+    );
+
+    // The `mixins` section applies to both sides, so it cannot pick one.
+    let common_section = fabric_without_environment(&[(
+        "side_test.mixins.json",
+        br#"{"package":"com.example.mixin","mixins":["a.Common"],"client":["b.Client"]}"#,
+    )]);
+    assert_eq!(
+        side(common_section.path()).expect("failed to classify"),
+        Side::Unknown
+    );
+
+    let broken = fabric_without_environment(&[("side_test.mixins.json", b"{ not json")]);
+    assert_eq!(
+        side(broken.path()).expect("failed to classify"),
+        Side::Unknown
+    );
+
+    let none = fabric_without_environment(&[]);
+    assert_eq!(
+        side(none.path()).expect("failed to classify"),
+        Side::Unknown
+    );
+}
+
+#[test]
+fn test_metadata_side_wins_over_mixin_configs() {
+    let jar = common::TempJar::from_entries(&[
+        (
+            "fabric.mod.json",
+            br#"{"schemaVersion":1,"id":"side_test","version":"1.0.0","environment":"*"}"#,
+        ),
+        (
+            "side_test.mixins.json",
+            br#"{"package":"com.example.mixin","server":["com.example.server.Mixin"]}"#,
+        ),
+    ]);
+
+    assert_eq!(side(jar.path()).expect("failed to classify"), Side::Both);
+}
+
 #[test]
 fn test_side_report_json_serialization() {
     let report = SideReport {

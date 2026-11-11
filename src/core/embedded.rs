@@ -1,4 +1,4 @@
-//! Discovery of metadata inside embedded JARs.
+//! Traversal of embedded JARs and the metadata they carry.
 
 use std::io::{self, Cursor, ErrorKind, Read, Seek};
 
@@ -19,26 +19,57 @@ use crate::error::{Error, Result};
 pub(crate) fn read_raw<R: Read + Seek>(
     mng: &mut ZipManager<R>,
 ) -> Result<Option<(ModType, String)>> {
+    let mut found = None;
+
+    visit_embedded(mng, |_path, nested| {
+        if found.is_some() {
+            return Ok(());
+        }
+
+        let Ok(mod_type) = REGISTRY.detect_archive(nested) else {
+            return Ok(());
+        };
+
+        let Some(file) = REGISTRY.find_metadata_file(&mod_type, &nested.entries()?) else {
+            return Ok(());
+        };
+
+        let Ok(raw) = read_metadata_string(nested, file) else {
+            return Ok(());
+        };
+
+        found = Some((mod_type, raw));
+        Ok(())
+    })?;
+
+    Ok(found)
+}
+
+/// Visit every embedded jar the outer archive carries, one at a time.
+///
+/// JarJar-style shells ship the real mod inside `META-INF/jarjar/`. An entry
+/// that cannot be read or that exceeds [`MAX_EMBEDDED_JAR_SIZE`] is skipped so
+/// one broken sibling does not abort the caller's work. Only one level is
+/// traversed, matching how metadata discovery sees a shell.
+///
+/// # Errors
+///
+/// Returns an error when the outer archive cannot be listed, or when `visit`
+/// returns one.
+pub(crate) fn visit_embedded<R, F>(mng: &mut ZipManager<R>, mut visit: F) -> Result<()>
+where
+    R: Read + Seek,
+    F: FnMut(&str, &mut ZipManager<Cursor<Vec<u8>>>) -> Result<()>,
+{
     for jar in find_embedded_jars(&mng.entries()?) {
         let Ok(mut nested) = read_entry(mng, &jar.path) else {
             continue;
         };
 
-        let Ok(mod_type) = REGISTRY.detect_archive(&mut nested) else {
-            continue;
-        };
-
-        let Some(file) = REGISTRY.find_metadata_file(&mod_type, &nested.entries()?) else {
-            continue;
-        };
-
-        let Ok(raw) = read_metadata_string(&mut nested, file) else {
-            continue;
-        };
-        return Ok(Some((mod_type, raw)));
+        visit(&jar.path, &mut nested)?;
     }
 
-    Ok(None)
+    Ok(())
 }
 
 const MAX_EMBEDDED_JAR_SIZE: usize = 128 * 1024 * 1024;
