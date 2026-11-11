@@ -106,6 +106,38 @@ ordering="BEFORE"
 }
 
 #[test]
+fn test_analyze_forge_modern_incompatible_dependencies() {
+    let manifest = r#"modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="testmod"
+version="1.0.0"
+
+[[dependencies.testmod]]
+modId="bad_mod"
+type="incompatible"
+versionRange="<1.0"
+
+[[dependencies.testmod]]
+modId="discouraged_mod"
+type="discouraged"
+"#;
+    let jar = common::TempJar::from_entries(&[("META-INF/mods.toml", manifest.as_bytes())]);
+    let report = analyze(jar.path(), false).expect("failed to analyze Forge dependencies");
+
+    let dep_map: BTreeMap<_, _> = report
+        .dependencies
+        .iter()
+        .map(|d| (d.name.as_str(), d.kind))
+        .collect();
+
+    assert_eq!(dep_map.get("bad_mod"), Some(&DepKind::Incompatible));
+    assert_eq!(dep_map.get("discouraged_mod"), Some(&DepKind::Discouraged));
+}
+
+#[test]
 fn test_analyze_neoforge_dependencies() {
     let jar = common::neoforge_jar("neoforge_dep_test", "1.0.0");
     let report = analyze(jar.path(), false).expect("failed to analyze NeoForge dependencies");
@@ -145,6 +177,39 @@ ordering="BEFORE"
 
     assert_eq!(dep_map.get("soft_mod"), Some(&DepKind::Optional));
     assert_eq!(dep_map.get("order_mod"), Some(&DepKind::LoadBefore));
+}
+
+#[test]
+fn test_analyze_neoforge_incompatible_dependencies() {
+    let manifest = r#"modLoader="javafml"
+loaderVersion="[1,)"
+license="MIT"
+
+[[mods]]
+modId="testmod"
+version="1.0.0"
+
+[[dependencies.testmod]]
+modId="bad_mod"
+type="incompatible"
+versionRange="<1.0"
+
+[[dependencies.testmod]]
+modId="discouraged_mod"
+type="discouraged"
+"#;
+    let jar =
+        common::TempJar::from_entries(&[("META-INF/neoforge.mods.toml", manifest.as_bytes())]);
+    let report = analyze(jar.path(), false).expect("failed to analyze NeoForge dependencies");
+
+    let dep_map: BTreeMap<_, _> = report
+        .dependencies
+        .iter()
+        .map(|d| (d.name.as_str(), d.kind))
+        .collect();
+
+    assert_eq!(dep_map.get("bad_mod"), Some(&DepKind::Incompatible));
+    assert_eq!(dep_map.get("discouraged_mod"), Some(&DepKind::Discouraged));
 }
 
 #[test]

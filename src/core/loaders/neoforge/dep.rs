@@ -21,9 +21,6 @@ pub fn extract(raw: &str) -> Result<Vec<DepEntry>> {
                 dep.mandatory,
                 dep.ordering.as_deref(),
             );
-            if kind.is_excluded() {
-                continue;
-            }
             deps.push(DepEntry {
                 name: dep.mod_id.clone(),
                 kind,
@@ -104,7 +101,7 @@ ordering = "BEFORE"
     }
 
     #[test]
-    fn extract_skips_discouraged() {
+    fn extract_discouraged() {
         let toml = r#"
 [[mods]]
 modId = "testmod"
@@ -114,7 +111,9 @@ modId = "bad-mod"
 type = "discouraged"
 "#;
         let deps = extract(toml).unwrap();
-        assert_eq!(deps, []);
+        assert_eq!(deps.len(), 1);
+        assert_eq!(deps[0].name, "bad-mod");
+        assert_eq!(deps[0].kind, DepKind::Discouraged);
     }
 
     #[test]

@@ -39,12 +39,6 @@ impl DepKind {
         }
     }
 
-    /// Returns `true` when this kind marks a dependency as excluded.
-    #[must_use]
-    pub fn is_excluded(self) -> bool {
-        matches!(self, Self::Incompatible | Self::Discouraged)
-    }
-
     fn marker(self) -> &'static str {
         match self {
             Self::Required => "*",
@@ -438,17 +432,6 @@ mod tests {
         assert_eq!(DepKind::Suggested.priority(), 1);
         assert_eq!(DepKind::Incompatible.priority(), 0);
         assert_eq!(DepKind::Discouraged.priority(), 0);
-    }
-
-    #[test]
-    fn dep_kind_is_excluded() {
-        assert!(!DepKind::Required.is_excluded());
-        assert!(!DepKind::LoadBefore.is_excluded());
-        assert!(!DepKind::Optional.is_excluded());
-        assert!(!DepKind::Recommended.is_excluded());
-        assert!(!DepKind::Suggested.is_excluded());
-        assert!(DepKind::Incompatible.is_excluded());
-        assert!(DepKind::Discouraged.is_excluded());
     }
 
     #[test]
