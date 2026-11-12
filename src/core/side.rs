@@ -293,30 +293,24 @@ pub fn classify(metadata: &ModMetadata) -> Side {
     }
 }
 
-/// Classify a Fabric mod: check `environment`, then entrypoints.
+/// Classify a Fabric mod: use `environment`, falling back to entrypoints.
 ///
-/// When `environment` is `*` (permissive), entrypoints can still narrow it to
-/// `client` or `server` if all of them point to one side.
+/// Any recognised `environment` wins, including `*`: entrypoints only describe
+/// where the initialiser runs, so a mod that ships server-side mixins but only
+/// a `client` entrypoint still runs on the server. `side` narrows a `*` down to
+/// `client` only when the archive itself proves it client-only.
 fn fabric_side(m: &FabricModMetadata) -> Side {
-    let env_side = m.environment.as_deref().map(environment_side);
-    // Explicitly declared as client or server — trust it.
-    if let Some(side @ (Side::Client | Side::Server)) = env_side {
-        return side;
-    }
-    // "*" / "both" / absent: let entrypoints refine the answer.
-    let ep = entrypoint_side(&m.entrypoints);
-    if ep == Side::Unknown {
-        // Fall back to whatever environment said (Both or Unknown).
-        env_side.unwrap_or(Side::Unknown)
-    } else {
-        ep
+    match m.environment.as_deref().map(environment_side) {
+        Some(side @ (Side::Client | Side::Server | Side::Both)) => side,
+        _ => entrypoint_side(&m.entrypoints),
     }
 }
 
 /// Classify a Quilt mod: check `minecraft.environment`, root `environment`,
 /// `quilt_loader.environment`, then entrypoints.
 ///
-/// When `environment` is `*`, entrypoints can still refine the answer.
+/// As with Fabric, an explicit `*` outranks the entrypoints; only a missing or
+/// unparsable environment leaves the entrypoints as the sole signal.
 fn quilt_side(m: &QuiltModMetadata) -> Side {
     let env = m
         .minecraft
@@ -343,11 +337,9 @@ fn quilt_side(m: &QuiltModMetadata) -> Side {
         Side::Unknown
     };
 
-    // "*" / "both" / absent: let entrypoints refine.
-    if ep_side == Side::Unknown {
-        env_side.unwrap_or(Side::Unknown)
-    } else {
-        ep_side
+    match env_side {
+        Some(side @ (Side::Client | Side::Server | Side::Both)) => side,
+        _ => ep_side,
     }
 }
 
@@ -650,6 +642,23 @@ mod tests {
     #[test]
     fn fabric_without_environment_is_unknown() {
         assert_eq!(classify(&fabric_with_environment(None)), Side::Unknown);
+    }
+
+    #[test]
+    fn fabric_entrypoints_only_decide_without_an_environment() {
+        // AppleSkin's shape: `*` plus a client entrypoint, but it also ships
+        // server-side mixins, so entrypoints must not narrow the declared side.
+        let declared = fabric(
+            r#"{"schemaVersion":1,"id":"example","version":"1.0.0","environment":"*",
+                "entrypoints":{"client":["com.example.Client"],"modmenu":["com.example.Menu"]}}"#,
+        );
+        assert_eq!(classify(&declared), Side::Both);
+
+        let silent = fabric(
+            r#"{"schemaVersion":1,"id":"example","version":"1.0.0",
+                "entrypoints":{"client":["com.example.Client"],"modmenu":["com.example.Menu"]}}"#,
+        );
+        assert_eq!(classify(&silent), Side::Client);
     }
 
     #[test]
