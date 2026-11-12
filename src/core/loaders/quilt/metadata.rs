@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
-use serde_json::from_str;
+use serde_json::{Value, from_str};
 
 use crate::error::Result;
 
@@ -27,6 +27,8 @@ pub struct QuiltModMetadata {
     pub minecraft: Option<QuiltMinecraft>,
     #[serde(default)]
     pub environment: Option<String>,
+    #[serde(default)]
+    pub entrypoints: Option<Value>,
 }
 
 /// The `minecraft` block of a Quilt mod's metadata.
@@ -48,6 +50,8 @@ pub struct QuiltLoader {
     pub depends: Vec<QuiltDep>,
     #[serde(default)]
     pub environment: Option<String>,
+    #[serde(default)]
+    pub entrypoints: Option<Value>,
 }
 
 /// Human-readable metadata nested under `quilt_loader.metadata`.

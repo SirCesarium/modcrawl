@@ -17,6 +17,7 @@ use serde::Serialize;
 use zipcrawl::ZipManager;
 
 use crate::core::embedded::visit_embedded;
+use crate::core::side::Side;
 use crate::error::{Error, Result};
 
 mod dupes;
@@ -314,6 +315,252 @@ pub fn find_mixin_overlaps_buffers(jars: &[(&str, &[u8])]) -> Result<Vec<MixinOv
         }
     }
     Ok(group_mixin_overlaps(&entries))
+}
+
+/// Annotation descriptors that identify a `@Mod` class or a dist-restricting
+/// annotation on the main class. Used as fast byte-level pre-filters before
+/// the class is parsed.
+const MOD_NEEDLES: [&[u8]; 6] = [
+    b"Lnet/neoforged/fml/common/Mod;",
+    b"Lcpw/mods/fml/common/Mod;",
+    b"Lnet/minecraftforge/fml/common/Mod;",
+    b"Lnet/minecraftforge/api/distmarker/OnlyIn;",
+    b"Lcpw/mods/fml/relauncher/SideOnly;",
+    b"Lnet/minecraftforge/fml/relauncher/SideOnly;",
+];
+
+/// Scan class-level annotations in the archive and its embedded JARs to infer
+/// the side the mod runs on.
+///
+/// Reads `@Mod(dist = …)` for `NeoForge`, `@Mod(clientSideOnly = …)` and
+/// `@Mod(serverSideOnly = …)` for Forge/FML 1.x, and `@OnlyIn`/`@SideOnly`
+/// on the main class as a fallback.
+///
+/// Returns `None` when no `@Mod`-annotated class is found.
+///
+/// # Errors
+///
+/// Returns an error if archive entries cannot be read.
+pub fn scan_mod_side<R: Read + Seek>(manager: &mut ZipManager<R>) -> Result<Option<Side>> {
+    let mut sides = Vec::new();
+    scan_archive_mod_side(manager, &mut sides)?;
+
+    visit_embedded(manager, |_path, nested| {
+        scan_archive_mod_side(nested, &mut sides)?;
+        Ok(())
+    })?;
+
+    if sides.is_empty() {
+        return Ok(None);
+    }
+
+    // Any "both" or a mix of client and server means both.
+    if sides.contains(&Side::Both)
+        || (sides.contains(&Side::Client) && sides.contains(&Side::Server))
+    {
+        return Ok(Some(Side::Both));
+    }
+
+    if sides.iter().all(|s| *s == Side::Client) {
+        return Ok(Some(Side::Client));
+    }
+
+    if sides.iter().all(|s| *s == Side::Server) {
+        return Ok(Some(Side::Server));
+    }
+
+    Ok(Some(Side::Both))
+}
+
+/// Constant-pool prefix of a dedicated-server class reference.
+const SERVER_CLASS_NEEDLE: &[u8] = b"net/minecraft/server/";
+
+/// Whether any class at the root of the archive references a dedicated-server
+/// class.
+///
+/// A mod whose classes never mention `net/minecraft/server/` cannot run any
+/// server-side code of its own. Embedded JARs are ignored on purpose: a bundled
+/// library's server references say nothing about the mod shipping it.
+///
+/// # Errors
+///
+/// Returns an error if archive entries cannot be read.
+pub fn references_server_classes<R: Read + Seek>(manager: &mut ZipManager<R>) -> Result<bool> {
+    for entry in manager.entries()? {
+        if entry.is_dir || !is_class_entry(&entry.name) {
+            continue;
+        }
+
+        let file = manager.open_file(&entry.name)?;
+        let mut bytes = Vec::new();
+        let read = file
+            .take((MAX_CLASS_SIZE as u64) + 1)
+            .read_to_end(&mut bytes)
+            .map_err(Error::Io)?;
+        if read > MAX_CLASS_SIZE {
+            continue;
+        }
+
+        if bytes
+            .windows(SERVER_CLASS_NEEDLE.len())
+            .any(|window| window == SERVER_CLASS_NEEDLE)
+        {
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
+
+fn scan_archive_mod_side<R: Read + Seek>(
+    manager: &mut ZipManager<R>,
+    sides: &mut Vec<Side>,
+) -> Result<()> {
+    let entries = manager.entries()?;
+    for entry in &entries {
+        if !is_class_entry(&entry.name) || entry.is_dir {
+            continue;
+        }
+
+        let file = manager.open_file(&entry.name)?;
+        let mut bytes = Vec::new();
+        let read = file
+            .take((MAX_CLASS_SIZE as u64) + 1)
+            .read_to_end(&mut bytes)
+            .map_err(Error::Io)?;
+        if read > MAX_CLASS_SIZE {
+            continue;
+        }
+
+        // Skip classes that have no relevant annotation descriptor at all.
+        let has_needle = MOD_NEEDLES
+            .iter()
+            .any(|needle| bytes.windows(needle.len()).any(|w| w == *needle));
+        if !has_needle {
+            continue;
+        }
+
+        let Ok(Ok((_, cf))) = panic::catch_unwind(|| parse_classfile(&bytes)) else {
+            continue;
+        };
+
+        if let Some(side) = extract_class_mod_side(&cf) {
+            sides.push(side);
+        }
+    }
+
+    Ok(())
+}
+
+/// Extract a side from class-level annotations on a single class file.
+///
+/// Returns `None` when the class has no `@Mod` annotation at all, so the
+/// caller can distinguish "no information" from "explicitly both".
+fn extract_class_mod_side(cf: &ClassFile) -> Option<Side> {
+    let mut is_mod_class = false;
+    let mut neoforge_dist: Option<Side> = None;
+    let mut forge_client_only = false;
+    let mut forge_server_only = false;
+    let mut only_in_side: Option<Side> = None;
+
+    for attr in &cf.attributes {
+        let parsed = parse_specialized_attribute(attr, &cf.constant_pool);
+        let anns = match parsed {
+            ParsedAttribute::RuntimeVisibleAnnotations(ref a)
+            | ParsedAttribute::RuntimeInvisibleAnnotations(ref a) => &a.annotations,
+            _ => continue,
+        };
+
+        for ann in anns {
+            let Some(ann_type) = resolve_utf8(&cf.constant_pool, ann.type_index) else {
+                continue;
+            };
+
+            if ann_type == "Lnet/neoforged/fml/common/Mod;" {
+                is_mod_class = true;
+                for (name_idx, val) in &ann.element_value_pairs {
+                    if resolve_utf8(&cf.constant_pool, *name_idx).as_deref() != Some("dist") {
+                        continue;
+                    }
+                    if let ElementValue::Enum {
+                        const_name_index, ..
+                    } = val
+                    {
+                        match resolve_utf8(&cf.constant_pool, *const_name_index).as_deref() {
+                            Some("CLIENT") => neoforge_dist = Some(Side::Client),
+                            Some("DEDICATED_SERVER" | "SERVER") => {
+                                neoforge_dist = Some(Side::Server);
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            } else if ann_type == "Lcpw/mods/fml/common/Mod;"
+                || ann_type == "Lnet/minecraftforge/fml/common/Mod;"
+            {
+                is_mod_class = true;
+                for (name_idx, val) in &ann.element_value_pairs {
+                    let Some(param) = resolve_utf8(&cf.constant_pool, *name_idx) else {
+                        continue;
+                    };
+                    if param == "clientSideOnly"
+                        && let ElementValue::Boolean { const_value_index } = val
+                        && let Some(ConstantPoolEntry::Integer(info)) =
+                            get_entry(&cf.constant_pool, *const_value_index)
+                        && info.value != 0
+                    {
+                        forge_client_only = true;
+                    } else if param == "serverSideOnly"
+                        && let ElementValue::Boolean { const_value_index } = val
+                        && let Some(ConstantPoolEntry::Integer(info)) =
+                            get_entry(&cf.constant_pool, *const_value_index)
+                        && info.value != 0
+                    {
+                        forge_server_only = true;
+                    }
+                }
+            } else if ann_type == "Lnet/minecraftforge/api/distmarker/OnlyIn;"
+                || ann_type == "Lcpw/mods/fml/relauncher/SideOnly;"
+                || ann_type == "Lnet/minecraftforge/fml/relauncher/SideOnly;"
+            {
+                for (name_idx, val) in &ann.element_value_pairs {
+                    if resolve_utf8(&cf.constant_pool, *name_idx).as_deref() != Some("value") {
+                        continue;
+                    }
+                    if let ElementValue::Enum {
+                        const_name_index, ..
+                    } = val
+                    {
+                        match resolve_utf8(&cf.constant_pool, *const_name_index).as_deref() {
+                            Some("CLIENT") => only_in_side = Some(Side::Client),
+                            Some("DEDICATED_SERVER" | "SERVER") => {
+                                only_in_side = Some(Side::Server);
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if !is_mod_class {
+        return None;
+    }
+
+    if let Some(dist) = neoforge_dist {
+        return Some(dist);
+    }
+
+    if forge_client_only || only_in_side == Some(Side::Client) {
+        return Some(Side::Client);
+    }
+
+    if forge_server_only || only_in_side == Some(Side::Server) {
+        return Some(Side::Server);
+    }
+
+    Some(Side::Both)
 }
 
 fn mixins_impl<R: Read + Seek>(manager: &mut ZipManager<R>) -> Result<ClassScan<MixinEntry>> {

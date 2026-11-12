@@ -1,5 +1,6 @@
 //! Client/server side classification for mods and plugins.
 
+use std::collections::BTreeMap;
 use std::fmt;
 use std::io::{Read, Seek};
 use std::path::Path;
@@ -8,10 +9,16 @@ use serde::Serialize;
 use serde_json::Value;
 use zipcrawl::ZipManager;
 
+#[cfg(feature = "classfile")]
+use crate::core::classfile::{references_server_classes, scan_mod_side};
 use crate::core::detect_mod_type::ModType;
 use crate::core::embedded::visit_embedded;
 use crate::core::identify::identify_impl;
+use crate::core::loaders::fabric;
+use crate::core::loaders::fabric::metadata::FabricModMetadata;
 use crate::core::loaders::forge_modern::metadata::{ModsTomlDependency, ModsTomlMetadata};
+use crate::core::loaders::quilt;
+use crate::core::loaders::quilt::metadata::QuiltModMetadata;
 use crate::core::metadata::{ModMetadata, read_metadata_impl, read_metadata_string};
 use crate::error::Result;
 
@@ -106,42 +113,280 @@ fn side_report_impl<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<SideRepor
 
     let metadata = read_metadata_impl(mng)?;
     let side = match classify(&metadata) {
-        Side::Unknown => mixin_side(mng)?,
+        Side::Unknown => {
+            // Fallback 1: mixin config sections.
+            match mixin_side(mng)? {
+                Side::Unknown => {
+                    // Fallback 2: bytecode @Mod/@OnlyIn annotations (Forge / NeoForge).
+                    #[cfg(feature = "classfile")]
+                    {
+                        scan_mod_side(mng)?.unwrap_or(Side::Unknown)
+                    }
+                    #[cfg(not(feature = "classfile"))]
+                    Side::Unknown
+                }
+                side => side,
+            }
+        }
         side => side,
     };
+
+    // A JAR may ship metadata for two loaders (e.g. `fabric.mod.json` and a
+    // NeoForge `mods.toml`). `identify` picks one, so the other loader's
+    // declaration is folded back in here.
+    let side = merge_secondary_side(side, secondary_metadata_side(mng));
+    let side = refine_both_side(mng, &metadata, side)?;
 
     Ok(SideReport { mod_type, side })
 }
 
+/// Narrow a `both` down to `client` when the archive proves the code is
+/// client-only.
+///
+/// Loaders default `environment`/`side` to `both`, so client mods routinely
+/// declare it without ever running server-side code. This only fires when every
+/// mixin sits in a `client` section, no `data/` payload is shipped, no
+/// entrypoint initialises on both sides, and no class references
+/// `net/minecraft/server/`. Any contrary evidence keeps `both`, the safe
+/// direction: a mod wrongly reported as client would be dropped from servers
+/// that need it.
+///
+/// # Errors
+///
+/// Returns an error if archive entries cannot be read.
+fn refine_both_side<R: Read + Seek>(
+    mng: &mut ZipManager<R>,
+    metadata: &ModMetadata,
+    side: Side,
+) -> Result<Side> {
+    if side != Side::Both
+        || mixin_side(mng)? != Side::Client
+        || ships_server_data(mng)?
+        || initialises_on_both_sides(metadata)
+    {
+        return Ok(side);
+    }
+
+    #[cfg(feature = "classfile")]
+    {
+        if references_server_classes(mng)? {
+            return Ok(side);
+        }
+    }
+
+    Ok(Side::Client)
+}
+
+/// Whether the archive ships a `data/` payload (recipes, loot tables, worldgen),
+/// which only a server can use.
+fn ships_server_data<R: Read + Seek>(mng: &mut ZipManager<R>) -> Result<bool> {
+    Ok(mng
+        .entries()?
+        .iter()
+        .any(|entry| !entry.is_dir && entry.name.starts_with("data/")))
+}
+
+/// Whether the mod declares an entrypoint that runs on both sides.
+fn initialises_on_both_sides(metadata: &ModMetadata) -> bool {
+    match metadata {
+        ModMetadata::Fabric(m) => m
+            .entrypoints
+            .keys()
+            .any(|key| is_both_sides_entrypoint(key)),
+        ModMetadata::Quilt(m) => {
+            let entrypoints = m
+                .quilt_loader
+                .entrypoints
+                .as_ref()
+                .or(m.entrypoints.as_ref());
+            entrypoints
+                .and_then(Value::as_object)
+                .is_some_and(|map| map.keys().any(|key| is_both_sides_entrypoint(key)))
+        }
+        _ => false,
+    }
+}
+
+/// Entrypoint keys whose initialiser runs on both sides.
+fn is_both_sides_entrypoint(key: &str) -> bool {
+    matches!(
+        key.strip_prefix("minecraft:").unwrap_or(key),
+        "main" | "init" | "preLaunch" | "server" | "server_init" | "dedicated_server"
+    )
+}
+
+/// Combine the detected loader's side with a dual-loader JAR's secondary one.
+///
+/// A definitive primary side wins. Otherwise an explicit `client`/`server`
+/// from the other loader wins, and a `both` only lifts an `unknown`.
+fn merge_secondary_side(primary: Side, secondary: Option<Side>) -> Side {
+    if matches!(primary, Side::Client | Side::Server) {
+        return primary;
+    }
+
+    match secondary {
+        Some(side @ (Side::Client | Side::Server)) => side,
+        Some(Side::Both) if primary == Side::Unknown => Side::Both,
+        _ => primary,
+    }
+}
+
+/// Side declared by a secondary `fabric.mod.json` or `quilt.mod.json` in a JAR
+/// whose primary loader is another one.
+///
+/// An explicit `client`/`server` describes the shipped code whatever loader
+/// detected the archive, so it is preferred; an explicit `both` is reported
+/// too, since it still beats the detected loader's silence.
+fn secondary_metadata_side<R: Read + Seek>(mng: &mut ZipManager<R>) -> Option<Side> {
+    let names: Vec<String> = mng
+        .entries()
+        .ok()?
+        .iter()
+        .filter(|entry| !entry.is_dir)
+        .map(|entry| entry.name.clone())
+        .collect();
+
+    let mut both = None;
+    for name in names {
+        let Ok(raw) = read_metadata_string(mng, &name) else {
+            continue;
+        };
+        let side = match name.as_str() {
+            "fabric.mod.json" => fabric::metadata::parse(&raw).ok().map(|m| fabric_side(&m)),
+            "quilt.mod.json" => quilt::metadata::parse(&raw).ok().map(|m| quilt_side(&m)),
+            _ => continue,
+        };
+        match side {
+            Some(side @ (Side::Client | Side::Server)) => return Some(side),
+            Some(Side::Both) => both = Some(Side::Both),
+            _ => {}
+        }
+    }
+
+    both
+}
+
 /// Classify where `metadata` says the mod or plugin runs.
 ///
-/// Fabric and Quilt use their `environment` field. Forge and `NeoForge` use
-/// `clientSideOnly`, falling back to the sides declared by their dependencies.
-/// Server plugins are always [`Side::Server`]. Legacy Forge metadata does not
-/// declare a side, so it is [`Side::Unknown`].
+/// **Fabric / Quilt**: use `environment`; fall back to entrypoints when it is
+/// absent (`client`-only → client, `server`-only → server, mixed → both).
+/// **Forge / `NeoForge`**: respect `clientSideOnly` on the root or any `[[mods]]`
+/// entry, then per-mod `side`, then dependency sides.
+/// **Server plugins**: always server.
+/// **Legacy Forge**: always unknown (no metadata side field; bytecode handles it).
 ///
 /// Metadata alone cannot say more than this: `side` refines [`Side::Unknown`]
-/// with the mixin configs of the artifact, which this function cannot see.
+/// with the mixin configs of the artifact and narrows a default [`Side::Both`]
+/// down to [`Side::Client`] when the archive is provably client-only, neither of
+/// which this function can see.
 #[must_use]
 pub fn classify(metadata: &ModMetadata) -> Side {
     match metadata {
-        ModMetadata::Fabric(m) => m
-            .environment
-            .as_deref()
-            .map_or(Side::Unknown, environment_side),
-        ModMetadata::Quilt(m) => m
-            .minecraft
-            .as_ref()
-            .and_then(|m| m.environment.as_deref())
-            .or(m.environment.as_deref())
-            .or(m.quilt_loader.environment.as_deref())
-            .map_or(Side::Unknown, environment_side),
+        ModMetadata::Fabric(m) => fabric_side(m),
+        ModMetadata::Quilt(m) => quilt_side(m),
         ModMetadata::ForgeModern(m) | ModMetadata::NeoForge(m) => forge_side(m),
         ModMetadata::Bukkit(_)
         | ModMetadata::Paper(_)
         | ModMetadata::Bungee(_)
         | ModMetadata::Velocity(_) => Side::Server,
         ModMetadata::ForgeLegacy(_) => Side::Unknown,
+    }
+}
+
+/// Classify a Fabric mod: check `environment`, then entrypoints.
+///
+/// When `environment` is `*` (permissive), entrypoints can still narrow it to
+/// `client` or `server` if all of them point to one side.
+fn fabric_side(m: &FabricModMetadata) -> Side {
+    let env_side = m.environment.as_deref().map(environment_side);
+    // Explicitly declared as client or server — trust it.
+    if let Some(side @ (Side::Client | Side::Server)) = env_side {
+        return side;
+    }
+    // "*" / "both" / absent: let entrypoints refine the answer.
+    let ep = entrypoint_side(&m.entrypoints);
+    if ep == Side::Unknown {
+        // Fall back to whatever environment said (Both or Unknown).
+        env_side.unwrap_or(Side::Unknown)
+    } else {
+        ep
+    }
+}
+
+/// Classify a Quilt mod: check `minecraft.environment`, root `environment`,
+/// `quilt_loader.environment`, then entrypoints.
+///
+/// When `environment` is `*`, entrypoints can still refine the answer.
+fn quilt_side(m: &QuiltModMetadata) -> Side {
+    let env = m
+        .minecraft
+        .as_ref()
+        .and_then(|mc| mc.environment.as_deref())
+        .or(m.environment.as_deref())
+        .or(m.quilt_loader.environment.as_deref());
+
+    let env_side = env.map(environment_side);
+    // Explicit client/server — trust it.
+    if let Some(side @ (Side::Client | Side::Server)) = env_side {
+        return side;
+    }
+
+    // quilt_loader.entrypoints or top-level entrypoints
+    let eps = m
+        .quilt_loader
+        .entrypoints
+        .as_ref()
+        .or(m.entrypoints.as_ref());
+    let ep_side = if let Some(Value::Object(map)) = eps {
+        entrypoint_side_from_keys(map.keys().map(String::as_str))
+    } else {
+        Side::Unknown
+    };
+
+    // "*" / "both" / absent: let entrypoints refine.
+    if ep_side == Side::Unknown {
+        env_side.unwrap_or(Side::Unknown)
+    } else {
+        ep_side
+    }
+}
+
+/// Infer a side from Fabric-style entrypoint keys.
+///
+/// Returns `Side::Unknown` when the map is empty or contains only unrecognised
+/// keys so the caller can proceed to the next fallback.
+fn entrypoint_side(map: &BTreeMap<String, Value>) -> Side {
+    entrypoint_side_from_keys(map.keys().map(String::as_str))
+}
+
+fn entrypoint_side_from_keys<'a>(keys: impl Iterator<Item = &'a str>) -> Side {
+    // Only the standard Fabric/Quilt entrypoint names are treated as side
+    // indicators.  Third-party plugin hooks (e.g. `modmenu`, `rei_client`,
+    // `emi`, `jade`) are neutral: they don't imply the mod runs on both sides.
+    let mut has_client = false;
+    let mut has_server = false;
+    let mut has_main = false;
+
+    for key in keys {
+        match key {
+            "client" | "client_init" => has_client = true,
+            "server" | "server_init" | "dedicated_server" => has_server = true,
+            "main" | "init" | "preLaunch" => has_main = true,
+            // Third-party plugin hooks — not a signal for either side.
+            _ => {}
+        }
+    }
+
+    // A "main" entrypoint runs on both sides regardless of what else is there.
+    if has_main {
+        return Side::Both;
+    }
+
+    match (has_client, has_server) {
+        (true, false) => Side::Client,
+        (false, true) => Side::Server,
+        (true, true) => Side::Both,
+        (false, false) => Side::Unknown,
     }
 }
 
@@ -156,12 +401,39 @@ fn environment_side(value: &str) -> Side {
 }
 
 /// Classify a Forge or `NeoForge` mod.
+///
+/// Checks root `clientSideOnly`, then per-`[[mods]]` `clientSideOnly` and
+/// `side`, then dependency sides.
 fn forge_side(metadata: &ModsTomlMetadata) -> Side {
-    match metadata.client_side_only {
-        Some(true) => Side::Client,
-        Some(false) => Side::Both,
-        None => dependency_side(metadata),
+    // Root-level clientSideOnly (older Forge convention).
+    if let Some(client_only) = metadata.client_side_only {
+        return if client_only {
+            Side::Client
+        } else {
+            Side::Both
+        };
     }
+
+    // Per-mod entries: clientSideOnly or side.
+    for m in &metadata.mods {
+        if let Some(client_only) = m.client_side_only {
+            return if client_only {
+                Side::Client
+            } else {
+                Side::Both
+            };
+        }
+        if let Some(side) = m.side.as_deref() {
+            match side.trim().to_ascii_uppercase().as_str() {
+                "CLIENT" => return Side::Client,
+                "SERVER" => return Side::Server,
+                "BOTH" => return Side::Both,
+                _ => {}
+            }
+        }
+    }
+
+    dependency_side(metadata)
 }
 
 /// Infer a side from the sides declared by the dependencies.

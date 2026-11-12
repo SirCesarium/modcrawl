@@ -150,6 +150,9 @@ pub struct ModsTomlMod {
     pub update_jsonurl: Option<String>,
     #[serde(rename = "displayTest")]
     pub display_test: Option<String>,
+    #[serde(rename = "clientSideOnly")]
+    pub client_side_only: Option<bool>,
+    pub side: Option<String>,
 }
 
 /// One dependency declaration inside a `[[dependencies.<mod>]]` table.

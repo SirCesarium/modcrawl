@@ -62,6 +62,144 @@ fn test_side_forge_modern() {
     assert_eq!(report.side, Side::Both);
 }
 
+/// A Jar detected as `NeoForge` must still honour a `fabric.mod.json` shipped
+/// alongside it, since that is the only place the client-only side is stated.
+#[test]
+fn test_side_dual_loader_uses_fabric_environment() {
+    let neoforge = r#"modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="dual"
+version="1.0.0"
+
+[[dependencies.dual]]
+modId="neoforge"
+mudatory=true
+versionRange="[47.1.0,)"
+ordering="NONE"
+side="BOTH"
+"#;
+    let fabric = r#"{"schemaVersion":1,"id":"dual","version":"1.0.0","environment":"client"}"#;
+    let jar = common::TempJar::from_entries(&[
+        ("META-INF/neoforge.mods.toml", neoforge.as_bytes()),
+        ("fabric.mod.json", fabric.as_bytes()),
+    ]);
+
+    let report = side_report(jar.path()).expect("failed to classify dual-loader jar");
+    assert_eq!(report.mod_type, ModType::NeoForge);
+    assert_eq!(report.side, Side::Client);
+}
+
+/// An explicit `*` in a secondary `fabric.mod.json` lifts an otherwise silent
+/// `NeoForge` jar from unknown to both.
+#[test]
+fn test_side_dual_loader_explicit_both_lifts_unknown() {
+    let neoforge = "modLoader=\"javafml\"\nloaderVersion=\"[47,)\"\nlicense=\"MIT\"\n\n[[mods]]\nmodId=\"dual\"\nversion=\"1.0.0\"\n";
+    let fabric = r#"{"schemaVersion":1,"id":"dual","version":"1.0.0","environment":"*"}"#;
+    let jar = common::TempJar::from_entries(&[
+        ("META-INF/neoforge.mods.toml", neoforge.as_bytes()),
+        ("fabric.mod.json", fabric.as_bytes()),
+    ]);
+
+    let report = side_report(jar.path()).expect("failed to classify dual-loader jar");
+    assert_eq!(report.mod_type, ModType::NeoForge);
+    assert_eq!(report.side, Side::Both);
+}
+
+/// A definitive side from the detected loader is never overridden by the
+/// secondary metadata of the other loader.
+#[test]
+fn test_side_dual_loader_primary_side_wins() {
+    let neoforge = "modLoader=\"javafml\"\nloaderVersion=\"[47,)\"\nlicense=\"MIT\"\nclientSideOnly=true\n\n[[mods]]\nmodId=\"dual\"\nversion=\"1.0.0\"\n";
+    let fabric = r#"{"schemaVersion":1,"id":"dual","version":"1.0.0","environment":"server"}"#;
+    let jar = common::TempJar::from_entries(&[
+        ("META-INF/neoforge.mods.toml", neoforge.as_bytes()),
+        ("fabric.mod.json", fabric.as_bytes()),
+    ]);
+
+    let report = side_report(jar.path()).expect("failed to classify dual-loader jar");
+    assert_eq!(report.mod_type, ModType::NeoForge);
+    assert_eq!(report.side, Side::Client);
+}
+
+/// `both` comes from the loader default, so client-only mixins plus no server
+/// payload are enough to narrow the side to `client`.
+#[test]
+fn test_side_client_only_mixins_narrow_both_to_client() {
+    let tomllib = "modLoader=\"javafml\"\nloaderVersion=\"[47,)\"\nlicense=\"MIT\"\n\n[[mods]]\nmodId=\"clientish\"\nversion=\"1.0.0\"\n\n[[dependencies.clientish]]\nmodId=\"forge\"\nmandatory=true\nversionRange=\"[47.1.0,)\"\nordering=\"NONE\"\nside=\"BOTH\"\n";
+    let mixins =
+        r#"{"required":true,"package":"com.example.mixin","mixins":[],"client":["MixinScreen"]}"#;
+    let jar = common::TempJar::from_entries(&[
+        ("META-INF/mods.toml", tomllib.as_bytes()),
+        ("clientish.mixins.json", mixins.as_bytes()),
+        ("com/example/Clientish.class", common::FAKE_CLASS_BYTES),
+    ]);
+
+    let report = side_report(jar.path()).expect("failed to classify client-only jar");
+    assert_eq!(report.mod_type, ModType::Forge(ForgeModFormat::ModsToml));
+    assert_eq!(report.side, Side::Client);
+}
+
+/// A shipped `data/` payload (recipes, loot) is server-side content, so the
+/// `both` declaration stands.
+#[test]
+fn test_side_data_payload_keeps_both() {
+    let tomllib = "modLoader=\"javafml\"\nloaderVersion=\"[47,)\"\nlicense=\"MIT\"\n\n[[mods]]\nmodId=\"contentful\"\nversion=\"1.0.0\"\n\n[[dependencies.contentful]]\nmodId=\"forge\"\nmandatory=true\nversionRange=\"[47.1.0,)\"\nordering=\"NONE\"\nside=\"BOTH\"\n";
+    let mixins =
+        r#"{"required":true,"package":"com.example.mixin","mixins":[],"client":["MixinScreen"]}"#;
+    let jar = common::TempJar::from_entries(&[
+        ("META-INF/mods.toml", tomllib.as_bytes()),
+        ("contentful.mixins.json", mixins.as_bytes()),
+        ("com/example/Contentful.class", common::FAKE_CLASS_BYTES),
+        ("data/contentful/recipe/thing.json", b"{}"),
+    ]);
+
+    assert_eq!(side(jar.path()).expect("failed to classify"), Side::Both);
+}
+
+/// A class that touches `net/minecraft/server/` proves the mod runs
+/// server-side, so it must not be reported as client.
+#[cfg(feature = "classfile")]
+#[test]
+fn test_side_server_class_reference_keeps_both() {
+    let tomllib = "modLoader=\"javafml\"\nloaderVersion=\"[47,)\"\nlicense=\"MIT\"\n\n[[mods]]\nmodId=\"serverish\"\nversion=\"1.0.0\"\n\n[[dependencies.serverish]]\nmodId=\"forge\"\nmandatory=true\nversionRange=\"[47.1.0,)\"\nordering=\"NONE\"\nside=\"BOTH\"\n";
+    let mixins =
+        r#"{"required":true,"package":"com.example.mixin","mixins":[],"client":["MixinScreen"]}"#;
+    let server_class: &[u8] =
+        b"\xca\xfe\xba\xbe\x00\x00\x00\x34net/minecraft/server/MinecraftServer";
+    let jar = common::TempJar::from_entries(&[
+        ("META-INF/mods.toml", tomllib.as_bytes()),
+        ("serverish.mixins.json", mixins.as_bytes()),
+        ("com/example/Serverish.class", server_class),
+    ]);
+
+    assert_eq!(side(jar.path()).expect("failed to classify"), Side::Both);
+}
+
+/// A `main` entrypoint initialises on both sides, so the `both` declaration of
+/// a library stays even when all of its mixins are client-only.
+#[test]
+fn test_side_main_entrypoint_keeps_both() {
+    let manifest = r#"{
+      "schemaVersion": 1,
+      "id": "bothlib",
+      "version": "1.0.0",
+      "environment": "*",
+      "entrypoints": {"main": ["com.example.BothLib"], "client": ["com.example.BothLibClient"]}
+    }"#;
+    let mixins =
+        r#"{"required":true,"package":"com.example.mixin","mixins":[],"client":["MixinScreen"]}"#;
+    let jar = common::TempJar::from_entries(&[
+        ("fabric.mod.json", manifest.as_bytes()),
+        ("bothlib.mixins.json", mixins.as_bytes()),
+        ("com/example/BothLib.class", common::FAKE_CLASS_BYTES),
+    ]);
+
+    assert_eq!(side(jar.path()).expect("failed to classify"), Side::Both);
+}
+
 #[test]
 fn test_side_unknown_jar() {
     let jar = common::TempJar::from_entries(&[("hello.txt", b"not a mod")]);
