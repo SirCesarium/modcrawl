@@ -33,19 +33,32 @@
 		</Typography>
 	</div>
 
-	<Button
-		href="https://github.com/SirCesarium/modcrawl"
-		target="_blank"
-		variant="ghost"
-		size="sm"
-		pixel
-		uppercase
-		icon="github"
-		iconSize={20}
-		iconClass="sm:size-6"
-		aria-label="GitHub repository"
-		class="shrink-0 gap-1.5 px-2.5 text-xs text-neutral-100 sm:h-10 sm:gap-2 sm:px-4 sm:text-base md:text-lg"
-	>
-		<span class="hidden sm:inline">source</span>
-	</Button>
+	<div class="flex items-center gap-2">
+		<Button
+			href="/docs"
+			variant="ghost"
+			size="sm"
+			pixel
+			uppercase
+			class="shrink-0 px-2.5 text-xs text-neutral-100 sm:h-10 sm:px-4 sm:text-base md:text-lg"
+		>
+			docs
+		</Button>
+
+		<Button
+			href="https://github.com/SirCesarium/modcrawl"
+			target="_blank"
+			variant="ghost"
+			size="sm"
+			pixel
+			uppercase
+			icon="github"
+			iconSize={20}
+			iconClass="sm:size-6"
+			aria-label="GitHub repository"
+			class="shrink-0 gap-1.5 px-2.5 text-xs text-neutral-100 sm:h-10 sm:gap-2 sm:px-4 sm:text-base md:text-lg"
+		>
+			<span class="hidden sm:inline">source</span>
+		</Button>
+	</div>
 </header>
