@@ -25,6 +25,7 @@
 		iconPosition?: IconPosition;
 		iconSize?: number | string;
 		iconClass?: string;
+		particleClass?: string;
 		href?: string;
 		target?: HTMLAnchorAttributes['target'];
 		rel?: string;
@@ -50,6 +51,7 @@
 		iconPosition = 'left',
 		iconSize,
 		iconClass = '',
+		particleClass = '',
 		href,
 		target,
 		rel,
@@ -84,17 +86,6 @@
 		info: 'shadow-[3px_3px_0_0_color-mix(in_srgb,var(--color-cyan-700)_70%,transparent)]'
 	};
 
-	const offsetHoverShadowClasses: Record<Color, string> = {
-		primary:
-			'hover:shadow-[5px_5px_0_0_color-mix(in_srgb,var(--color-purple-700)_70%,transparent)]',
-		neutral:
-			'hover:shadow-[5px_5px_0_0_color-mix(in_srgb,var(--color-neutral-700)_70%,transparent)]',
-		success:
-			'hover:shadow-[5px_5px_0_0_color-mix(in_srgb,var(--color-emerald-700)_70%,transparent)]',
-		warning: 'hover:shadow-[5px_5px_0_0_color-mix(in_srgb,var(--color-amber-700)_70%,transparent)]',
-		danger: 'hover:shadow-[5px_5px_0_0_color-mix(in_srgb,var(--color-red-700)_70%,transparent)]',
-		info: 'hover:shadow-[5px_5px_0_0_color-mix(in_srgb,var(--color-cyan-700)_70%,transparent)]'
-	};
 
 	const pressShadowClasses: Record<Color, string> = {
 		primary:
@@ -119,20 +110,69 @@
 	};
 
 	let bounceAnimation: Animation | undefined;
-	let hoverAnimation: Animation | undefined;
 
 	const cancelBounce = () => {
 		bounceAnimation?.cancel();
 		bounceAnimation = undefined;
 	};
 
-	const cancelHover = () => {
-		hoverAnimation?.cancel();
-		hoverAnimation = undefined;
-	};
-
 	const prefersReducedMotion = () =>
 		typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+	let cornerTL: HTMLSpanElement | undefined;
+	let cornerTR: HTMLSpanElement | undefined;
+	let cornerBL: HTMLSpanElement | undefined;
+	let cornerBR: HTMLSpanElement | undefined;
+	let cornerAnims: Animation[] = [];
+
+	const stopCorners = () => {
+		for (const a of cornerAnims) a.cancel();
+		cornerAnims = [];
+	};
+
+	const animateCorners = (entering: boolean) => {
+		if (prefersReducedMotion()) return;
+		stopCorners();
+
+		const isOutline = variant === 'outline';
+		const dist = 3;
+		const targets = [
+			{ el: cornerTL, dx: -dist, dy: -dist },
+			{ el: cornerTR, dx: dist, dy: -dist },
+			{ el: cornerBL, dx: -dist, dy: dist },
+			{ el: cornerBR, dx: dist, dy: dist }
+		];
+
+		const restOpacity = isOutline ? 0.35 : 0;
+
+		for (const { el, dx, dy } of targets) {
+			if (!el) continue;
+			const offset = `${dx}px ${dy}px`;
+			const overshoot = `${-dx * 0.45}px ${-dy * 0.45}px`;
+			const from = entering
+				? { translate: offset, opacity: restOpacity }
+				: { translate: '0 0', opacity: 1 };
+			const to = entering
+				? { translate: '0 0', opacity: 1 }
+				: { translate: offset, opacity: restOpacity };
+
+			const a = el.animate(
+				entering
+					? [
+							{ translate: offset, opacity: restOpacity, offset: 0 },
+							{ translate: overshoot, opacity: 1, offset: 0.65 },
+							{ translate: '0 0', opacity: 1, offset: 1 }
+						]
+					: [from, to],
+				{
+					duration: entering ? 350 : 150,
+					easing: entering ? 'cubic-bezier(0.16, 1, 0.3, 1)' : 'ease-in',
+					fill: 'forwards'
+				}
+			);
+			cornerAnims.push(a);
+		}
+	};
 
 	const playBounce = (node: HTMLElement) => {
 		const isFlat = variant === 'link' || variant === 'outline';
@@ -140,7 +180,6 @@
 		const overshoot = isFlat ? '0 0' : '-1px -1px';
 		const settle = isFlat ? '0 0' : '1px 1px';
 
-		cancelHover();
 		cancelBounce();
 
 		const animation = node.animate(
@@ -165,33 +204,6 @@
 			.catch(() => {});
 	};
 
-	const playHoverBounce = (node: HTMLElement) => {
-		cancelBounce();
-		cancelHover();
-
-		const animation = node.animate(
-			[
-				{ translate: '0 -2px', offset: 0 },
-				{ translate: '0 -5px', offset: 0.35 },
-				{ translate: '0 -1px', offset: 0.6 },
-				{ translate: '0 -2px', offset: 0.8 },
-				{ translate: '0 0', offset: 1 }
-			],
-			{
-				duration: 480,
-				easing: 'cubic-bezier(0.22, 1, 0.36, 1)'
-			}
-		);
-
-		hoverAnimation = animation;
-
-		animation.finished
-			.then(() => {
-				if (hoverAnimation === animation) hoverAnimation = undefined;
-			})
-			.catch(() => {});
-	};
-
 	const spawnParticles = (node: HTMLElement, event: MouseEvent) => {
 		const rect = node.getBoundingClientRect();
 		const isKeyboardClick = event.detail === 0;
@@ -204,7 +216,7 @@
 			const size = 3 + Math.floor(Math.random() * 3);
 			const particle = document.createElement('span');
 			particle.setAttribute('aria-hidden', 'true');
-			particle.className = `pointer-events-none absolute z-10 ring-1 ${particleClasses[color]}`;
+			particle.className = `pointer-events-none absolute z-10 ring-1 ${particleClass || particleClasses[color]}`;
 			particle.style.left = `${x - size / 2}px`;
 			particle.style.top = `${y - size / 2}px`;
 			particle.style.width = `${size}px`;
@@ -254,7 +266,6 @@
 	};
 
 	const handlePointerDown: PointerEventHandler<HTMLButtonElement | HTMLAnchorElement> = (event) => {
-		cancelHover();
 		cancelBounce();
 		onpointerdown?.(event);
 	};
@@ -262,16 +273,14 @@
 	const handlePointerEnter: PointerEventHandler<HTMLButtonElement | HTMLAnchorElement> = (
 		event
 	) => {
-		if (!disabled && variant !== 'link' && !prefersReducedMotion()) {
-			playHoverBounce(event.currentTarget);
-		}
+		animateCorners(true);
 		onpointerenter?.(event);
 	};
 
 	const handlePointerLeave: PointerEventHandler<HTMLButtonElement | HTMLAnchorElement> = (
 		event
 	) => {
-		cancelHover();
+		animateCorners(false);
 		onpointerleave?.(event);
 	};
 
@@ -367,7 +376,7 @@
 	const resolvedIconSize = $derived(iconSize ?? iconSizes[size]);
 	const resolvedIconClass = $derived(
 		twMerge(
-			'transition-transform duration-150 group-active:translate-y-px group-active:scale-90',
+			'transition-transform duration-150 group-active:translate-y-px',
 			variant === 'solid' && 'brightness-0',
 			iconClass
 		)
@@ -375,6 +384,9 @@
 	const resolvedRel = $derived(rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined));
 
 	const hasOffsetShadow = $derived(variant === 'solid' || variant === 'soft');
+	const cornerSize = $derived(variant === 'link' ? 'size-1.5' : 'size-2');
+	const cornerTop = $derived(variant === 'link' ? '-top-0.5' : '-top-1');
+	const cornerBottom = $derived(variant === 'link' ? '-bottom-0.5' : '-bottom-1');
 
 	const computedClass = $derived(
 		twMerge(
@@ -383,9 +395,7 @@
 			sizeClasses[size],
 			toneClasses[color][variant],
 			hasOffsetShadow && offsetShadowClasses[color],
-			hasOffsetShadow && 'hover:-top-0.5',
-			hasOffsetShadow && offsetHoverShadowClasses[color],
-			variant !== 'link' && 'active:scale-0.98 active:translate-0.75',
+			variant !== 'link' && 'active:translate-x-0.75 active:translate-y-0.75 active:scale-[0.98]',
 			hasOffsetShadow && 'active:shadow-none',
 			variant === 'outline' && pressShadowClasses[color],
 			variant === 'link' && 'h-auto p-0 underline-offset-4 hover:underline',
@@ -399,28 +409,28 @@
 
 {#snippet corners()}
 	<span
+		bind:this={cornerTL}
 		aria-hidden="true"
-		class="pointer-events-none absolute -top-1 -left-1 z-10 size-2 scale-75 border-t-2 border-l-2 opacity-0 transition duration-150 group-hover:scale-100 group-hover:opacity-100 {cornerClasses[
-			color
-		]}"
+		style={variant === 'outline' ? 'translate: -3px -3px' : undefined}
+		class="pointer-events-none absolute {cornerTop} -left-1 z-10 {cornerSize} origin-top-left border-t-2 border-l-2 {variant === 'outline' ? 'opacity-35' : 'opacity-0'} {cornerClasses[color]}"
 	></span>
 	<span
+		bind:this={cornerTR}
 		aria-hidden="true"
-		class="pointer-events-none absolute -top-1 -right-1 z-10 size-2 scale-75 border-t-2 border-r-2 opacity-0 transition duration-150 group-hover:scale-100 group-hover:opacity-100 {cornerClasses[
-			color
-		]}"
+		style={variant === 'outline' ? 'translate: 3px -3px' : undefined}
+		class="pointer-events-none absolute {cornerTop} -right-1 z-10 {cornerSize} origin-top-right border-t-2 border-r-2 {variant === 'outline' ? 'opacity-35' : 'opacity-0'} {cornerClasses[color]}"
 	></span>
 	<span
+		bind:this={cornerBL}
 		aria-hidden="true"
-		class="pointer-events-none absolute -bottom-1 -left-1 z-10 size-2 scale-75 border-b-2 border-l-2 opacity-0 transition duration-150 group-hover:scale-100 group-hover:opacity-100 {cornerClasses[
-			color
-		]}"
+		style={variant === 'outline' ? 'translate: -3px 3px' : undefined}
+		class="pointer-events-none absolute {cornerBottom} -left-1 z-10 {cornerSize} origin-bottom-left border-b-2 border-l-2 {variant === 'outline' ? 'opacity-35' : 'opacity-0'} {cornerClasses[color]}"
 	></span>
 	<span
+		bind:this={cornerBR}
 		aria-hidden="true"
-		class="pointer-events-none absolute -right-1 -bottom-1 z-10 size-2 scale-75 border-r-2 border-b-2 opacity-0 transition duration-150 group-hover:scale-100 group-hover:opacity-100 {cornerClasses[
-			color
-		]}"
+		style={variant === 'outline' ? 'translate: 3px 3px' : undefined}
+		class="pointer-events-none absolute -right-1 {cornerBottom} z-10 {cornerSize} origin-bottom-right border-r-2 border-b-2 {variant === 'outline' ? 'opacity-35' : 'opacity-0'} {cornerClasses[color]}"
 	></span>
 {/snippet}
 
@@ -430,9 +440,7 @@
 		<Icon name={icon} size={resolvedIconSize} class={resolvedIconClass} alt="" aria-hidden="true" />
 	{/if}
 	{#if children}
-		<span class="inline-block transition-transform duration-150 group-active:translate-x-0.5">
-			{@render children()}
-		</span>
+		{@render children()}
 	{/if}
 	{#if icon && iconPosition === 'right'}
 		<Icon name={icon} size={resolvedIconSize} class={resolvedIconClass} alt="" aria-hidden="true" />
