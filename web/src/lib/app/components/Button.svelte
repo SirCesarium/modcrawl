@@ -86,7 +86,6 @@
 		info: 'shadow-[3px_3px_0_0_color-mix(in_srgb,var(--color-cyan-700)_70%,transparent)]'
 	};
 
-
 	const pressShadowClasses: Record<Color, string> = {
 		primary:
 			'active:shadow-[2px_2px_0_0_color-mix(in_srgb,var(--color-purple-700)_70%,transparent)]',
@@ -412,25 +411,37 @@
 		bind:this={cornerTL}
 		aria-hidden="true"
 		style={variant === 'outline' ? 'translate: -3px -3px' : undefined}
-		class="pointer-events-none absolute {cornerTop} -left-1 z-10 {cornerSize} origin-top-left border-t-2 border-l-2 {variant === 'outline' ? 'opacity-35' : 'opacity-0'} {cornerClasses[color]}"
+		class="pointer-events-none absolute {cornerTop} -left-1 z-10 {cornerSize} origin-top-left border-t-2 border-l-2 {variant ===
+		'outline'
+			? 'opacity-35'
+			: 'opacity-0'} {cornerClasses[color]}"
 	></span>
 	<span
 		bind:this={cornerTR}
 		aria-hidden="true"
 		style={variant === 'outline' ? 'translate: 3px -3px' : undefined}
-		class="pointer-events-none absolute {cornerTop} -right-1 z-10 {cornerSize} origin-top-right border-t-2 border-r-2 {variant === 'outline' ? 'opacity-35' : 'opacity-0'} {cornerClasses[color]}"
+		class="pointer-events-none absolute {cornerTop} -right-1 z-10 {cornerSize} origin-top-right border-t-2 border-r-2 {variant ===
+		'outline'
+			? 'opacity-35'
+			: 'opacity-0'} {cornerClasses[color]}"
 	></span>
 	<span
 		bind:this={cornerBL}
 		aria-hidden="true"
 		style={variant === 'outline' ? 'translate: -3px 3px' : undefined}
-		class="pointer-events-none absolute {cornerBottom} -left-1 z-10 {cornerSize} origin-bottom-left border-b-2 border-l-2 {variant === 'outline' ? 'opacity-35' : 'opacity-0'} {cornerClasses[color]}"
+		class="pointer-events-none absolute {cornerBottom} -left-1 z-10 {cornerSize} origin-bottom-left border-b-2 border-l-2 {variant ===
+		'outline'
+			? 'opacity-35'
+			: 'opacity-0'} {cornerClasses[color]}"
 	></span>
 	<span
 		bind:this={cornerBR}
 		aria-hidden="true"
 		style={variant === 'outline' ? 'translate: 3px 3px' : undefined}
-		class="pointer-events-none absolute -right-1 {cornerBottom} z-10 {cornerSize} origin-bottom-right border-r-2 border-b-2 {variant === 'outline' ? 'opacity-35' : 'opacity-0'} {cornerClasses[color]}"
+		class="pointer-events-none absolute -right-1 {cornerBottom} z-10 {cornerSize} origin-bottom-right border-r-2 border-b-2 {variant ===
+		'outline'
+			? 'opacity-35'
+			: 'opacity-0'} {cornerClasses[color]}"
 	></span>
 {/snippet}
 

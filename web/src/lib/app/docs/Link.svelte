@@ -12,12 +12,7 @@
 	let { href = '#', children, class: className = '', ...restProps }: Props = $props();
 </script>
 
-<Button
-	variant="link"
-	{href}
-	class={className}
-	{...restProps}
->
+<Button variant="link" {href} class={className} {...restProps}>
 	{#if children}
 		{@render children()}
 	{/if}

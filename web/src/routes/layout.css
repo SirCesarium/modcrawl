@@ -165,7 +165,6 @@ pre[class*='language-'] {
 	padding: 0.15em 0.3em !important;
 }
 
-
 /** Respect the user's reduced-motion preference across the app. */
 @media (prefers-reduced-motion: reduce) {
 	*,
