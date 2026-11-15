@@ -1,4 +1,8 @@
 @import 'tailwindcss';
+@import './prism-modcrawl.css';
+
+/* Docs markdown lives outside web/, so Tailwind must scan it explicitly. */
+@source '../../../docs';
 
 /** Design tokens and keyframes shared by every route. */
 @theme {
@@ -136,7 +140,31 @@
 /** Pixel font utility for headings and decorative labels. */
 .font-pixel {
 	font-family: 'Silkscreen', sans-serif;
+	-webkit-font-smoothing: none;
+	-moz-osx-font-smoothing: grayscale;
 }
+
+/** Let the code wrapper own the translucent purple surface. */
+pre[class*='language-'],
+pre[class*='language-'] > code,
+pre[class*='language-'] > code[class*='language-'] {
+	background: transparent !important;
+}
+
+:not(pre) > code[class*='language-'] {
+	background: color-mix(in srgb, var(--color-purple-950) 40%, transparent) !important;
+	border: 1px solid color-mix(in srgb, var(--color-purple-500) 25%, transparent);
+}
+
+pre[class*='language-'] {
+	margin: 0 !important;
+	padding: 0.25rem 1rem 1.25rem !important;
+}
+
+:not(pre) > code[class*='language-'] {
+	padding: 0.15em 0.3em !important;
+}
+
 
 /** Respect the user's reduced-motion preference across the app. */
 @media (prefers-reduced-motion: reduce) {

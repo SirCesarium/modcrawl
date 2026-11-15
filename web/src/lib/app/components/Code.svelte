@@ -1,13 +1,21 @@
 <script lang="ts">
+	import CodeToolbar from '#app/docs/CodeToolbar.svelte';
 	import Prism from 'prismjs';
 	import 'prismjs/components/prism-json';
 	import 'prismjs/components/prism-java';
 	import 'prismjs/components/prism-bash';
-	import 'prism-themes/themes/prism-gruvbox-dark.css';
+	import 'prismjs/components/prism-powershell';
+	import 'prismjs/components/prism-markdown';
+	import 'prismjs/components/prism-python';
+	import 'prismjs/components/prism-javascript';
+	import 'prismjs/components/prism-typescript';
+
+	type Language =
+		'java' | 'json' | 'bash' | 'powershell' | 'markdown' | 'python' | 'typescript' | (string & {});
 
 	interface Props {
 		code: string;
-		language?: 'java' | 'json' | 'bash';
+		language?: Language;
 		class?: string;
 	}
 
@@ -23,15 +31,14 @@
 	});
 </script>
 
-<div class="relative my-4 overflow-hidden rounded-xl bg-[#1d2021] shadow-lg {className}">
-	<div
-		class="absolute top-2 right-3 hidden font-mono text-xs tracking-wider uppercase opacity-50 sm:block"
-	>
-		{language}
-	</div>
+<div
+	data-code-block
+	class="relative my-4 overflow-hidden border border-purple-500/25 bg-purple-950/40 shadow-lg {className}"
+>
+	<CodeToolbar {language} />
 	<!-- eslint-disable svelte/no-at-html-tags -- Safe internal Prism.js highlighted output -->
 	<pre
-		class="language-{language} overflow-x-auto p-3 font-mono text-[10px] leading-relaxed sm:p-4 sm:text-sm"><code
+		class="language-{language} overflow-x-auto font-mono text-[10px] leading-relaxed sm:text-sm"><code
 			class="language-{language}">{@html highlighted}</code
 		></pre>
 </div>
