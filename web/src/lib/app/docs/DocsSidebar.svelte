@@ -35,7 +35,7 @@
 {/if}
 
 <aside
-	class="fixed inset-y-14 left-0 z-35 w-80 border-r border-white/10 bg-neutral-950/95 p-4 transition-transform duration-200 lg:static lg:inset-y-auto lg:z-auto lg:w-88 lg:translate-x-0 lg:border-r lg:border-white/10 lg:bg-transparent lg:py-8 lg:pr-6 lg:pl-6 {open
+	class="fixed inset-y-14 left-0 z-35 w-80 border-r border-white/10 bg-neutral-950/95 p-4 transition-transform duration-200 lg:static lg:inset-y-auto lg:z-auto lg:w-88 lg:translate-x-0 lg:border-r lg:border-white/10 lg:bg-transparent lg:px-6 lg:py-8 {open
 		? 'translate-x-0'
 		: '-translate-x-full'}"
 >

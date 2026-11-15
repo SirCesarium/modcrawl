@@ -394,7 +394,7 @@
 			sizeClasses[size],
 			toneClasses[color][variant],
 			hasOffsetShadow && offsetShadowClasses[color],
-			variant !== 'link' && 'active:translate-x-0.75 active:translate-y-0.75 active:scale-[0.98]',
+			variant !== 'link' && 'active:scale-0.98 active:translate-0.75',
 			hasOffsetShadow && 'active:shadow-none',
 			variant === 'outline' && pressShadowClasses[color],
 			variant === 'link' && 'h-auto p-0 underline-offset-4 hover:underline',

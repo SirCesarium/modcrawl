@@ -21,7 +21,7 @@
 			: 'opacity-0'}"
 	></canvas>
 
-	<!-- eslint-disable-next-line tailwindcss/no-unnecessary-arbitrary-value -- Tailwind v4 does not support opacity-0.045; arbitrary value is required -->
+	<!-- eslint-disable tailwindcss/no-unnecessary-arbitrary-value -- Tailwind v4 does not support opacity-0.045; arbitrary value is required -->
 	<div
 		class="absolute -inset-24 bg-[url('/noise.png')] bg-size-[128px_128px] bg-repeat opacity-[0.045] [image-rendering:pixelated]"
 	></div>

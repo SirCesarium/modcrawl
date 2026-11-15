@@ -6,10 +6,10 @@
 	let { class: className = '' }: Props = $props();
 </script>
 
-<hr class="docs-rule {className}" />
+<hr class={className} />
 
 <style>
-	.docs-rule {
+	hr {
 		border: none;
 		height: 1px;
 		position: relative;
@@ -23,8 +23,8 @@
 		);
 	}
 
-	.docs-rule::before,
-	.docs-rule::after {
+	hr::before,
+	hr::after {
 		content: '';
 		position: absolute;
 		top: -2px;
@@ -33,11 +33,11 @@
 		background: color-mix(in srgb, var(--color-purple-400) 65%, transparent);
 	}
 
-	.docs-rule::before {
+	hr::before {
 		left: calc(10% - 2px);
 	}
 
-	.docs-rule::after {
+	hr::after {
 		right: calc(10% - 2px);
 	}
 </style>
