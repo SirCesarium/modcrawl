@@ -45,16 +45,16 @@ fn test_metadata_quilt() {
 }
 
 #[test]
-fn test_metadata_forge_modern() {
-    let jar = common::forge_modern_jar("test_forge", "3.0.0");
-    let meta = read_metadata(jar.path()).expect("failed to read Forge modern metadata");
+fn test_metadata_forge() {
+    let jar = common::forge_jar("test_forge", "3.0.0");
+    let meta = read_metadata(jar.path()).expect("failed to read Forge metadata");
     match meta {
-        ModMetadata::ForgeModern(m) => {
+        ModMetadata::Forge(m) => {
             assert_eq!(m.mods.len(), 1);
             assert_eq!(m.mods[0].mod_id, "test_forge");
             assert_eq!(m.mods[0].version.as_deref(), Some("3.0.0"));
         }
-        other => panic!("expected ModMetadata::ForgeModern, got {other:?}"),
+        other => panic!("expected ModMetadata::Forge, got {other:?}"),
     }
 }
 
@@ -242,7 +242,7 @@ fn test_loader_id_matches_between_commands() {
     let jars = [
         common::fabric_jar("match_fabric", "1.0.0"),
         common::quilt_jar("match_quilt", "1.0.0"),
-        common::forge_modern_jar("match_forge", "1.0.0"),
+        common::forge_jar("match_forge", "1.0.0"),
         common::neoforge_jar("match_neoforge", "1.0.0"),
         common::forge_legacy_jar("match_forge_legacy", "1.12-1.0"),
         common::bukkit_jar("MatchBukkit", "1.0.0"),

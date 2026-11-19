@@ -2,7 +2,7 @@
 
 pub mod dep;
 
-use super::forge_modern::metadata;
+use super::forge::metadata;
 use crate::core::dep::types::DepEntry;
 use crate::core::detect_mod_type::ModType;
 use crate::core::metadata::ModMetadata;

@@ -1,9 +1,9 @@
 //! Command-line interface and per-command argument handling.
 
 pub mod dep;
+pub mod loader;
 pub mod metadata;
 pub mod side;
-pub mod r#type;
 
 #[cfg(feature = "classfile")]
 pub mod classes;
@@ -49,9 +49,11 @@ pub enum Commands {
     #[command(aliases = &["meta", "md"])]
     Metadata(metadata::Args),
 
-    /// Get mod type. (eg. `NeoForge` mod, `Fabric` mod, ...)
-    #[command(name = "type", aliases = &["t", "ty", "loader"])]
-    Type(r#type::Args),
+    /// Detect the mod or plugin loader (eg. `NeoForge` mod, `Fabric` mod, ...).
+    ///
+    /// `type` is kept as an alias of `loader`.
+    #[command(aliases = &["t", "ty", "type"])]
+    Loader(loader::Args),
 
     /// Classify mods and plugins as client, server, both, or unknown.
     #[command(aliases = &["sd"])]

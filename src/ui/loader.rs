@@ -1,4 +1,4 @@
-//! `modcrawl type` — the loader detection line.
+//! `modcrawl loader` — the loader detection line.
 
 use anstream::println;
 

@@ -55,8 +55,8 @@ fn test_side_bukkit_server() {
 }
 
 #[test]
-fn test_side_forge_modern() {
-    let jar = common::forge_modern_jar("forge_modern", "1.0.0");
+fn test_side_forge() {
+    let jar = common::forge_jar("forge", "1.0.0");
     let report = side_report(jar.path()).expect("failed to classify");
     assert_eq!(report.mod_type, ModType::Forge(ForgeModFormat::ModsToml));
     assert_eq!(report.side, Side::Both);

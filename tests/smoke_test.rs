@@ -119,19 +119,19 @@ fn smoke_test_ferritecore_neoforge() {
 
 #[test]
 #[ignore = "requires real downloaded JARs from Modrinth in .smoke_fixtures"]
-fn smoke_test_ferritecore_forge_modern() {
+fn smoke_test_ferritecore_forge() {
     let path = fixture_path("ferritecore-6.0.1-forge.jar")
         .expect("ferritecore-forge fixture not found; run scripts/fetch_modrinth_fixtures.sh");
 
-    let detected = identify(&path).expect("failed to identify FerriteCore Forge Modern");
+    let detected = identify(&path).expect("failed to identify FerriteCore Forge");
     assert_eq!(detected, ModType::Forge(ForgeModFormat::ModsToml));
 
-    let meta = read_metadata(&path).expect("failed to read FerriteCore Forge Modern metadata");
+    let meta = read_metadata(&path).expect("failed to read FerriteCore Forge metadata");
     match meta {
-        modcrawl::ModMetadata::ForgeModern(m) => {
+        modcrawl::ModMetadata::Forge(m) => {
             assert_eq!(m.mods[0].mod_id, "ferritecore");
         }
-        other => panic!("expected ForgeModern metadata, got {other:?}"),
+        other => panic!("expected Forge metadata, got {other:?}"),
     }
 }
 
@@ -253,11 +253,11 @@ fn smoke_test_jei() {
 
     let meta = read_metadata(&path).expect("failed to read JEI metadata");
     match meta {
-        modcrawl::ModMetadata::ForgeModern(m) => {
+        modcrawl::ModMetadata::Forge(m) => {
             assert_eq!(m.mods[0].mod_id, "jei");
             assert_eq!(m.mods[0].version.as_deref(), Some("15.74.0.234"));
         }
-        other => panic!("expected ForgeModern metadata for JEI, got {other:?}"),
+        other => panic!("expected Forge metadata for JEI, got {other:?}"),
     }
 
     let report = analyze(&path, false).expect("failed to analyze JEI deps");
@@ -343,11 +343,11 @@ fn smoke_test_create_if_present() {
 
     let meta = read_metadata(&path).expect("failed to read Create metadata");
     match meta {
-        modcrawl::ModMetadata::ForgeModern(m) => {
+        modcrawl::ModMetadata::Forge(m) => {
             assert_eq!(m.mods[0].mod_id, "create");
             assert_eq!(m.mods[0].version.as_deref(), Some("6.0.8"));
         }
-        other => panic!("expected ForgeModern metadata for Create, got {other:?}"),
+        other => panic!("expected Forge metadata for Create, got {other:?}"),
     }
 
     let report = analyze(&path, false).expect("failed to analyze Create deps");

@@ -3,8 +3,8 @@
 pub(crate) mod bukkit;
 pub(crate) mod bungee;
 pub(crate) mod fabric;
+pub(crate) mod forge;
 pub(crate) mod forge_legacy;
-pub(crate) mod forge_modern;
 pub(crate) mod neoforge;
 pub(crate) mod paper;
 pub(crate) mod quilt;
@@ -21,7 +21,7 @@ pub fn register_all(registry: &mut Registry) {
     registry.register(Box::new(paper::PaperHandler));
     registry.register(Box::new(bukkit::BukkitHandler));
     registry.register(Box::new(neoforge::NeoForgeHandler));
-    registry.register(Box::new(forge_modern::ForgeModernHandler));
+    registry.register(Box::new(forge::ForgeHandler));
     registry.register(Box::new(forge_legacy::ForgeLegacyHandler));
     registry.register(Box::new(fabric::FabricHandler));
     registry.register(Box::new(quilt::QuiltHandler));
@@ -80,7 +80,7 @@ mod tests {
     }
 
     #[test]
-    fn test_forge_modern_handler() {
+    fn test_forge_handler() {
         test_handler(
             &ModType::Forge(ForgeModFormat::ModsToml),
             "META-INF/mods.toml",

@@ -1,4 +1,4 @@
-//! The `type` command.
+//! The `loader` command.
 
 use std::io;
 use std::path::PathBuf;
@@ -15,7 +15,7 @@ use crate::ui;
 
 const EOCD_MAGIC: &[u8] = b"PK\x05\x06";
 
-/// Arguments for the `type` command.
+/// Arguments for the `loader` command.
 #[derive(ClapArgs)]
 pub struct Args {
     /// Path of JAR file or directory containing JAR files
@@ -52,7 +52,7 @@ fn process_zip_chunks(data: &[u8], json: bool) -> Result<bool> {
                 })?
             );
         } else {
-            ui::render_type(&mod_type);
+            ui::render_loader(&mod_type);
         }
         return Ok(false);
     }
@@ -87,7 +87,7 @@ fn process_zip_chunks(data: &[u8], json: bool) -> Result<bool> {
                     mod_type,
                 });
             } else {
-                ui::render_type_tagged(n, &mod_type);
+                ui::render_loader_tagged(n, &mod_type);
             }
         }
         prev = chunk_end;
@@ -141,8 +141,8 @@ fn render(files: &[PathBuf], named_only: bool, json: bool) -> Result<bool> {
             let pairs: Vec<(String, _)> =
                 entries.into_iter().map(|e| (e.file, e.mod_type)).collect();
             match (named_only, pairs.as_slice()) {
-                (true, [entry]) => ui::render_type(&entry.1),
-                _ => ui::render_type_multi(&pairs),
+                (true, [entry]) => ui::render_loader(&entry.1),
+                _ => ui::render_loader_multi(&pairs),
             }
         }
     }
@@ -150,7 +150,7 @@ fn render(files: &[PathBuf], named_only: bool, json: bool) -> Result<bool> {
     Ok(failed)
 }
 
-/// Run the `type` command: detect mod/plugin type(s) from JAR files.
+/// Run the `loader` command: detect mod/plugin type(s) from JAR files.
 ///
 /// # Errors
 ///

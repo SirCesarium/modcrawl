@@ -1,8 +1,8 @@
 //! Dependency extraction from `neoforge.mods.toml`.
 
 use super::super::super::dep::types::{DepEntry, VersionRange};
-use super::super::forge_modern::dep::forge_dep_kind;
-use super::super::forge_modern::metadata::parse;
+use super::super::forge::dep::forge_dep_kind;
+use super::super::forge::metadata::parse;
 use crate::error::Result;
 
 /// Extracts dependencies from a `NeoForge` `mods.toml` document.

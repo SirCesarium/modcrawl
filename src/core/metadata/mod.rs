@@ -15,7 +15,7 @@ use crate::error::{Error, Result};
 
 use super::REGISTRY;
 use super::embedded;
-use super::loaders::{bukkit, bungee, fabric, forge_legacy, forge_modern, paper, quilt, velocity};
+use super::loaders::{bukkit, bungee, fabric, forge, forge_legacy, paper, quilt, velocity};
 
 /// Parsed mod/plugin metadata from a JAR file.
 ///
@@ -30,8 +30,8 @@ pub enum ModMetadata {
     Fabric(Box<fabric::metadata::FabricModMetadata>),
     Quilt(Box<quilt::metadata::QuiltModMetadata>),
     ForgeLegacy(forge_legacy::metadata::ForgeLegacyMetadata),
-    ForgeModern(Box<forge_modern::metadata::ModsTomlMetadata>),
-    NeoForge(Box<forge_modern::metadata::ModsTomlMetadata>),
+    Forge(Box<forge::metadata::ModsTomlMetadata>),
+    NeoForge(Box<forge::metadata::ModsTomlMetadata>),
     Bukkit(bukkit::metadata::BukkitPluginMetadata),
     Bungee(bungee::metadata::BungeePluginMetadata),
     Paper(paper::metadata::PaperPluginMetadata),
@@ -70,7 +70,7 @@ impl Serialize for ModMetadata {
         match self {
             Self::Fabric(m) => flatten_with_type(type_id, m, serializer),
             Self::Quilt(m) => flatten_with_type(type_id, m, serializer),
-            Self::ForgeModern(m) | Self::NeoForge(m) => flatten_with_type(type_id, m, serializer),
+            Self::Forge(m) | Self::NeoForge(m) => flatten_with_type(type_id, m, serializer),
             Self::Bukkit(m) => flatten_with_type(type_id, m, serializer),
             Self::Bungee(m) => flatten_with_type(type_id, m, serializer),
             Self::Paper(m) => flatten_with_type(type_id, m, serializer),
@@ -95,7 +95,7 @@ impl ModMetadata {
             Self::Fabric(_) => ModType::Fabric,
             Self::Quilt(_) => ModType::Quilt,
             Self::ForgeLegacy(_) => ModType::Forge(ForgeModFormat::McmodInfo),
-            Self::ForgeModern(_) => ModType::Forge(ForgeModFormat::ModsToml),
+            Self::Forge(_) => ModType::Forge(ForgeModFormat::ModsToml),
             Self::NeoForge(_) => ModType::NeoForge,
             Self::Bukkit(_) => ModType::Plugin(PluginType::Bukkit),
             Self::Bungee(_) => ModType::Plugin(PluginType::Bungee),
@@ -115,7 +115,7 @@ impl fmt::Display for ModMetadata {
             Self::ForgeLegacy(entries) => {
                 write!(f, "{}", forge_legacy::metadata::ForgeLegacyDisplay(entries))
             }
-            Self::ForgeModern(m) | Self::NeoForge(m) => write!(f, "{m}"),
+            Self::Forge(m) | Self::NeoForge(m) => write!(f, "{m}"),
             Self::Bukkit(m) => write!(f, "{m}"),
             Self::Bungee(m) => write!(f, "{m}"),
             Self::Paper(m) => write!(f, "{m}"),

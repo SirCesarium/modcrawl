@@ -6,13 +6,13 @@ use super::style::{dim, kind_label, kind_style, loader_style, paint};
 use super::table::{Cell, cell, print_table, styled_cell};
 use crate::core::dep::types::{DepKind, VersionRange};
 use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
-use crate::core::loaders::forge_modern::dep::forge_dep_kind;
+use crate::core::loaders::forge::dep::forge_dep_kind;
 use crate::core::loaders::{
     bukkit::metadata::BukkitPluginMetadata,
     bungee::metadata::BungeePluginMetadata,
     fabric::metadata::FabricModMetadata,
+    forge::metadata::{ModsTomlMetadata, ModsTomlMod},
     forge_legacy::metadata::ForgeLegacyModEntry,
-    forge_modern::metadata::{ModsTomlMetadata, ModsTomlMod},
     paper::metadata::PaperPluginMetadata,
     quilt::metadata::{QuiltModMetadata, QuiltVersions, StringOrList},
     velocity::metadata::VelocityPluginMetadata,
@@ -47,8 +47,8 @@ pub(crate) fn render(meta: &ModMetadata) {
         ModMetadata::Fabric(m) => fabric(m),
         ModMetadata::Quilt(m) => quilt(m),
         ModMetadata::ForgeLegacy(entries) => forge_legacy(entries),
-        ModMetadata::ForgeModern(m) => forge_modern(m, ModType::Forge(ForgeModFormat::ModsToml)),
-        ModMetadata::NeoForge(m) => forge_modern(m, ModType::NeoForge),
+        ModMetadata::Forge(m) => forge(m, ModType::Forge(ForgeModFormat::ModsToml)),
+        ModMetadata::NeoForge(m) => forge(m, ModType::NeoForge),
         ModMetadata::Bukkit(m) => bukkit(m),
         ModMetadata::Bungee(m) => bungee(m),
         ModMetadata::Paper(m) => paper(m),
@@ -308,7 +308,7 @@ fn quilt(m: &QuiltModMetadata) -> Vec<Block> {
 
 /// Forge/NeoForge `mods.toml`. File-level fields ride on the first block, each
 /// `mods[]` entry gets its own, and the merged dependency table goes on the last.
-fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
+fn forge(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
     let mut blocks = Vec::new();
     let mut entries = m.mods.iter();
 
@@ -351,7 +351,7 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
         });
     }
 
-    let depends = forge_modern_depends(m);
+    let depends = forge_depends(m);
 
     if let Some(last) = blocks.last_mut() {
         last.depends = depends;
@@ -437,7 +437,7 @@ fn mod_title(entry: &ModsTomlMod) -> String {
 
 /// Forge/NeoForge `dependencies` map as rows. The only loader that records a
 /// per-dependency side.
-fn forge_modern_depends(m: &ModsTomlMetadata) -> Vec<DepRow> {
+fn forge_depends(m: &ModsTomlMetadata) -> Vec<DepRow> {
     m.dependencies
         .values()
         .flat_map(|deps| {

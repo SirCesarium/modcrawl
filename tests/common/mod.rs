@@ -147,8 +147,8 @@ pub fn quilt_jar(id: &str, version: &str) -> TempJar {
     TempJar::from_entries(&[("quilt.mod.json", manifest.as_bytes())])
 }
 
-/// Create a minimal Forge modern (`mods.toml`) fixture.
-pub fn forge_modern_jar(id: &str, version: &str) -> TempJar {
+/// Create a minimal Forge (`mods.toml`) fixture.
+pub fn forge_jar(id: &str, version: &str) -> TempJar {
     let manifest = format!(
         r#"modLoader="javafml"
 loaderVersion="[47,)"
@@ -172,7 +172,7 @@ side="BOTH"
     TempJar::from_entries(&[("META-INF/mods.toml", manifest.as_bytes())])
 }
 
-/// Create a minimal `NeoForge` modern fixture.
+/// Create a minimal `NeoForge` fixture.
 pub fn neoforge_jar(id: &str, version: &str) -> TempJar {
     let manifest = format!(
         r#"modLoader="javafml"

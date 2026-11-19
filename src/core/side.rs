@@ -16,7 +16,7 @@ use crate::core::embedded::visit_embedded;
 use crate::core::identify::identify_impl;
 use crate::core::loaders::fabric;
 use crate::core::loaders::fabric::metadata::FabricModMetadata;
-use crate::core::loaders::forge_modern::metadata::{ModsTomlDependency, ModsTomlMetadata};
+use crate::core::loaders::forge::metadata::{ModsTomlDependency, ModsTomlMetadata};
 use crate::core::loaders::quilt;
 use crate::core::loaders::quilt::metadata::QuiltModMetadata;
 use crate::core::metadata::{ModMetadata, read_metadata_impl, read_metadata_string};
@@ -284,7 +284,7 @@ pub fn classify(metadata: &ModMetadata) -> Side {
     match metadata {
         ModMetadata::Fabric(m) => fabric_side(m),
         ModMetadata::Quilt(m) => quilt_side(m),
-        ModMetadata::ForgeModern(m) | ModMetadata::NeoForge(m) => forge_side(m),
+        ModMetadata::Forge(m) | ModMetadata::NeoForge(m) => forge_side(m),
         ModMetadata::Bukkit(_)
         | ModMetadata::Paper(_)
         | ModMetadata::Bungee(_)
@@ -576,9 +576,8 @@ fn section_len(config: &Value, key: &str) -> usize {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use crate::core::loaders::{
-        bukkit, bungee, fabric, forge_legacy, forge_modern, paper, quilt, velocity,
-    };
+    use crate::core::loaders::forge::metadata as forge_metadata;
+    use crate::core::loaders::{bukkit, bungee, fabric, forge_legacy, paper, quilt, velocity};
 
     fn fabric(json: &str) -> ModMetadata {
         ModMetadata::Fabric(Box::new(fabric::metadata::parse(json).unwrap()))
@@ -588,16 +587,12 @@ mod tests {
         ModMetadata::Quilt(Box::new(quilt::metadata::parse(json).unwrap()))
     }
 
-    fn forge(toml: &str, kind: fn(Box<ModsTomlMetadata>) -> ModMetadata) -> ModMetadata {
-        kind(Box::new(forge_modern::metadata::parse(toml).unwrap()))
-    }
-
-    fn modern(toml: &str) -> ModMetadata {
-        forge(toml, ModMetadata::ForgeModern)
+    fn forge(toml: &str) -> ModMetadata {
+        ModMetadata::Forge(Box::new(forge_metadata::parse(toml).unwrap()))
     }
 
     fn neoforge(toml: &str) -> ModMetadata {
-        forge(toml, ModMetadata::NeoForge)
+        ModMetadata::NeoForge(Box::new(forge_metadata::parse(toml).unwrap()))
     }
 
     fn fabric_with_environment(environment: Option<&str>) -> ModMetadata {
@@ -703,10 +698,10 @@ version = "1.0.0"
 
     #[test]
     fn forge_client_side_only() {
-        let client = modern(&format!("clientSideOnly = true\n{MODS}"));
+        let client = forge(&format!("clientSideOnly = true\n{MODS}"));
         assert_eq!(classify(&client), Side::Client);
 
-        let both = modern(&format!("clientSideOnly = false\n{MODS}"));
+        let both = forge(&format!("clientSideOnly = false\n{MODS}"));
         assert_eq!(classify(&both), Side::Both);
 
         let neoforge = neoforge(&format!("clientSideOnly = true\n{MODS}"));
@@ -715,7 +710,7 @@ version = "1.0.0"
 
     #[test]
     fn forge_dependency_side_fallback() {
-        let client = modern(&format!(
+        let client = forge(&format!(
             r#"{MODS}
 [[dependencies.example]]
 modId = "minecraft"
@@ -724,7 +719,7 @@ side = "CLIENT"
         ));
         assert_eq!(classify(&client), Side::Client);
 
-        let server = modern(&format!(
+        let server = forge(&format!(
             r#"{MODS}
 [[dependencies.example]]
 modId = "minecraft"
@@ -733,7 +728,7 @@ side = "SERVER"
         ));
         assert_eq!(classify(&server), Side::Server);
 
-        let both = modern(&format!(
+        let both = forge(&format!(
             r#"{MODS}
 [[dependencies.example]]
 modId = "minecraft"
@@ -745,10 +740,10 @@ side = "BOTH"
 
     #[test]
     fn forge_absent_or_conflicting_side_is_unknown() {
-        let absent = modern(MODS);
+        let absent = forge(MODS);
         assert_eq!(classify(&absent), Side::Unknown);
 
-        let mixed = modern(&format!(
+        let mixed = forge(&format!(
             r#"{MODS}
 [[dependencies.example]]
 modId = "other"
@@ -766,7 +761,7 @@ side = "SERVER"
     fn forge_platform_dependency_decides_the_side() {
         // Create's shape: the game runs on both sides while optional
         // integrations are client-only.
-        let both = modern(&format!(
+        let both = forge(&format!(
             r#"{MODS}
 [[dependencies.example]]
 modId = "neoforge"
@@ -787,7 +782,7 @@ side = "CLIENT"
         ));
         assert_eq!(classify(&both), Side::Both);
 
-        let client = modern(&format!(
+        let client = forge(&format!(
             r#"{MODS}
 [[dependencies.example]]
 modId = "minecraft"
@@ -804,7 +799,7 @@ side = "SERVER"
         ));
         assert_eq!(classify(&client), Side::Client);
 
-        let server = modern(&format!(
+        let server = forge(&format!(
             r#"{MODS}
 [[dependencies.example]]
 modId = "minecraft"
@@ -820,7 +815,7 @@ side = "BOTH"
 
     #[test]
     fn forge_platform_dependencies_that_contradict_are_unknown() {
-        let contradictory = modern(&format!(
+        let contradictory = forge(&format!(
             r#"{MODS}
 [[dependencies.example]]
 modId = "minecraft"
@@ -834,7 +829,7 @@ side = "SERVER"
         assert_eq!(classify(&contradictory), Side::Unknown);
 
         // A platform dependency without a side carries no information.
-        let unsided = modern(&format!(
+        let unsided = forge(&format!(
             r#"{MODS}
 [[dependencies.example]]
 modId = "minecraft"

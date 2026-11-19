@@ -65,8 +65,8 @@ fn test_analyze_quilt_dependencies() {
 }
 
 #[test]
-fn test_analyze_forge_modern_dependencies() {
-    let jar = common::forge_modern_jar("forge_dep_test", "1.0.0");
+fn test_analyze_forge_dependencies() {
+    let jar = common::forge_jar("forge_dep_test", "1.0.0");
     let report = analyze(jar.path(), false).expect("failed to analyze Forge dependencies");
 
     assert_eq!(report.dependencies.len(), 1);
@@ -75,7 +75,7 @@ fn test_analyze_forge_modern_dependencies() {
 }
 
 #[test]
-fn test_analyze_forge_modern_mandatory_and_ordering() {
+fn test_analyze_forge_mandatory_and_ordering() {
     let manifest = r#"modLoader="javafml"
 loaderVersion="[47,)"
 license="MIT"
@@ -106,7 +106,7 @@ ordering="BEFORE"
 }
 
 #[test]
-fn test_analyze_forge_modern_incompatible_dependencies() {
+fn test_analyze_forge_incompatible_dependencies() {
     let manifest = r#"modLoader="javafml"
 loaderVersion="[47,)"
 license="MIT"

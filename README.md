@@ -75,7 +75,7 @@ modcrawl side mods/ --json | jq '.[] | select(.side == "client")'
 | --- | --- | --- | --- |
 | `dep` | `d`, `deps`, `dependencies` | Analyze mod dependencies and find embedded or missing requirements | `--include-jar-in-jar` (`--jij`), `-j`, `--json` |
 | `metadata` | `meta`, `md` | Extract mod and plugin metadata (name, ID, version, authors, etc.) | `-j`, `--json` |
-| `loader` | `t`, `ty` | Detect mod loader or server plugin platform | `-j`, `--json` |
+| `loader` | `t`, `ty`, `type` | Detect mod loader or server plugin platform | `-j`, `--json` |
 | `side` | `sd` | Classify mods and plugins as `client`, `server`, `both`, or `unknown` | `-j`, `--json` |
 | `classes` | `c`, `cls` | List all `.class` files with Java classfile version and access flags | `--strict`, `-j`, `--json` |
 | `grep` | `g`, `search` | Search strings in constant pools of `.class` files | `-q`, `--quiet`, `--limit <N>`, `--strict`, `-j`, `--json` |

@@ -6,13 +6,13 @@ pub(crate) mod deps;
 pub(crate) mod dupes;
 pub(crate) mod grep;
 pub(crate) mod lines;
+pub(crate) mod loader;
 pub(crate) mod metadata;
 pub(crate) mod mixins;
 pub(crate) mod side;
 pub(crate) mod style;
 pub(crate) mod table;
 pub(crate) mod text;
-pub(crate) mod r#type;
 
 pub(crate) use classes::render as render_classes;
 pub(crate) use deps::render as render_deps;
@@ -21,10 +21,11 @@ pub(crate) use grep::{more_matches, render as render_grep};
 #[cfg(feature = "classfile")]
 pub(crate) use lines::skipped_classes;
 pub(crate) use lines::{file_error, file_header, no_results};
+pub(crate) use loader::{
+    render as render_loader, render_multi as render_loader_multi,
+    render_tagged as render_loader_tagged,
+};
 pub(crate) use metadata::render as render_metadata;
 pub(crate) use mixins::render as render_mixins;
 pub(crate) use mixins::render_overlaps as render_mixin_overlaps;
 pub(crate) use side::{render as render_side, render_one as render_side_one};
-pub(crate) use r#type::{
-    render as render_type, render_multi as render_type_multi, render_tagged as render_type_tagged,
-};

@@ -60,7 +60,7 @@ explain why CI may still pass.
 | --- | --- | --- |
 | `dep` | `src/cmd/dep.rs` | `deps_json` |
 | `metadata` | `src/cmd/metadata.rs` | `metadata_json` |
-| `type` | `src/cmd/type.rs` | `identify` |
+| `loader` | `src/cmd/loader.rs` | `identify` |
 | `side` | `src/cmd/side.rs` | `side_json` |
 | `classes` | `src/cmd/classes.rs` | `classes_json` |
 | `grep` | `src/cmd/grep.rs` | `grep_json` |

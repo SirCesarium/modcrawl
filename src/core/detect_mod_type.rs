@@ -7,7 +7,7 @@ use serde::Serialize;
 /// Metadata format used by a Forge mod.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ForgeModFormat {
-    /// Modern Forge metadata stored in `META-INF/mods.toml`.
+    /// Forge metadata stored in `META-INF/mods.toml`.
     ModsToml,
     /// Legacy Forge metadata stored in `mcmod.info`.
     McmodInfo,
