@@ -1,11 +1,16 @@
 <script lang="ts">
 	import './layout.css';
 	import PageBackdrop from '#app/widgets/PageBackdrop.svelte';
+	import { page } from '$app/state';
 	import type { LayoutProps } from './$types';
 	import { onMount } from 'svelte';
 
 	let { children }: LayoutProps = $props();
 	let ready = $state(false);
+
+	const isDocsRoute = $derived(
+		page.url.pathname === '/docs' || page.url.pathname.startsWith('/docs/')
+	);
 
 	onMount(() => {
 		if (typeof document !== 'undefined' && 'fonts' in document) {
@@ -27,7 +32,9 @@
 	<link rel="icon" href="/favicon.ico" />
 </svelte:head>
 
-<PageBackdrop />
+{#if !isDocsRoute}
+	<PageBackdrop />
+{/if}
 
 <div
 	class="relative z-10 w-full overflow-x-clip transition-opacity duration-500 ease-out {ready
