@@ -1,6 +1,10 @@
 [
   {
     "name": "Getting Started",
-    "pages": ["home"]
+    "pages": ["home", "commands"]
+  },
+  {
+    "name": "Analysis",
+    "pages": ["metadata"]
   }
 ]
