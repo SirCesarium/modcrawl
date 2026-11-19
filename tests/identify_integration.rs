@@ -147,7 +147,7 @@ fn test_identify_json_single() {
     assert!(output.status.success());
     let v: serde_json::Value =
         serde_json::from_slice(&output.stdout).expect("output is not valid JSON");
-    assert_eq!(v.get("type").and_then(|t| t.as_str()), Some("Fabric"));
+    assert_eq!(v.get("type").and_then(|t| t.as_str()), Some("fabric"));
     assert!(v.get("file").is_some());
 }
 
@@ -175,6 +175,6 @@ fn test_identify_json_multi() {
         .iter()
         .filter_map(|e| e.get("type").and_then(|t| t.as_str()))
         .collect();
-    assert!(types.contains(&"Fabric"));
-    assert!(types.contains(&"Forge (mods.toml)"));
+    assert!(types.contains(&"fabric"));
+    assert!(types.contains(&"forge"));
 }

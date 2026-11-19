@@ -19,12 +19,12 @@ use super::loaders::{bukkit, bungee, fabric, forge_legacy, forge_modern, paper, 
 
 /// Parsed mod/plugin metadata from a JAR file.
 ///
-/// Serializes as a flat JSON object with a `"type"` field that identifies the
-/// loader, followed by the loader-specific fields at the top level.
-/// For example: `{"type": "Fabric", "id": "my-mod", ...}`.
+/// Serializes as a flat JSON object with a `"type"` field carrying the loader's
+/// machine id, followed by the loader-specific fields at the top level.
+/// For example: `{"type": "fabric", "id": "my-mod", ...}`.
 ///
 /// `ForgeLegacy` is an exception: its inner value is a list of mod entries, so
-/// it serializes as `{"type": "ForgeLegacy", "mods": [...]}`.
+/// it serializes as `{"type": "forge_legacy", "mods": [...]}`.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ModMetadata {
     Fabric(Box<fabric::metadata::FabricModMetadata>),
@@ -43,7 +43,7 @@ impl Serialize for ModMetadata {
         /// Merge a `"type"` key with the fields of a serializable struct into a
         /// single flat map.  The inner value must serialize as a JSON object.
         fn flatten_with_type<S, T>(
-            type_name: &'static str,
+            type_id: &str,
             inner: &T,
             serializer: S,
         ) -> StdResult<S::Ok, S::Error>
@@ -58,27 +58,28 @@ impl Serialize for ModMetadata {
                 .as_object()
                 .ok_or_else(|| S::Error::custom("inner metadata did not serialize as an object"))?;
             let mut map = serializer.serialize_map(Some(obj.len() + 1))?;
-            map.serialize_entry("type", type_name)?;
+            map.serialize_entry("type", type_id)?;
             for (k, v) in obj {
                 map.serialize_entry(k, v)?;
             }
             map.end()
         }
 
+        let type_id = self.mod_type().id();
+
         match self {
-            Self::Fabric(m) => flatten_with_type("Fabric", m, serializer),
-            Self::Quilt(m) => flatten_with_type("Quilt", m, serializer),
-            Self::ForgeModern(m) => flatten_with_type("ForgeModern", m, serializer),
-            Self::NeoForge(m) => flatten_with_type("NeoForge", m, serializer),
-            Self::Bukkit(m) => flatten_with_type("Bukkit", m, serializer),
-            Self::Bungee(m) => flatten_with_type("Bungee", m, serializer),
-            Self::Paper(m) => flatten_with_type("Paper", m, serializer),
-            Self::Velocity(m) => flatten_with_type("Velocity", m, serializer),
-            // ForgeLegacy inner value is a Vec, not a struct, so it cannot be
+            Self::Fabric(m) => flatten_with_type(type_id, m, serializer),
+            Self::Quilt(m) => flatten_with_type(type_id, m, serializer),
+            Self::ForgeModern(m) | Self::NeoForge(m) => flatten_with_type(type_id, m, serializer),
+            Self::Bukkit(m) => flatten_with_type(type_id, m, serializer),
+            Self::Bungee(m) => flatten_with_type(type_id, m, serializer),
+            Self::Paper(m) => flatten_with_type(type_id, m, serializer),
+            Self::Velocity(m) => flatten_with_type(type_id, m, serializer),
+            // ForgeLegacy's inner value is a Vec, not a struct, so it cannot be
             // flattened field-by-field; wrap it under a "mods" key instead.
             Self::ForgeLegacy(entries) => {
                 let mut map = serializer.serialize_map(Some(2))?;
-                map.serialize_entry("type", "ForgeLegacy")?;
+                map.serialize_entry("type", type_id)?;
                 map.serialize_entry("mods", entries)?;
                 map.end()
             }
@@ -106,45 +107,20 @@ impl ModMetadata {
 
 impl fmt::Display for ModMetadata {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f, "Type:     {}", self.mod_type().label())?;
+
         match self {
-            Self::Fabric(m) => {
-                writeln!(f, "Type:     Fabric")?;
-                write!(f, "{m}")?;
-            }
-            Self::Quilt(m) => {
-                writeln!(f, "Type:     Quilt")?;
-                write!(f, "{m}")?;
-            }
+            Self::Fabric(m) => write!(f, "{m}"),
+            Self::Quilt(m) => write!(f, "{m}"),
             Self::ForgeLegacy(entries) => {
-                writeln!(f, "Type:     Forge (mcmod.info)")?;
-                write!(f, "{}", forge_legacy::metadata::ForgeLegacyDisplay(entries))?;
+                write!(f, "{}", forge_legacy::metadata::ForgeLegacyDisplay(entries))
             }
-            Self::ForgeModern(m) => {
-                writeln!(f, "Type:     Forge (mods.toml)")?;
-                write!(f, "{m}")?;
-            }
-            Self::NeoForge(m) => {
-                writeln!(f, "Type:     NeoForge")?;
-                write!(f, "{m}")?;
-            }
-            Self::Bukkit(m) => {
-                writeln!(f, "Type:     Bukkit/Spigot")?;
-                write!(f, "{m}")?;
-            }
-            Self::Bungee(m) => {
-                writeln!(f, "Type:     BungeeCord")?;
-                write!(f, "{m}")?;
-            }
-            Self::Paper(m) => {
-                writeln!(f, "Type:     Paper")?;
-                write!(f, "{m}")?;
-            }
-            Self::Velocity(m) => {
-                writeln!(f, "Type:     Velocity")?;
-                write!(f, "{m}")?;
-            }
+            Self::ForgeModern(m) | Self::NeoForge(m) => write!(f, "{m}"),
+            Self::Bukkit(m) => write!(f, "{m}"),
+            Self::Bungee(m) => write!(f, "{m}"),
+            Self::Paper(m) => write!(f, "{m}"),
+            Self::Velocity(m) => write!(f, "{m}"),
         }
-        Ok(())
     }
 }
 

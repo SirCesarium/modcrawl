@@ -81,16 +81,45 @@ pub enum ModType {
     Unknown,
 }
 
+impl ModType {
+    /// Stable machine identifier used in JSON output.
+    #[must_use]
+    pub fn id(&self) -> &'static str {
+        match self {
+            Self::Fabric => "fabric",
+            Self::Quilt => "quilt",
+            Self::Forge(ForgeModFormat::ModsToml) => "forge",
+            Self::Forge(ForgeModFormat::McmodInfo) => "forge_legacy",
+            Self::NeoForge => "neoforge",
+            Self::Plugin(PluginType::Bukkit) => "bukkit",
+            Self::Plugin(PluginType::Paper) => "paper",
+            Self::Plugin(PluginType::Bungee) => "bungee",
+            Self::Plugin(PluginType::Velocity) => "velocity",
+            Self::Unknown => "unknown",
+        }
+    }
+
+    /// Human-readable loader name shared by every text renderer.
+    #[must_use]
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::Fabric => "Fabric",
+            Self::Quilt => "Quilt",
+            Self::Forge(ForgeModFormat::ModsToml) => "Forge",
+            Self::Forge(ForgeModFormat::McmodInfo) => "Forge (legacy)",
+            Self::NeoForge => "NeoForge",
+            Self::Plugin(PluginType::Bukkit) => "Bukkit",
+            Self::Plugin(PluginType::Paper) => "Paper",
+            Self::Plugin(PluginType::Bungee) => "Bungee",
+            Self::Plugin(PluginType::Velocity) => "Velocity",
+            Self::Unknown => "Unknown",
+        }
+    }
+}
+
 impl fmt::Display for ModType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Fabric => write!(f, "Fabric"),
-            Self::Quilt => write!(f, "Quilt"),
-            Self::NeoForge => write!(f, "NeoForge"),
-            Self::Unknown => write!(f, "Unknown"),
-            Self::Forge(fmt) => write!(f, "Forge ({fmt})"),
-            Self::Plugin(ty) => write!(f, "Plugin ({ty})"),
-        }
+        f.write_str(self.label())
     }
 }
 
@@ -99,7 +128,7 @@ impl Serialize for ModType {
     where
         S: serde::Serializer,
     {
-        serializer.collect_str(self)
+        serializer.serialize_str(self.id())
     }
 }
 
@@ -122,91 +151,45 @@ mod tests {
     }
 
     #[test]
-    fn mod_type_fabric() {
-        assert_eq!(ModType::Fabric.to_string(), "Fabric");
-    }
+    fn mod_type_labels() {
+        let cases = [
+            (ModType::Fabric, "Fabric"),
+            (ModType::Quilt, "Quilt"),
+            (ModType::Forge(ForgeModFormat::ModsToml), "Forge"),
+            (ModType::Forge(ForgeModFormat::McmodInfo), "Forge (legacy)"),
+            (ModType::NeoForge, "NeoForge"),
+            (ModType::Plugin(PluginType::Bukkit), "Bukkit"),
+            (ModType::Plugin(PluginType::Paper), "Paper"),
+            (ModType::Plugin(PluginType::Bungee), "Bungee"),
+            (ModType::Plugin(PluginType::Velocity), "Velocity"),
+            (ModType::Unknown, "Unknown"),
+        ];
 
-    #[test]
-    fn mod_type_quilt() {
-        assert_eq!(ModType::Quilt.to_string(), "Quilt");
-    }
-
-    #[test]
-    fn mod_type_neoforge() {
-        assert_eq!(ModType::NeoForge.to_string(), "NeoForge");
-    }
-
-    #[test]
-    fn mod_type_unknown() {
-        assert_eq!(ModType::Unknown.to_string(), "Unknown");
-    }
-
-    #[test]
-    fn mod_type_forge_modstoml() {
-        assert_eq!(
-            ModType::Forge(ForgeModFormat::ModsToml).to_string(),
-            "Forge (mods.toml)"
-        );
-    }
-
-    #[test]
-    fn mod_type_forge_mcmodinfo() {
-        assert_eq!(
-            ModType::Forge(ForgeModFormat::McmodInfo).to_string(),
-            "Forge (mcmod.info)"
-        );
-    }
-
-    #[test]
-    fn mod_type_plugin_bukkit() {
-        assert_eq!(
-            ModType::Plugin(PluginType::Bukkit).to_string(),
-            "Plugin (Bukkit/Spigot)"
-        );
-    }
-
-    #[test]
-    fn mod_type_plugin_paper() {
-        assert_eq!(
-            ModType::Plugin(PluginType::Paper).to_string(),
-            "Plugin (Paper)"
-        );
-    }
-
-    #[test]
-    fn mod_type_plugin_bungee() {
-        assert_eq!(
-            ModType::Plugin(PluginType::Bungee).to_string(),
-            "Plugin (BungeeCord)"
-        );
-    }
-
-    #[test]
-    fn mod_type_plugin_velocity() {
-        assert_eq!(
-            ModType::Plugin(PluginType::Velocity).to_string(),
-            "Plugin (Velocity)"
-        );
+        for (kind, label) in cases {
+            assert_eq!(kind.label(), label);
+            assert_eq!(kind.to_string(), label);
+        }
     }
 
     #[test]
     #[allow(clippy::unwrap_used)]
-    fn mod_type_serialization() {
-        assert_eq!(
-            serde_json::to_string(&ModType::Fabric).unwrap(),
-            "\"Fabric\""
-        );
-        assert_eq!(
-            serde_json::to_string(&ModType::Forge(ForgeModFormat::ModsToml)).unwrap(),
-            "\"Forge (mods.toml)\""
-        );
-        assert_eq!(
-            serde_json::to_string(&ModType::Plugin(PluginType::Paper)).unwrap(),
-            "\"Plugin (Paper)\""
-        );
-        assert_eq!(
-            serde_json::to_string(&ModType::Unknown).unwrap(),
-            "\"Unknown\""
-        );
+    fn mod_type_ids() {
+        let cases = [
+            (ModType::Fabric, "fabric"),
+            (ModType::Quilt, "quilt"),
+            (ModType::Forge(ForgeModFormat::ModsToml), "forge"),
+            (ModType::Forge(ForgeModFormat::McmodInfo), "forge_legacy"),
+            (ModType::NeoForge, "neoforge"),
+            (ModType::Plugin(PluginType::Bukkit), "bukkit"),
+            (ModType::Plugin(PluginType::Paper), "paper"),
+            (ModType::Plugin(PluginType::Bungee), "bungee"),
+            (ModType::Plugin(PluginType::Velocity), "velocity"),
+            (ModType::Unknown, "unknown"),
+        ];
+
+        for (kind, id) in cases {
+            assert_eq!(kind.id(), id);
+            assert_eq!(serde_json::to_string(&kind).unwrap(), format!("\"{id}\""));
+        }
     }
 }

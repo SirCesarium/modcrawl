@@ -3,7 +3,7 @@
 use anstyle::{AnsiColor, Color, Style};
 
 use crate::core::dep::types::DepKind;
-use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
+use crate::core::detect_mod_type::{ModType, PluginType};
 use crate::core::side::Side;
 
 /// Foreground color for a loader or plugin type.
@@ -24,23 +24,6 @@ pub(crate) fn loader_color(t: &ModType) -> Color {
 /// Bold loader name in the loader's color.
 pub(crate) fn loader_style(t: &ModType) -> Style {
     Style::new().bold().fg_color(Some(loader_color(t)))
-}
-
-/// Loader name for display. Unlike `ModType`'s `Display`, this drops the
-/// format suffix, keeping it only for legacy `mcmod.info`.
-pub(crate) fn loader_name(t: &ModType) -> &'static str {
-    match t {
-        ModType::Fabric => "Fabric",
-        ModType::Quilt => "Quilt",
-        ModType::Forge(ForgeModFormat::ModsToml) => "Forge",
-        ModType::Forge(ForgeModFormat::McmodInfo) => "Forge (legacy format)",
-        ModType::NeoForge => "NeoForge",
-        ModType::Plugin(PluginType::Bukkit) => "Bukkit/Spigot",
-        ModType::Plugin(PluginType::Paper) => "Paper",
-        ModType::Plugin(PluginType::Bungee) => "BungeeCord",
-        ModType::Plugin(PluginType::Velocity) => "Velocity",
-        ModType::Unknown => "Unknown",
-    }
 }
 
 /// Foreground color for a side classification.

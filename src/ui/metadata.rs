@@ -2,7 +2,7 @@
 
 use anstream::println;
 
-use super::style::{dim, kind_label, kind_style, loader_name, loader_style, paint};
+use super::style::{dim, kind_label, kind_style, loader_style, paint};
 use super::table::{Cell, cell, print_table, styled_cell};
 use crate::core::dep::types::{DepKind, VersionRange};
 use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
@@ -65,7 +65,7 @@ pub(crate) fn render(meta: &ModMetadata) {
 
 /// Print the header, field table, and optional depends table for a block.
 fn print_block(block: &Block) {
-    let name = loader_name(&block.kind);
+    let name = block.kind.label();
     let title = if block.title.is_empty() {
         name.to_owned()
     } else {
@@ -315,7 +315,7 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
     if let Some(first) = entries.next() {
         let mut fields = Vec::new();
 
-        push_field(&mut fields, "Loader", loader_name(&kind).to_owned());
+        push_field(&mut fields, "Loader", kind.label().to_owned());
         push_field(&mut fields, "Loader Version", loader_version(m, &kind));
         push_field(
             &mut fields,
@@ -358,7 +358,7 @@ fn forge_modern(m: &ModsTomlMetadata, kind: ModType) -> Vec<Block> {
     } else {
         let mut fields = Vec::new();
 
-        push_field(&mut fields, "Loader", loader_name(&kind).to_owned());
+        push_field(&mut fields, "Loader", kind.label().to_owned());
         push_field(&mut fields, "Loader Version", loader_version(m, &kind));
         push_field(
             &mut fields,

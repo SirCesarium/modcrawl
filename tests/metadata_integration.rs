@@ -3,6 +3,7 @@
 mod common;
 
 use std::fs::File;
+use std::process::Command;
 
 use modcrawl::{ModMetadata, read_metadata, read_metadata_reader};
 use serde_json::Value;
@@ -196,15 +197,15 @@ fn test_metadata_missing_file_error() {
 /// rather than the serde default of external enum tagging.
 #[test]
 fn test_metadata_json_is_flat() {
-    // Fabric: flat object with "type": "Fabric" and top-level mod fields.
+    // Fabric: flat object with "type": "fabric" and top-level mod fields.
     let jar = common::fabric_jar("flat_test", "1.0.0");
     let meta = read_metadata(jar.path()).expect("failed to read Fabric metadata");
     let json: Value = serde_json::to_value(&meta).expect("serialization failed");
     let obj = json.as_object().expect("expected a JSON object");
     assert_eq!(
         obj.get("type").and_then(Value::as_str),
-        Some("Fabric"),
-        "\"type\" field must be \"Fabric\", got: {json}"
+        Some("fabric"),
+        "\"type\" field must be \"fabric\", got: {json}"
     );
     assert!(
         obj.contains_key("id"),
@@ -215,15 +216,15 @@ fn test_metadata_json_is_flat() {
         "must not use external enum tagging, got: {json}"
     );
 
-    // ForgeLegacy: flat object with "type": "ForgeLegacy" and "mods" array.
+    // ForgeLegacy: flat object with "type": "forge_legacy" and "mods" array.
     let jar = common::forge_legacy_jar("flat_legacy", "1.12-1.0");
     let meta = read_metadata(jar.path()).expect("failed to read ForgeLegacy metadata");
     let json: Value = serde_json::to_value(&meta).expect("serialization failed");
     let obj = json.as_object().expect("expected a JSON object");
     assert_eq!(
         obj.get("type").and_then(Value::as_str),
-        Some("ForgeLegacy"),
-        "\"type\" field must be \"ForgeLegacy\", got: {json}"
+        Some("forge_legacy"),
+        "\"type\" field must be \"forge_legacy\", got: {json}"
     );
     assert!(
         obj.get("mods").and_then(Value::as_array).is_some(),
@@ -233,4 +234,44 @@ fn test_metadata_json_is_flat() {
         !obj.contains_key("ForgeLegacy"),
         "must not use external enum tagging, got: {json}"
     );
+}
+
+/// Both commands must report the same loader id for the same JAR.
+#[test]
+fn test_loader_id_matches_between_commands() {
+    let jars = [
+        common::fabric_jar("match_fabric", "1.0.0"),
+        common::quilt_jar("match_quilt", "1.0.0"),
+        common::forge_modern_jar("match_forge", "1.0.0"),
+        common::neoforge_jar("match_neoforge", "1.0.0"),
+        common::forge_legacy_jar("match_forge_legacy", "1.12-1.0"),
+        common::bukkit_jar("MatchBukkit", "1.0.0"),
+        common::paper_jar("MatchPaper", "1.0.0"),
+        common::velocity_jar("matchvelocity", "1.0.0"),
+        common::bungee_jar("MatchBungee", "1.0.0"),
+    ];
+
+    for jar in &jars {
+        let path = jar.path().to_str().unwrap();
+        let loader = run_json(&["loader", "--json", path]);
+        let metadata = run_json(&["metadata", "--json", path]);
+
+        assert_eq!(
+            loader.get("type"),
+            metadata.get("type"),
+            "loader and metadata disagree for {path}"
+        );
+    }
+}
+
+/// Run `modcrawl` with `args` and parse its stdout as JSON.
+fn run_json(args: &[&str]) -> Value {
+    let output = Command::new(env!("CARGO_BIN_EXE_modcrawl"))
+        .args(args)
+        .output()
+        .expect("failed to run modcrawl");
+
+    assert!(output.status.success(), "modcrawl {args:?} failed");
+
+    serde_json::from_slice(&output.stdout).expect("output is not valid JSON")
 }

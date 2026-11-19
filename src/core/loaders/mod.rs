@@ -33,43 +33,31 @@ pub fn register_all(registry: &mut Registry) {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+    use crate::core::detect_mod_type::{ForgeModFormat, ModType, PluginType};
     use crate::core::registry::Registry;
 
-    fn test_handler(mod_type: &str) {
+    fn test_handler(expect: &ModType, metadata_file: &str) {
         let mut registry = Registry::new();
         register_all(&mut registry);
 
-        let handler = registry.handler_by_file(match mod_type {
-            "Fabric" => "fabric.mod.json",
-            "Quilt" => "quilt.mod.json",
-            "Forge (mods.toml)" => "META-INF/mods.toml",
-            "NeoForge" => "META-INF/neoforge.mods.toml",
-            "Forge (mcmod.info)" => "mcmod.info",
-            "Plugin (Bukkit/Spigot)" => "plugin.yml",
-            "Plugin (Paper)" => "paper-plugin.yml",
-            "Plugin (Velocity)" => "velocity-plugin.json",
-            "Plugin (BungeeCord)" => "bungee.yml",
-            _ => panic!("unknown mod type: {mod_type}"),
-        });
-        assert!(handler.is_some(), "handler for {mod_type} not found");
-        assert_eq!(handler.unwrap().mod_type().to_string(), mod_type);
+        let handler = registry.handler_by_file(metadata_file);
+        assert!(handler.is_some(), "handler for {metadata_file} not found");
+        assert_eq!(&handler.unwrap().mod_type(), expect);
     }
 
     #[test]
     fn test_fabric_handler() {
-        test_handler("Fabric");
+        test_handler(&ModType::Fabric, "fabric.mod.json");
     }
 
     #[test]
     fn test_quilt_handler() {
-        test_handler("Quilt");
+        test_handler(&ModType::Quilt, "quilt.mod.json");
     }
 
     #[test]
     fn registry_detect_dual_fabric_quilt() {
         use zipcrawl::ZipEntry;
-
-        use crate::core::detect_mod_type::ModType;
 
         let mut registry = Registry::new();
         register_all(&mut registry);
@@ -93,36 +81,42 @@ mod tests {
 
     #[test]
     fn test_forge_modern_handler() {
-        test_handler("Forge (mods.toml)");
+        test_handler(
+            &ModType::Forge(ForgeModFormat::ModsToml),
+            "META-INF/mods.toml",
+        );
     }
 
     #[test]
     fn test_neoforge_handler() {
-        test_handler("NeoForge");
+        test_handler(&ModType::NeoForge, "META-INF/neoforge.mods.toml");
     }
 
     #[test]
     fn test_forge_legacy_handler() {
-        test_handler("Forge (mcmod.info)");
+        test_handler(&ModType::Forge(ForgeModFormat::McmodInfo), "mcmod.info");
     }
 
     #[test]
     fn test_bukkit_handler() {
-        test_handler("Plugin (Bukkit/Spigot)");
+        test_handler(&ModType::Plugin(PluginType::Bukkit), "plugin.yml");
     }
 
     #[test]
     fn test_paper_handler() {
-        test_handler("Plugin (Paper)");
+        test_handler(&ModType::Plugin(PluginType::Paper), "paper-plugin.yml");
     }
 
     #[test]
     fn test_velocity_handler() {
-        test_handler("Plugin (Velocity)");
+        test_handler(
+            &ModType::Plugin(PluginType::Velocity),
+            "velocity-plugin.json",
+        );
     }
 
     #[test]
     fn test_bungee_handler() {
-        test_handler("Plugin (BungeeCord)");
+        test_handler(&ModType::Plugin(PluginType::Bungee), "bungee.yml");
     }
 }
