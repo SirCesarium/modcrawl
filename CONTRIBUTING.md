@@ -76,7 +76,7 @@ bun run build
 - Add tests for behavior changes. Tests must be deterministic and must not need network access.
 - Add doc comments to new public APIs and update user-facing documentation when behavior changes.
 - Keep the diff focused. Do not reformat code you did not change (unless the CI is failing).
-- Do not bump the crate version or edit `Cargo.lock` unless the dependency set changes.
+- Leave the crate version and `Cargo.lock` alone. The maintainer bumps the version at release time, which updates `Cargo.lock` too. Dependabot pull requests that change the dependency set are the exception; a maintainer reviews and merges them.
 
 ## Dependencies
 
