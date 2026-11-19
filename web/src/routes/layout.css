@@ -6,6 +6,9 @@
 
 /** Design tokens and keyframes shared by every route. */
 @theme {
+	/* JetBrains Sans is not publicly distributable; Figtree renders as its free stand-in. */
+	--font-sans: 'JetBrains Sans', 'Figtree', sans-serif;
+
 	--animate-code-line: code-line-in 600ms cubic-bezier(0.16, 1, 0.3, 1);
 	--animate-fog: fog 24s ease-in-out infinite alternate;
 	--animate-scroll-chevron: scroll-chevron 1800ms ease-in-out infinite;
@@ -144,25 +147,21 @@
 	-moz-osx-font-smoothing: grayscale;
 }
 
-/** Let the code wrapper own the translucent purple surface. */
+/** Let the code wrapper own the surface; the token theme only colors text. */
 pre[class*='language-'],
 pre[class*='language-'] > code,
 pre[class*='language-'] > code[class*='language-'] {
 	background: transparent !important;
 }
 
-:not(pre) > code[class*='language-'] {
-	background: color-mix(in srgb, var(--color-purple-950) 40%, transparent) !important;
-	border: 1px solid color-mix(in srgb, var(--color-purple-500) 25%, transparent);
-}
-
 pre[class*='language-'] {
 	margin: 0 !important;
-	padding: 0.25rem 1rem 1.25rem !important;
 }
 
 :not(pre) > code[class*='language-'] {
-	padding: 0.15em 0.3em !important;
+	background: color-mix(in srgb, white 7%, transparent) !important;
+	border-radius: 0.25rem;
+	padding: 0.1em 0.35em !important;
 }
 
 /** Respect the user's reduced-motion preference across the app. */

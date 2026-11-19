@@ -21,7 +21,14 @@
 			: 'pointer-events-none -translate-x-1 opacity-0'} flex min-w-0 shrink items-center gap-1.5 transition duration-300 ease-out sm:gap-2"
 		aria-hidden={!showLogo}
 	>
-		<Icon name="modcrawl" size={20} alt="" aria-hidden="true" class="translate-y-0.5 sm:size-6" />
+		<!-- Silkscreen caps sit low in the line box; nudge the icon to the label's optical center. -->
+		<Icon
+			name="modcrawl"
+			size={20}
+			alt=""
+			aria-hidden="true"
+			class="translate-y-px sm:size-6 sm:translate-y-0.5"
+		/>
 		<Typography
 			variant="h4"
 			component="span"
@@ -42,7 +49,7 @@
 			uppercase
 			class="shrink-0 px-2.5 text-xs text-neutral-100 sm:h-10 sm:px-4 sm:text-base md:text-lg"
 		>
-			docs
+			<span class="-translate-y-px">docs</span>
 		</Button>
 
 		<Button
@@ -58,7 +65,7 @@
 			aria-label="GitHub repository"
 			class="shrink-0 gap-1.5 px-2.5 text-xs text-neutral-100 sm:h-10 sm:gap-2 sm:px-4 sm:text-base md:text-lg"
 		>
-			<span class="hidden sm:inline">source</span>
+			<span class="hidden -translate-y-px sm:inline">source</span>
 		</Button>
 	</div>
 </header>
