@@ -8,7 +8,6 @@ license = "MIT"
 authors = ["Cesarium <239650612+SirCesarium@users.noreply.github.com>"]
 readme = "README.md"
 repository = "https://github.com/SirCesarium/modcrawl"
-homepage = "https://github.com/SirCesarium/modcrawl"
 documentation = "https://docs.rs/modcrawl"
 keywords = ["minecraft", "mod", "analyzer", "loaders", "forge"]
 categories = ["development-tools", "command-line-utilities"]
