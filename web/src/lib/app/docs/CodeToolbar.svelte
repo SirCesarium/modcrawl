@@ -28,11 +28,22 @@
 	};
 </script>
 
-<div class="flex w-full items-center justify-between gap-2 px-3 pt-3 sm:px-4">
+<div class="flex w-full items-center justify-between gap-2 px-4 pt-3 pb-1">
 	{#if language}
-		<span class="font-pixel text-[11px] tracking-wider uppercase opacity-70">{language}</span>
+		<span class="font-mono text-[11px] tracking-wide text-neutral-500">{language}</span>
+	{:else}
+		<span></span>
 	{/if}
-	<Button variant="outline" size="xs" class="min-w-18" onclick={copy}>
-		{copied ? 'Copied' : 'Copy'}
+
+	<Button
+		variant="ghost"
+		color="neutral"
+		size="xs"
+		class="min-w-16 opacity-100 transition-opacity sm:opacity-0 sm:group-focus-within/code:opacity-100 sm:group-hover/code:opacity-100 {copied
+			? 'sm:opacity-100'
+			: ''}"
+		onclick={copy}
+	>
+		<span aria-live="polite">{copied ? 'Copied' : 'Copy'}</span>
 	</Button>
 </div>

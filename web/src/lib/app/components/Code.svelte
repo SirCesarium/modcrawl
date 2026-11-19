@@ -33,12 +33,12 @@
 
 <div
 	data-code-block
-	class="relative my-4 overflow-hidden border border-purple-500/25 bg-purple-950/40 shadow-lg {className}"
+	class="group/code relative my-6 overflow-hidden rounded-md border border-white/10 bg-neutral-900/50 {className}"
 >
 	<CodeToolbar {language} />
 	<!-- eslint-disable svelte/no-at-html-tags -- Safe internal Prism.js highlighted output -->
 	<pre
-		class="language-{language} overflow-x-auto font-mono text-[10px] leading-relaxed sm:text-sm"><code
+		class="language-{language} overflow-x-auto px-4 pt-1 pb-4 font-mono text-[13px] leading-6 sm:text-sm"><code
 			class="language-{language}">{@html highlighted}</code
 		></pre>
 </div>

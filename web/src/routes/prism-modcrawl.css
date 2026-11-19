@@ -1,11 +1,10 @@
 /**
- * Prism theme matched to the modcrawl palette: deep indigo surface, lavender
- * base text, and pink, mint and amber accents. The wrapper in layout.css owns
- * the background, so the token rules only set colors.
+ * Quiet Prism theme for docs: neutral base text and four low-saturation accents.
+ * The code surface belongs to the wrapper, so these rules only set token colors.
  */
 code[class*='language-'],
 pre[class*='language-'] {
-	color: #dcd7f5;
+	color: #c7c9d1;
 	font-family: 'JetBrains Mono', monospace;
 	text-shadow: none;
 	tab-size: 2;
@@ -15,12 +14,12 @@ pre[class*='language-'] {
 .token.prolog,
 .token.doctype,
 .token.cdata {
-	color: #7a7397;
+	color: #737a86;
 	font-style: italic;
 }
 
 .token.punctuation {
-	color: #a9a2c9;
+	color: #9ca3af;
 }
 
 .token.namespace {
@@ -28,25 +27,33 @@ pre[class*='language-'] {
 }
 
 .token.property,
-.token.tag,
 .token.constant,
-.token.symbol,
-.token.deleted {
-	color: #f0a6ca;
+.token.symbol {
+	color: #c7c9d1;
+}
+
+.token.tag,
+.token.atrule,
+.token.keyword {
+	color: #b9a7e6;
 }
 
 .token.boolean,
-.token.number {
-	color: #f6c177;
+.token.number,
+.token.regex,
+.token.important,
+.token.variable {
+	color: #d8c39c;
 }
 
 .token.selector,
 .token.attr-name,
+.token.attr-value,
 .token.string,
 .token.char,
 .token.builtin,
 .token.inserted {
-	color: #9be7c4;
+	color: #a8c3a0;
 }
 
 .token.operator,
@@ -54,24 +61,16 @@ pre[class*='language-'] {
 .token.url,
 .language-css .token.string,
 .style .token.string {
-	color: #c4b5fd;
-}
-
-.token.atrule,
-.token.attr-value,
-.token.keyword {
-	color: #c084fc;
+	color: #b0b4bf;
 }
 
 .token.function,
 .token.class-name {
-	color: #7dd3fc;
+	color: #9dbdd4;
 }
 
-.token.regex,
-.token.important,
-.token.variable {
-	color: #f6c177;
+.token.deleted {
+	color: #d8a0a0;
 }
 
 .token.important,
@@ -89,11 +88,10 @@ pre[class*='language-'] {
 
 /* Line highlight used by the code viewer. */
 .line-highlight {
-	background: color-mix(in srgb, #a855f7 14%, transparent);
-	border-left: 2px solid #c084fc;
+	background: color-mix(in srgb, #b9a7e6 10%, transparent);
+	border-left: 2px solid #b9a7e6;
 }
 
-/* Inline code picks up the same lavender as the markdown layout. */
 :not(pre) > code[class*='language-'] {
-	color: #c7bdf7;
+	color: #d4d4d8;
 }

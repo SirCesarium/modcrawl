@@ -81,7 +81,7 @@ export default defineConfig({
 							const rawHighlighted = grammar ? Prism.highlight(code, grammar, language) : code;
 							const highlighted = escapeSvelte(rawHighlighted);
 
-							return `<div data-code-block class="relative my-4 overflow-hidden border border-purple-500/25 bg-purple-950/40 shadow-lg"><div class="code-toolbar" data-language="${language}"></div><pre class="language-${language} overflow-x-auto p-3 font-mono text-[10px] leading-relaxed sm:p-4 sm:text-sm"><code class="language-${language}">{@html \`${highlighted}\`}</code></pre></div>`;
+							return `<div data-code-block class="group/code relative my-6 overflow-hidden rounded-md border border-white/10 bg-neutral-900/50"><div class="code-toolbar min-h-9" data-language="${language}"></div><pre class="language-${language} overflow-x-auto px-4 pt-1 pb-4 font-mono text-[13px] leading-6 sm:text-sm"><code class="language-${language}">{@html \`${highlighted}\`}</code></pre></div>`;
 						}
 					}
 				})
