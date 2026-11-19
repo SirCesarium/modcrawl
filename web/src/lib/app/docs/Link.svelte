@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Button from '#app/components/Button.svelte';
 	import type { Snippet } from 'svelte';
 
 	interface Props {
@@ -12,8 +11,14 @@
 	let { href = '#', children, class: className = '', ...restProps }: Props = $props();
 </script>
 
-<Button variant="link" {href} class={className} {...restProps}>
+<!-- eslint-disable svelte/no-navigation-without-resolve -- Markdown links can point to arbitrary internal and external destinations. -->
+<a
+	{href}
+	class="font-medium text-purple-300 underline decoration-purple-300/30 underline-offset-4 transition-colors hover:text-purple-200 hover:decoration-purple-300/60 {className}"
+	{...restProps}
+>
 	{#if children}
 		{@render children()}
 	{/if}
-</Button>
+</a>
+<!-- eslint-enable svelte/no-navigation-without-resolve -->

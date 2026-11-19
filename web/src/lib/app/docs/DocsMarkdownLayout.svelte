@@ -5,6 +5,7 @@
 	export { default as h4 } from './Heading4.svelte';
 	export { default as a } from './Link.svelte';
 	export { default as hr } from './Rule.svelte';
+	export { default as table } from './Table.svelte';
 </script>
 
 <script lang="ts">
@@ -17,64 +18,137 @@
 	let { children }: Props = $props();
 </script>
 
-<div class="max-w-none text-neutral-200">
+<div data-docs-prose class="text-[15px] leading-7 text-neutral-300 sm:text-base">
 	{#if children}
 		{@render children()}
 	{/if}
 </div>
 
 <style>
-	/* Inline code in markdown — no language class, Prism doesn't touch it */
-	:global(.max-w-none :not(pre) > code) {
-		background: color-mix(in srgb, var(--color-purple-950) 40%, transparent);
-		border: 1px solid color-mix(in srgb, var(--color-purple-500) 25%, transparent);
-		padding: 0.15em 0.4em;
+	:global([data-docs-prose] > :first-child) {
+		margin-top: 0;
+	}
+
+	:global([data-docs-prose] > :last-child) {
+		margin-bottom: 0;
+	}
+
+	:global([data-docs-prose] p) {
+		margin: 1rem 0;
+	}
+
+	:global([data-docs-prose] strong) {
+		color: var(--color-neutral-100);
+		font-weight: 600;
+	}
+
+	:global([data-docs-prose] em) {
+		font-style: italic;
+	}
+
+	/* Inline code stays neutral so it reads as a token, not as a highlighted surface. */
+	:global([data-docs-prose] :not(pre) > code) {
+		background: color-mix(in srgb, white 7%, transparent);
+		border-radius: 0.25rem;
+		padding: 0.1em 0.35em;
+		color: var(--color-neutral-200);
 		font-family: 'JetBrains Mono', monospace;
 		font-size: 0.875em;
-		color: #a599e9;
 	}
 
-	/* Spacing lives here so the rule itself stays margin-free for header use */
-	:global(.max-w-none hr) {
-		margin: 2rem 0 1.5rem;
+	:global([data-docs-prose] hr) {
+		margin: 2.5rem 0;
+		border: 0;
+		border-top: 1px solid color-mix(in srgb, white 10%, transparent);
 	}
 
-	/* Tailwind preflight drops markers, so prose lists restore their own */
-	:global(.max-w-none ul),
-	:global(.max-w-none ol) {
-		padding-left: 1.35rem;
-		margin: 0.75rem 0;
+	/* Tailwind preflight drops markers, so prose lists restore their own. */
+	:global([data-docs-prose] ul),
+	:global([data-docs-prose] ol) {
+		margin: 1rem 0;
+		padding-left: 1.25rem;
 	}
 
-	/* `list-style: disc` is minified away as the initial value, so state the type */
-	:global(.max-w-none ul) {
+	:global([data-docs-prose] ul) {
 		list-style-type: disc;
 	}
 
-	:global(.max-w-none ul ul) {
+	:global([data-docs-prose] ul ul) {
 		list-style: circle;
 		margin: 0.25rem 0;
 	}
 
-	:global(.max-w-none ol) {
+	:global([data-docs-prose] ol) {
 		list-style: decimal;
 	}
 
-	:global(.max-w-none ol ol) {
+	:global([data-docs-prose] ol ol) {
 		list-style: lower-alpha;
 		margin: 0.25rem 0;
 	}
 
-	:global(.max-w-none li) {
-		margin: 0.25rem 0;
+	:global([data-docs-prose] li) {
+		margin: 0.35rem 0;
 		padding-left: 0.15rem;
 	}
 
-	:global(.max-w-none li) > :global(p) {
+	:global([data-docs-prose] li) > :global(p) {
 		margin: 0;
 	}
 
-	:global(.max-w-none li)::marker {
-		color: color-mix(in srgb, var(--color-purple-400) 85%, transparent);
+	:global([data-docs-prose] li)::marker {
+		color: var(--color-neutral-500);
+	}
+
+	:global([data-docs-prose] blockquote) {
+		margin: 1.5rem 0;
+		border-left: 2px solid color-mix(in srgb, white 14%, transparent);
+		padding-left: 1rem;
+		color: var(--color-neutral-400);
+	}
+
+	:global([data-docs-prose] p img) {
+		max-width: 100%;
+		margin: 1.5rem 0;
+		border: 1px solid color-mix(in srgb, white 10%, transparent);
+		border-radius: 0.375rem;
+	}
+
+	:global([data-docs-prose] pre),
+	:global([data-docs-prose] .overflow-x-auto) {
+		scrollbar-width: thin;
+		scrollbar-color: color-mix(in srgb, white 16%, transparent) transparent;
+	}
+
+	/* Preflight strips cell borders and padding, so markdown tables arrive unstyled. */
+	:global([data-docs-prose] table) {
+		width: 100%;
+		font-size: 0.875rem;
+	}
+
+	:global([data-docs-prose] thead) {
+		background: color-mix(in srgb, white 3%, transparent);
+	}
+
+	:global([data-docs-prose] th) {
+		padding: 0.6rem 0.75rem;
+		border-bottom: 1px solid color-mix(in srgb, white 10%, transparent);
+		color: var(--color-neutral-400);
+		font-size: 0.75rem;
+		font-weight: 600;
+		letter-spacing: normal;
+		text-align: left;
+		text-transform: none;
+		white-space: nowrap;
+	}
+
+	:global([data-docs-prose] td) {
+		padding: 0.6rem 0.75rem;
+		border-top: 1px solid color-mix(in srgb, white 6%, transparent);
+		vertical-align: top;
+	}
+
+	:global([data-docs-prose] tbody tr:first-child td) {
+		border-top: 0;
 	}
 </style>

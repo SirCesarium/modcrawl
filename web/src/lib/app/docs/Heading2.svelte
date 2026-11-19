@@ -1,5 +1,4 @@
 <script lang="ts">
-	import Typography from '#app/components/Typography.svelte';
 	import type { Snippet } from 'svelte';
 
 	interface Props {
@@ -11,8 +10,11 @@
 	let { children, class: className = '', ...restProps }: Props = $props();
 </script>
 
-<Typography variant="h2" pixel class="mt-6 mb-3 scroll-mt-24 {className}" {...restProps}>
+<h2
+	class="mt-10 mb-3 scroll-mt-20 text-xl font-semibold tracking-tight text-neutral-100 sm:text-[1.375rem] {className}"
+	{...restProps}
+>
 	{#if children}
 		{@render children()}
 	{/if}
-</Typography>
+</h2>
