@@ -1480,9 +1480,9 @@ dependencies = [
 
 [[package]]
 name = "zipcrawl"
-version = "4.0.1"
+version = "4.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5db8c03016c7e058548390414c4f561df71c304e610ed54396effb2455e30986"
+checksum = "51076b81de86a4969e5497e122d81700446c26689d24a1306b0d117a1dbb3a7d"
 dependencies = [
  "serde",
  "serde_json",
